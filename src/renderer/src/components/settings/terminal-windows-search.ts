@@ -1,53 +1,40 @@
 import type { SettingsSearchEntry } from './settings-search'
+import { terminalEn } from '@/i18n/settings-terminal-en'
+import type { SettingsTerminalMessages } from '@/i18n/settings-terminal-types'
 
-export const TERMINAL_WINDOWS_SHELL_SEARCH_ENTRY: SettingsSearchEntry[] = [
-  {
-    title: 'Default Shell',
-    description: 'Choose the default shell for new terminal panes on Windows.',
-    keywords: [
-      'terminal',
-      'windows',
-      'shell',
-      'powershell',
-      'cmd',
-      'command prompt',
-      'default',
-      'wsl',
-      'linux',
-      'bash',
-      'ubuntu'
-    ]
-  }
-]
+export function getTerminalWindowsShellSearchEntry(
+  messages: SettingsTerminalMessages = terminalEn
+): SettingsSearchEntry[] {
+  return [messages.windowsShell.defaultShell]
+}
 
-export const TERMINAL_WINDOWS_POWERSHELL_IMPLEMENTATION_SEARCH_ENTRY: SettingsSearchEntry[] = [
-  {
-    title: 'PowerShell Version',
-    description:
-      'Choose whether the PowerShell shell option launches Windows PowerShell or PowerShell 7+ for new terminal panes.',
-    keywords: [
-      'terminal',
-      'windows',
-      'powershell',
-      'windows powershell',
-      'powershell 7',
-      'pwsh',
-      'version',
-      'advanced'
-    ]
-  }
-]
+export function getTerminalWindowsPowerShellImplementationSearchEntry(
+  messages: SettingsTerminalMessages = terminalEn
+): SettingsSearchEntry[] {
+  return [messages.windowsShell.powerShellVersion]
+}
 
-export const TERMINAL_RIGHT_CLICK_TO_PASTE_SEARCH_ENTRY: SettingsSearchEntry[] = [
-  {
-    title: 'Right-click to paste',
-    description:
-      'On Windows, right-click pastes the clipboard into the terminal. Use Ctrl+right-click to open the context menu.',
-    keywords: ['terminal', 'windows', 'right click', 'paste', 'context menu']
-  }
-]
+export function getTerminalRightClickToPasteSearchEntry(
+  messages: SettingsTerminalMessages = terminalEn
+): SettingsSearchEntry[] {
+  return [messages.windowsShell.rightClickToPaste]
+}
 
-export const TERMINAL_WINDOWS_SEARCH_ENTRIES: SettingsSearchEntry[] = [
+export function getTerminalWindowsSearchEntries(
+  messages: SettingsTerminalMessages = terminalEn
+): SettingsSearchEntry[] {
+  return [
+    ...getTerminalWindowsShellSearchEntry(messages),
+    ...getTerminalWindowsPowerShellImplementationSearchEntry(messages),
+    ...getTerminalRightClickToPasteSearchEntry(messages)
+  ]
+}
+
+export const TERMINAL_WINDOWS_SHELL_SEARCH_ENTRY = getTerminalWindowsShellSearchEntry()
+export const TERMINAL_WINDOWS_POWERSHELL_IMPLEMENTATION_SEARCH_ENTRY =
+  getTerminalWindowsPowerShellImplementationSearchEntry()
+export const TERMINAL_RIGHT_CLICK_TO_PASTE_SEARCH_ENTRY = getTerminalRightClickToPasteSearchEntry()
+export const TERMINAL_WINDOWS_SEARCH_ENTRIES = [
   ...TERMINAL_WINDOWS_SHELL_SEARCH_ENTRY,
   ...TERMINAL_WINDOWS_POWERSHELL_IMPLEMENTATION_SEARCH_ENTRY,
   ...TERMINAL_RIGHT_CLICK_TO_PASTE_SEARCH_ENTRY

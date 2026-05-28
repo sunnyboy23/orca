@@ -1,40 +1,32 @@
 import React, { useMemo, useState } from 'react'
 import type { CtrlTabOrderMode } from '../../../../shared/types'
 import {
-  KEYBINDING_DEFINITIONS,
   findKeybindingConflicts,
   formatKeybindingList,
   getEffectiveKeybindingsForAction,
-  getKeybindingDefinition,
-  isKeybindingAllowedInTerminal,
-  isKeybindingPotentialTerminalConflict,
   keybindingFromInputForAction,
-  keybindingIsActiveInContext,
   normalizeKeybindingListForAction,
   type KeybindingActionId,
-  type KeybindingDefinition,
   type KeybindingInput,
   type KeybindingOverrides,
   type TerminalShortcutPolicy
 } from '../../../../shared/keybindings'
+import { useI18n } from '@/i18n'
 import { useAppStore } from '../../store'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { KeybindingsFileActions } from './KeybindingsFileActions'
 import { SearchableSetting } from './SearchableSetting'
 import { SettingsRow, SettingsSubsectionHeader } from './SettingsFormControls'
-import { ShortcutBindingRow, type ShortcutTerminalStatus } from './ShortcutBindingRow'
+import { ShortcutBindingRow } from './ShortcutBindingRow'
 import { matchesSettingsSearch, type SettingsSearchEntry } from './settings-search'
 import {
-  CTRL_TAB_BEHAVIOR_SEARCH_ENTRY,
   SHORTCUTS_PANE_SEARCH_ENTRIES,
-  TERMINAL_SHORTCUT_POLICY_SEARCH_ENTRY
+  getCtrlTabBehaviorSearchEntry,
+  getTerminalShortcutPolicySearchEntry
 } from './shortcuts-search'
+import { getShortcutActionCopy, localizeShortcutError } from './shortcut-copy'
+import { getLocalizedShortcutGroups, getShortcutTerminalStatus } from './shortcut-presentation'
 export { SHORTCUTS_PANE_SEARCH_ENTRIES }
-
-type ShortcutGroup = {
-  title: string
-  items: KeybindingDefinition[]
-}
 
 const isMac = navigator.userAgent.includes('Mac')
 const platform: NodeJS.Platform = isMac
@@ -42,14 +34,6 @@ const platform: NodeJS.Platform = isMac
   : navigator.userAgent.includes('Windows')
     ? 'win32'
     : 'linux'
-
-function groupDefinitions(): ShortcutGroup[] {
-  const groups = new Map<string, KeybindingDefinition[]>()
-  for (const definition of KEYBINDING_DEFINITIONS) {
-    groups.set(definition.group, [...(groups.get(definition.group) ?? []), definition])
-  }
-  return Array.from(groups.entries()).map(([title, items]) => ({ title, items }))
-}
 
 function sameBindings(a: readonly string[], b: readonly string[]): boolean {
   return a.length === b.length && a.every((binding, index) => binding === b[index])
@@ -78,45 +62,9 @@ function hasCommonBindingOverride(
   return hasOwnBindingOverride(snapshot?.commonOverrides ?? {}, actionId)
 }
 
-function getShortcutTerminalStatus(
-  definition: KeybindingDefinition,
-  terminalShortcutPolicy: TerminalShortcutPolicy,
-  hasEffectiveBinding: boolean
-): ShortcutTerminalStatus | undefined {
-  if (!hasEffectiveBinding) {
-    return undefined
-  }
-  if (definition.scope === 'terminal') {
-    return {
-      label: 'Terminal',
-      description: 'Runs from terminal panes.'
-    }
-  }
-  if (isKeybindingAllowedInTerminal(definition)) {
-    return {
-      label: 'Terminal active',
-      description: 'Still runs while a terminal has keyboard focus.'
-    }
-  }
-  if (!isKeybindingPotentialTerminalConflict(definition)) {
-    return undefined
-  }
-  const activeInTerminal = keybindingIsActiveInContext(definition, {
-    context: 'terminal',
-    terminalShortcutPolicy
-  })
-  return activeInTerminal
-    ? {
-        label: 'Orca first',
-        description: 'Also runs while a terminal or TUI has keyboard focus.'
-      }
-    : {
-        label: 'Terminal first',
-        description: 'Disabled while a terminal or TUI has keyboard focus.'
-      }
-}
-
 export function ShortcutsPane(): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.shortcuts
   const searchQuery = useAppStore((state) => state.settingsSearchQuery)
   const ctrlTabOrderMode = useAppStore((state) => state.settings?.ctrlTabOrderMode ?? 'mru')
   const terminalShortcutPolicy = useAppStore(
@@ -131,36 +79,41 @@ export function ShortcutsPane(): React.JSX.Element {
   const [errors, setErrors] = useState<Partial<Record<KeybindingActionId, string>>>({})
   const [recordingActionId, setRecordingActionId] = useState<KeybindingActionId | null>(null)
 
-  const groups = useMemo(groupDefinitions, [])
+  const groups = useMemo(() => getLocalizedShortcutGroups(copy), [copy])
+  const terminalPolicySearchEntry = useMemo(
+    () => getTerminalShortcutPolicySearchEntry(copy),
+    [copy]
+  )
+  const ctrlTabSearchEntry = useMemo(() => getCtrlTabBehaviorSearchEntry(copy), [copy])
   const groupEntries = useMemo<Record<string, SettingsSearchEntry[]>>(
     () =>
       Object.fromEntries(
         groups.map((group) => [
           group.title,
           group.items.map((item) => ({
-            title: item.title,
-            description: `${group.title} shortcut`,
-            keywords: [...item.searchKeywords]
+            title: item.localizedTitle,
+            description: copy.search.actionDescription(group.localizedTitle),
+            keywords: [...item.localizedSearchKeywords]
           }))
         ])
       ),
-    [groups]
+    [copy, groups]
   )
   const conflictByAction = useMemo(() => {
     const result = new Map<KeybindingActionId, string[]>()
     for (const conflict of findKeybindingConflicts(platform, keybindings)) {
       const labels = conflict.actionIds
-        .map((id) => getKeybindingDefinition(id)?.title ?? id)
+        .map((id) => getShortcutActionCopy(copy, id).title)
         .join(', ')
       for (const actionId of conflict.actionIds) {
         result.set(actionId, [
           ...(result.get(actionId) ?? []),
-          `${formatKeybindingList([conflict.binding], platform)} conflicts with ${labels}.`
+          copy.errors.conflict(formatKeybindingList([conflict.binding], platform), labels)
         ])
       }
     }
     return result
-  }, [keybindings])
+  }, [copy, keybindings])
 
   const saveBindings = async (
     actionId: KeybindingActionId,
@@ -170,7 +123,9 @@ export function ShortcutsPane(): React.JSX.Element {
     if (!Array.isArray(normalizedResult)) {
       setErrors((prev) => ({
         ...prev,
-        [actionId]: normalizedResult.ok ? 'Unable to parse shortcut.' : normalizedResult.error
+        [actionId]: normalizedResult.ok
+          ? copy.errors.unableToParse
+          : localizeShortcutError(normalizedResult.error, copy)
       }))
       return false
     }
@@ -187,11 +142,14 @@ export function ShortcutsPane(): React.JSX.Element {
     if (blockingConflict) {
       const labels = blockingConflict.actionIds
         .filter((id) => id !== actionId)
-        .map((id) => getKeybindingDefinition(id)?.title ?? id)
+        .map((id) => getShortcutActionCopy(copy, id).title)
         .join(', ')
       setErrors((prev) => ({
         ...prev,
-        [actionId]: `${formatKeybindingList([blockingConflict.binding], platform)} conflicts with ${labels}.`
+        [actionId]: copy.errors.conflict(
+          formatKeybindingList([blockingConflict.binding], platform),
+          labels
+        )
       }))
       return false
     }
@@ -208,7 +166,7 @@ export function ShortcutsPane(): React.JSX.Element {
     } catch (error) {
       setErrors((prev) => ({
         ...prev,
-        [actionId]: error instanceof Error ? error.message : 'Failed to save shortcut.'
+        [actionId]: error instanceof Error ? error.message : copy.errors.saveFailed
       }))
       return false
     }
@@ -220,7 +178,7 @@ export function ShortcutsPane(): React.JSX.Element {
   ): Promise<void> => {
     const captured = keybindingFromInputForAction(actionId, input, platform)
     if (!captured.ok) {
-      setErrors((prev) => ({ ...prev, [actionId]: captured.error }))
+      setErrors((prev) => ({ ...prev, [actionId]: localizeShortcutError(captured.error, copy) }))
       return
     }
 
@@ -240,7 +198,7 @@ export function ShortcutsPane(): React.JSX.Element {
     } catch (error) {
       setErrors((prev) => ({
         ...prev,
-        [actionId]: error instanceof Error ? error.message : 'Failed to reset shortcut.'
+        [actionId]: error instanceof Error ? error.message : copy.errors.resetFailed
       }))
     }
   }
@@ -252,7 +210,7 @@ export function ShortcutsPane(): React.JSX.Element {
     } catch (error) {
       setErrors((prev) => ({
         ...prev,
-        [actionId]: error instanceof Error ? error.message : 'Failed to disable shortcut.'
+        [actionId]: error instanceof Error ? error.message : copy.errors.disableFailed
       }))
     }
   }
@@ -261,29 +219,26 @@ export function ShortcutsPane(): React.JSX.Element {
     setErrors((prev) => ({ ...prev, [actionId]: undefined }))
   }
 
-  const showPolicy = matchesSettingsSearch(searchQuery, TERMINAL_SHORTCUT_POLICY_SEARCH_ENTRY)
-  const showCtrlTab = matchesSettingsSearch(searchQuery, CTRL_TAB_BEHAVIOR_SEARCH_ENTRY)
+  const showPolicy = matchesSettingsSearch(searchQuery, terminalPolicySearchEntry)
+  const showCtrlTab = matchesSettingsSearch(searchQuery, ctrlTabSearchEntry)
 
   return (
     <div className="space-y-6">
       <section className="space-y-3">
-        <SettingsSubsectionHeader
-          title="Keyboard Shortcuts"
-          description="Customize shortcuts visually or edit the file directly."
-        />
+        <SettingsSubsectionHeader title={copy.header.title} description={copy.header.description} />
 
         {showPolicy || showCtrlTab ? (
           <div className="divide-y divide-border/40">
             {showPolicy ? (
               <SearchableSetting
                 id="terminal-shortcut-policy"
-                title="Shortcuts in Terminal"
-                description="Choose whether Orca or the focused terminal wins when shortcuts overlap."
-                keywords={TERMINAL_SHORTCUT_POLICY_SEARCH_ENTRY.keywords}
+                title={copy.terminalPolicy.title}
+                description={copy.terminalPolicy.description}
+                keywords={terminalPolicySearchEntry.keywords}
               >
                 <SettingsRow
-                  label="Shortcuts in Terminal"
-                  description="Orca first keeps app shortcuts active in TUIs. Terminal first lets shell shortcuts win unless marked terminal-active."
+                  label={copy.terminalPolicy.title}
+                  description={copy.terminalPolicy.detail}
                   control={
                     <Select
                       value={terminalShortcutPolicy}
@@ -297,8 +252,10 @@ export function ShortcutsPane(): React.JSX.Element {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="orca-first">Orca first</SelectItem>
-                        <SelectItem value="terminal-first">Terminal first</SelectItem>
+                        <SelectItem value="orca-first">{copy.terminalPolicy.orcaFirst}</SelectItem>
+                        <SelectItem value="terminal-first">
+                          {copy.terminalPolicy.terminalFirst}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   }
@@ -308,13 +265,13 @@ export function ShortcutsPane(): React.JSX.Element {
 
             {showCtrlTab ? (
               <SearchableSetting
-                title="Recent Tab Order"
-                description="Choose recent or sequential tab switching."
-                keywords={CTRL_TAB_BEHAVIOR_SEARCH_ENTRY.keywords}
+                title={copy.ctrlTab.title}
+                description={copy.ctrlTab.description}
+                keywords={ctrlTabSearchEntry.keywords}
               >
                 <SettingsRow
-                  label="Recent Tab Order"
-                  description="Choose whether recent tab switching follows recent use or the tab strip order."
+                  label={copy.ctrlTab.title}
+                  description={copy.ctrlTab.detail}
                   control={
                     <Select
                       value={ctrlTabOrderMode}
@@ -326,8 +283,8 @@ export function ShortcutsPane(): React.JSX.Element {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="mru">Most recent</SelectItem>
-                        <SelectItem value="sequential">Tab strip order</SelectItem>
+                        <SelectItem value="mru">{copy.ctrlTab.mostRecent}</SelectItem>
+                        <SelectItem value="sequential">{copy.ctrlTab.tabStripOrder}</SelectItem>
                       </SelectContent>
                     </Select>
                   }
@@ -345,7 +302,7 @@ export function ShortcutsPane(): React.JSX.Element {
             .map((group) => (
               <div key={group.title} className="space-y-3">
                 <h3 className="border-b border-border/50 pb-2 text-sm font-medium text-muted-foreground">
-                  {group.title}
+                  {group.localizedTitle}
                 </h3>
                 <div className="grid gap-2">
                   {group.items.map((item) => {
@@ -359,14 +316,16 @@ export function ShortcutsPane(): React.JSX.Element {
                     const terminalStatus = getShortcutTerminalStatus(
                       item,
                       terminalShortcutPolicy,
-                      effective.length > 0
+                      effective.length > 0,
+                      copy.terminalStatus
                     )
 
                     return (
                       <ShortcutBindingRow
                         key={item.id}
                         item={item}
-                        groupTitle={group.title}
+                        groupTitle={copy.search.actionDescription(group.localizedTitle)}
+                        copy={copy.row}
                         platform={platform}
                         effective={effective}
                         modified={modified}

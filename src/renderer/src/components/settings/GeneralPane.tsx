@@ -19,13 +19,13 @@ import {
 import { OPEN_IN_APPLICATIONS_MAX } from '../../../../shared/open-in-applications'
 import { clampNumber } from '@/lib/terminal-theme'
 import {
-  GENERAL_CACHE_TIMER_SEARCH_ENTRIES,
   GENERAL_CLI_SEARCH_ENTRIES,
-  GENERAL_EDITOR_SEARCH_ENTRIES,
-  GENERAL_PANE_SEARCH_ENTRIES,
-  GENERAL_SUPPORT_SEARCH_ENTRIES,
-  GENERAL_UPDATE_SEARCH_ENTRIES,
-  GENERAL_WORKSPACE_SEARCH_ENTRIES
+  getGeneralCacheTimerSearchEntries,
+  getGeneralEditorSearchEntries,
+  getGeneralPaneSearchEntries,
+  getGeneralSupportSearchEntries,
+  getGeneralUpdateSearchEntries,
+  getGeneralWorkspaceSearchEntries
 } from './general-search'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { SearchableSetting } from './SearchableSetting'
@@ -36,6 +36,7 @@ import {
   SettingsSwitch,
   SettingsSwitchRow
 } from './SettingsFormControls'
+import { normalizeAppLanguage, useI18n } from '@/i18n'
 
 function createOpenInApplication(): OpenInApplication {
   return {
@@ -71,7 +72,7 @@ export function getDesktopPlatformFromUserAgent(userAgent: string): 'darwin' | '
   return 'other'
 }
 
-export { GENERAL_PANE_SEARCH_ENTRIES }
+export { getGeneralPaneSearchEntries }
 
 type GeneralPaneProps = {
   settings: GlobalSettings
@@ -79,6 +80,17 @@ type GeneralPaneProps = {
 }
 
 export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settings.general
+  const workspaceSearchEntries = getGeneralWorkspaceSearchEntries(messages.settings, {
+    title: messages.language.title,
+    description: messages.language.description,
+    keywords: ['language', 'locale', '中文', 'chinese', 'english', '语言']
+  })
+  const editorSearchEntries = getGeneralEditorSearchEntries(messages.settings)
+  const cacheTimerSearchEntries = getGeneralCacheTimerSearchEntries(messages.settings)
+  const updateSearchEntries = getGeneralUpdateSearchEntries(messages.settings)
+  const supportSearchEntries = getGeneralSupportSearchEntries(messages.settings)
   const searchQuery = useAppStore((s) => s.settingsSearchQuery)
   const updateStatus = useAppStore((s) => s.updateStatus)
   // Why: the 'error' variant of UpdateStatus does not carry a `version` field.
@@ -220,20 +232,42 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
   }
 
   const visibleSections = [
-    matchesSettingsSearch(searchQuery, GENERAL_WORKSPACE_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, workspaceSearchEntries) ? (
       <section key="workspace" className="space-y-4">
         <SettingsSubsectionHeader
-          title="Workspace"
-          description="Configure where new workspaces are created."
+          title={copy.workspace.title}
+          description={copy.workspace.description}
         />
 
         <SearchableSetting
-          title="Workspace Directory"
-          description="Root directory where workspace folders are created."
-          keywords={['workspace', 'folder', 'path', 'worktree']}
+          title={messages.language.title}
+          description={messages.language.description}
+          keywords={['language', 'locale', '中文', 'chinese', 'english']}
+          className="flex items-center justify-between gap-4 py-2"
+        >
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <Label>{messages.language.title}</Label>
+            <p className="text-xs text-muted-foreground">{messages.language.description}</p>
+          </div>
+          <SettingsSegmentedControl
+            ariaLabel={messages.language.title}
+            value={normalizeAppLanguage(settings.appLanguage)}
+            onChange={(option) => updateSettings({ appLanguage: option })}
+            options={[
+              { value: 'system', label: messages.language.system },
+              { value: 'en', label: messages.language.english },
+              { value: 'zh-CN', label: messages.language.chinese }
+            ]}
+          />
+        </SearchableSetting>
+
+        <SearchableSetting
+          title={copy.fields.workspaceDirectory.title}
+          description={copy.fields.workspaceDirectory.description}
+          keywords={copy.fields.workspaceDirectory.keywords}
           className="space-y-2"
         >
-          <Label>Workspace Directory</Label>
+          <Label>{copy.fields.workspaceDirectory.title}</Label>
           <div className="flex gap-2">
             <Input
               value={settings.workspaceDir}
@@ -247,22 +281,22 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
               className="shrink-0 gap-1.5"
             >
               <FolderOpen className="size-3.5" />
-              Browse
+              {copy.actions.browse}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Root directory where workspace folders are created.
+            {copy.fields.workspaceDirectory.description}
           </p>
         </SearchableSetting>
 
         <SearchableSetting
-          title="Nest Workspaces"
-          description="Create workspaces inside a repo-named subfolder."
-          keywords={['nested', 'subfolder', 'directory']}
+          title={copy.fields.nestWorkspaces.title}
+          description={copy.fields.nestWorkspaces.description}
+          keywords={copy.fields.nestWorkspaces.keywords}
         >
           <SettingsSwitchRow
-            label="Nest Workspaces"
-            description="Create workspaces inside a repo-named subfolder."
+            label={copy.fields.nestWorkspaces.title}
+            description={copy.fields.nestWorkspaces.description}
             checked={settings.nestWorkspaces}
             onChange={() => updateSettings({ nestWorkspaces: !settings.nestWorkspaces })}
           />
@@ -273,13 +307,13 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
             breaks that toast action even though this pane still renders fine. */}
         <div id="general-skip-delete-worktree-confirm" className="scroll-mt-6">
           <SearchableSetting
-            title="Ask Before Deleting Workspaces"
-            description="Show a confirmation dialog before deleting a workspace."
-            keywords={['delete', 'worktree', 'confirm', 'dialog', 'skip', 'prompt']}
+            title={copy.fields.askBeforeDeletingWorkspaces.title}
+            description={copy.fields.askBeforeDeletingWorkspaces.description}
+            keywords={copy.fields.askBeforeDeletingWorkspaces.keywords}
           >
             <SettingsSwitchRow
-              label="Ask Before Deleting Workspaces"
-              description="Show a confirmation before deleting a workspace from the context menu. Failed deletes still surface a Force Delete fallback."
+              label={copy.fields.askBeforeDeletingWorkspaces.title}
+              description={copy.fields.askBeforeDeletingWorkspacesToggle}
               checked={!settings.skipDeleteWorktreeConfirm}
               onChange={() =>
                 updateSettings({
@@ -292,13 +326,13 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
 
         <div id="general-skip-delete-automation-confirm" className="scroll-mt-6">
           <SearchableSetting
-            title="Ask Before Deleting Automations"
-            description="Show a confirmation dialog before deleting an automation and its run history."
-            keywords={['delete', 'automation', 'confirm', 'dialog', 'skip', 'prompt']}
+            title={copy.fields.askBeforeDeletingAutomations.title}
+            description={copy.fields.askBeforeDeletingAutomations.description}
+            keywords={copy.fields.askBeforeDeletingAutomations.keywords}
           >
             <SettingsSwitchRow
-              label="Ask Before Deleting Automations"
-              description="Show a confirmation before deleting automations and their run history."
+              label={copy.fields.askBeforeDeletingAutomations.title}
+              description={copy.fields.askBeforeDeletingAutomationsToggle}
               checked={!settings.skipDeleteAutomationConfirm}
               onChange={() =>
                 updateSettings({
@@ -310,21 +344,15 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
         </div>
 
         <SearchableSetting
-          title="Open In Menu"
-          description="Add custom launchers to the workspace Open in menu."
-          keywords={['open in', 'editor', 'launcher', 'cursor', 'zed', 'command', 'vscode']}
+          title={copy.fields.openInMenu.title}
+          description={copy.fields.openInMenu.description}
+          keywords={copy.fields.openInMenu.keywords}
           className="space-y-3"
         >
           <div className="space-y-1">
-            <Label>Open In Menu</Label>
-            <p className="text-xs text-muted-foreground">
-              VS Code is always included first. Add executables to show extra entries in each
-              workspace&apos;s Open in menu.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Commands are not shell-parsed. Use only an executable command name. For flags, use a
-              wrapper script.
-            </p>
+            <Label>{copy.fields.openInMenu.title}</Label>
+            <p className="text-xs text-muted-foreground">{copy.fields.openInMenuDescription}</p>
+            <p className="text-xs text-muted-foreground">{copy.fields.openInMenuCommandNote}</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -337,7 +365,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                 ])
               }
             >
-              Add Cursor
+              {copy.fields.addCursor}
             </Button>
             <Button
               variant="outline"
@@ -349,7 +377,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                 ])
               }
             >
-              Add Zed
+              {copy.fields.addZed}
             </Button>
           </div>
           <div className="space-y-2">
@@ -357,7 +385,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
               <div key={app.id} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto]">
                 <Input
                   value={app.label}
-                  placeholder="Label"
+                  placeholder={copy.fields.labelPlaceholder}
                   onChange={(event) => {
                     const next = [...openInApplicationsDraft]
                     next[index] = { ...app, label: event.target.value }
@@ -372,7 +400,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                 />
                 <Input
                   value={app.command}
-                  placeholder="Executable command"
+                  placeholder={copy.fields.executableCommandPlaceholder}
                   onChange={(event) => {
                     const next = [...openInApplicationsDraft]
                     next[index] = { ...app, command: event.target.value }
@@ -394,7 +422,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                     commitOpenInApplications(next)
                   }}
                 >
-                  Remove
+                  {copy.actions.remove}
                 </Button>
               </div>
             ))}
@@ -407,42 +435,41 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
             }
             disabled={openInApplicationsDraft.length >= OPEN_IN_APPLICATIONS_MAX}
           >
-            Add Custom Launcher
+            {copy.fields.addCustomLauncher}
           </Button>
         </SearchableSetting>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, GENERAL_EDITOR_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, editorSearchEntries) ? (
       <section key="editor" className="space-y-4">
         <SettingsSubsectionHeader
-          title="Editor"
-          description="Configure how Orca persists file edits."
+          title={copy.editor.title}
+          description={copy.editor.description}
         />
 
         <SearchableSetting
-          title="Auto Save Files"
-          description="Save editor and editable diff changes automatically after a short pause."
-          keywords={['autosave', 'save']}
+          title={copy.fields.autoSaveFiles.title}
+          description={copy.fields.autoSaveFiles.description}
+          keywords={copy.fields.autoSaveFiles.keywords}
         >
           <SettingsSwitchRow
-            label="Auto Save Files"
-            description="Save editor and editable diff changes automatically after a short pause."
+            label={copy.fields.autoSaveFiles.title}
+            description={copy.fields.autoSaveFiles.description}
             checked={settings.editorAutoSave}
             onChange={() => updateSettings({ editorAutoSave: !settings.editorAutoSave })}
           />
         </SearchableSetting>
 
         <SearchableSetting
-          title="Auto Save Delay"
-          description="How long Orca waits after your last edit before saving automatically."
-          keywords={['autosave', 'delay', 'milliseconds']}
+          title={copy.fields.autoSaveDelay.title}
+          description={copy.fields.autoSaveDelay.description}
+          keywords={copy.fields.autoSaveDelay.keywords}
           className="flex items-center justify-between gap-4 py-2"
         >
           <div className="min-w-0 flex-1 space-y-0.5">
-            <Label>Auto Save Delay</Label>
+            <Label>{copy.fields.autoSaveDelay.title}</Label>
             <p className="text-xs text-muted-foreground">
-              How long Orca waits after your last edit before saving automatically. First launch
-              defaults to {DEFAULT_EDITOR_AUTO_SAVE_DELAY_MS} ms.
+              {copy.fields.autoSaveDelayDescription(DEFAULT_EDITOR_AUTO_SAVE_DELAY_MS)}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -466,61 +493,61 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
         </SearchableSetting>
 
         <SearchableSetting
-          title="Default Diff View"
-          description="Preferred presentation format for showing git diffs by default."
-          keywords={['diff', 'view', 'inline', 'side-by-side', 'split']}
+          title={copy.fields.defaultDiffView.title}
+          description={copy.fields.defaultDiffView.description}
+          keywords={copy.fields.defaultDiffView.keywords}
           className="flex items-center justify-between gap-4 py-2"
         >
           <div className="min-w-0 flex-1 space-y-0.5">
-            <Label>Default Diff View</Label>
+            <Label>{copy.fields.defaultDiffView.title}</Label>
             <p className="text-xs text-muted-foreground">
-              Preferred presentation format for showing git diffs by default.
+              {copy.fields.defaultDiffView.description}
             </p>
           </div>
           <SettingsSegmentedControl
-            ariaLabel="Default Diff View"
+            ariaLabel={copy.fields.defaultDiffView.title}
             value={settings.diffDefaultView}
             onChange={(option) => updateSettings({ diffDefaultView: option })}
             options={[
-              { value: 'inline', label: 'Inline' },
-              { value: 'side-by-side', label: 'Side-by-side' }
+              { value: 'inline', label: copy.options.inline },
+              { value: 'side-by-side', label: copy.options.sideBySide }
             ]}
           />
         </SearchableSetting>
 
         <SearchableSetting
-          title="Default Diff File Tree"
-          description="Show or hide the file tree when opening combined diff views."
-          keywords={['diff', 'tree', 'file tree', 'combined diff', 'sidebar']}
+          title={copy.fields.defaultDiffFileTree.title}
+          description={copy.fields.defaultDiffFileTree.description}
+          keywords={copy.fields.defaultDiffFileTree.keywords}
           className="flex items-center justify-between gap-4 py-2"
         >
           <div className="min-w-0 flex-1 space-y-0.5">
-            <Label>Default Diff File Tree</Label>
+            <Label>{copy.fields.defaultDiffFileTree.title}</Label>
             <p className="text-xs text-muted-foreground">
-              Show or hide the file tree when opening combined diff views.
+              {copy.fields.defaultDiffFileTree.description}
             </p>
           </div>
           <SettingsSegmentedControl
-            ariaLabel="Default Diff File Tree"
+            ariaLabel={copy.fields.defaultDiffFileTree.title}
             value={settings.combinedDiffFileTreeVisibleByDefault ? 'shown' : 'hidden'}
             onChange={(option) =>
               updateSettings({ combinedDiffFileTreeVisibleByDefault: option === 'shown' })
             }
             options={[
-              { value: 'shown', label: 'Shown' },
-              { value: 'hidden', label: 'Hidden' }
+              { value: 'shown', label: copy.options.shown },
+              { value: 'hidden', label: copy.options.hidden }
             ]}
           />
         </SearchableSetting>
 
         <SearchableSetting
-          title="Minimap"
-          description="Show the minimap overview when editing a file."
-          keywords={['minimap', 'overview', 'code', 'scroll']}
+          title={copy.fields.minimap.title}
+          description={copy.fields.minimap.description}
+          keywords={copy.fields.minimap.keywords}
         >
           <SettingsSwitchRow
-            label="Minimap"
-            description="Show the minimap overview when editing a file."
+            label={copy.fields.minimap.title}
+            description={copy.fields.minimap.description}
             checked={settings.editorMinimapEnabled}
             onChange={() =>
               updateSettings({ editorMinimapEnabled: !settings.editorMinimapEnabled })
@@ -529,13 +556,13 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
         </SearchableSetting>
 
         <SearchableSetting
-          title="Markdown Review Notes"
-          description="Show local markdown review note controls in rich editor mode."
-          keywords={['markdown', 'review', 'notes', 'annotations', 'agents']}
+          title={copy.fields.markdownReviewNotes.title}
+          description={copy.fields.markdownReviewNotes.description}
+          keywords={copy.fields.markdownReviewNotes.keywords}
         >
           <SettingsSwitchRow
-            label="Markdown Review Notes"
-            description="Show local markdown note controls in rich editor mode and agent handoff actions."
+            label={copy.fields.markdownReviewNotes.title}
+            description={copy.fields.markdownReviewNotes.description}
             checked={settings.markdownReviewToolsEnabled}
             onChange={() =>
               updateSettings({ markdownReviewToolsEnabled: !settings.markdownReviewToolsEnabled })
@@ -550,17 +577,17 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
         currentPlatform={getDesktopPlatformFromUserAgent(navigator.userAgent)}
       />
     ) : null,
-    matchesSettingsSearch(searchQuery, GENERAL_CACHE_TIMER_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, cacheTimerSearchEntries) ? (
       <section key="cache-timer" className="space-y-4">
         <SettingsSubsectionHeader
-          title="Prompt Cache Timer"
-          description="Claude caches your conversation to reduce costs. When idle too long the cache expires and the next message resends full context at higher cost. This shows a countdown so you know when to resume."
+          title={copy.cacheTimer.header.title}
+          description={copy.cacheTimer.header.description}
         />
 
         <SearchableSetting
-          title="Cache Timer"
-          description="Show a countdown after a Claude agent becomes idle."
-          keywords={GENERAL_CACHE_TIMER_SEARCH_ENTRIES.flatMap((entry) => [
+          title={copy.cacheTimer.cacheTimer.title}
+          description={copy.cacheTimer.cacheTimer.description}
+          keywords={cacheTimerSearchEntries.flatMap((entry) => [
             entry.title,
             entry.description ?? '',
             ...(entry.keywords ?? [])
@@ -570,14 +597,12 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
           <div className="min-w-0 flex-1 space-y-0.5">
             <div className="flex items-center gap-2">
               <Timer className="size-4 text-muted-foreground" />
-              <Label>Cache Timer</Label>
+              <Label>{copy.cacheTimer.cacheTimer.title}</Label>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Show a countdown in the sidebar after a Claude agent becomes idle.
-            </p>
+            <p className="text-xs text-muted-foreground">{copy.cacheTimer.timerDescription}</p>
           </div>
           <SettingsSwitch
-            ariaLabel="Cache Timer"
+            ariaLabel={copy.cacheTimer.cacheTimer.title}
             checked={settings.promptCacheTimerEnabled}
             onChange={() => {
               const enabling = !settings.promptCacheTimerEnabled
@@ -591,15 +616,15 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
 
         {settings.promptCacheTimerEnabled && (
           <SearchableSetting
-            title="Timer Duration"
-            description="Match this to your provider's cache TTL."
-            keywords={['cache', 'timer', 'duration', 'ttl']}
+            title={copy.cacheTimer.duration.title}
+            description={copy.cacheTimer.duration.description}
+            keywords={copy.cacheTimer.duration.keywords}
             className="flex items-center justify-between gap-4 py-2 pl-7"
           >
             <div className="min-w-0 flex-1 space-y-0.5">
-              <Label>Timer Duration</Label>
+              <Label>{copy.cacheTimer.duration.title}</Label>
               <p className="text-xs text-muted-foreground">
-                Match this to your provider&apos;s cache TTL. The default is 5 minutes.
+                {copy.cacheTimer.durationDescription}
               </p>
             </div>
             <Select
@@ -610,25 +635,25 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="300000">5 minutes</SelectItem>
-                <SelectItem value="3600000">1 hour</SelectItem>
+                <SelectItem value="300000">{copy.cacheTimer.fiveMinutes}</SelectItem>
+                <SelectItem value="3600000">{copy.cacheTimer.oneHour}</SelectItem>
               </SelectContent>
             </Select>
           </SearchableSetting>
         )}
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, GENERAL_UPDATE_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, updateSearchEntries) ? (
       <section key="updates" className="space-y-4">
         <SettingsSubsectionHeader
-          title="Updates"
-          description={`Current version: ${appVersion ?? '…'}`}
+          title={copy.updates.title}
+          description={copy.updates.currentVersion(appVersion)}
         />
 
         <SearchableSetting
-          title="Check for Updates"
-          description="Check for app updates and install a newer Orca version."
-          keywords={['update', 'version', 'release notes', 'download']}
+          title={copy.updates.check.title}
+          description={copy.updates.check.description}
+          keywords={copy.updates.check.keywords}
           className="space-y-3"
         >
           <div className="flex items-center gap-3">
@@ -651,7 +676,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
               ) : (
                 <RefreshCw className="size-3.5" />
               )}
-              Check for Updates
+              {copy.updates.checkButton}
             </Button>
 
             {updateStatus.state === 'available' ? (
@@ -660,7 +685,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                 size="sm"
                 onClick={() => {
                   void window.api.updater.download().catch((error) => {
-                    toast.error('Could not start the update download.', {
+                    toast.error(copy.updates.downloadStartError, {
                       description: String((error as Error)?.message ?? error)
                     })
                   })
@@ -668,23 +693,22 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                 className="gap-2"
               >
                 <Download className="size-3.5" />
-                Install Update ({updateStatus.version})
+                {copy.updates.installUpdate(updateStatus.version)}
               </Button>
             ) : updateStatus.state === 'downloaded' ? (
               <Button variant="default" size="sm" onClick={handleRestartToUpdate} className="gap-2">
                 <Download className="size-3.5" />
-                Restart to Update ({updateStatus.version})
+                {copy.updates.restartToUpdate(updateStatus.version)}
               </Button>
             ) : null}
           </div>
 
           <p className="text-xs text-muted-foreground">
-            {updateStatus.state === 'idle' && 'Updates are checked automatically on launch.'}
-            {updateStatus.state === 'checking' && 'Checking for updates...'}
+            {updateStatus.state === 'idle' && copy.updates.idle}
+            {updateStatus.state === 'checking' && copy.updates.checking}
             {updateStatus.state === 'available' && (
               <>
-                Version {updateStatus.version} is available. Click &quot;Install Update&quot; to
-                download and install it.{' '}
+                {copy.updates.available(updateStatus.version)}{' '}
                 <a
                   href={
                     updateStatus.releaseUrl ??
@@ -694,16 +718,16 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                   rel="noopener noreferrer"
                   className="underline hover:text-foreground"
                 >
-                  Release notes
+                  {copy.updates.releaseNotes}
                 </a>
               </>
             )}
-            {updateStatus.state === 'not-available' && 'You\u2019re on the latest version.'}
+            {updateStatus.state === 'not-available' && copy.updates.latest}
             {updateStatus.state === 'downloading' &&
-              `Downloading v${updateStatus.version}... ${updateStatus.percent}%`}
+              copy.updates.downloading(updateStatus.version, updateStatus.percent)}
             {updateStatus.state === 'downloaded' && (
               <>
-                Version {updateStatus.version} is ready to install.{' '}
+                {copy.updates.downloaded(updateStatus.version)}{' '}
                 <a
                   href={
                     updateStatus.releaseUrl ??
@@ -713,7 +737,7 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
                   rel="noopener noreferrer"
                   className="underline hover:text-foreground"
                 >
-                  Release notes
+                  {copy.updates.releaseNotes}
                 </a>
               </>
             )}
@@ -724,8 +748,8 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
               // 'downloaded' state). Label accordingly so a download failure
               // isn't mislabeled as a "check" failure. Mirrors UpdateCard.tsx.
               (updateVersionRef.current
-                ? `Update error. ${updateStatus.message}`
-                : `Update check failed. ${updateStatus.message}`)}
+                ? copy.updates.updateError(updateStatus.message)
+                : copy.updates.checkError(updateStatus.message))}
           </p>
         </SearchableSetting>
       </section>
@@ -744,8 +768,9 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
           {section}
         </div>
       ))}
-      {matchesSettingsSearch(searchQuery, GENERAL_SUPPORT_SEARCH_ENTRIES) ? (
+      {matchesSettingsSearch(searchQuery, supportSearchEntries) ? (
         <SupportSection
+          copy={copy}
           state={starState}
           hasPrecedingSections={visibleSections.length > 0}
           onStarClick={handleStarClick}
@@ -756,12 +781,14 @@ export function GeneralPane({ settings, updateSettings }: GeneralPaneProps): Rea
 }
 
 type SupportSectionProps = {
+  copy: ReturnType<typeof useI18n>['messages']['settings']['general']
   state: 'loading' | 'not-starred' | 'starring' | 'starred' | 'hidden' | 'error'
   hasPrecedingSections: boolean
   onStarClick: () => void | Promise<void>
 }
 
 function SupportSection({
+  copy,
   state,
   hasPrecedingSections,
   onStarClick
@@ -785,10 +812,10 @@ function SupportSection({
         <div className="space-y-8">
           {hasPrecedingSections ? <Separator /> : null}
           <div className="space-y-4">
-            <SettingsSubsectionHeader title="Support Orca" />
+            <SettingsSubsectionHeader title={copy.support.title} />
             {state === 'loading' ? <SupportRowSkeleton /> : null}
             {state !== 'loading' && state !== 'hidden' ? (
-              <SupportRow state={state} onStarClick={onStarClick} />
+              <SupportRow copy={copy} state={state} onStarClick={onStarClick} />
             ) : null}
           </div>
         </div>
@@ -807,9 +834,11 @@ function SupportRowSkeleton(): React.JSX.Element {
 }
 
 function SupportRow({
+  copy,
   state,
   onStarClick
 }: {
+  copy: ReturnType<typeof useI18n>['messages']['settings']['general']
   state: 'not-starred' | 'starring' | 'starred' | 'error'
   onStarClick: () => void | Promise<void>
 }): React.JSX.Element {
@@ -821,14 +850,14 @@ function SupportRow({
   // disabled button.
   return (
     <SearchableSetting
-      title="Star Orca on GitHub"
-      description="Support the project with a GitHub star via the gh CLI."
-      keywords={['star', 'github', 'support', 'feedback', 'like']}
+      title={copy.support.star.title}
+      description={copy.support.star.description}
+      keywords={copy.support.star.keywords}
       className="flex items-center justify-between gap-4 py-2"
     >
-      <Label>Star Orca on GitHub</Label>
+      <Label>{copy.support.star.title}</Label>
       {state === 'starred' ? (
-        <SupportRowThanks />
+        <SupportRowThanks copy={copy} />
       ) : (
         <Button
           variant="default"
@@ -842,14 +871,22 @@ function SupportRow({
           ) : (
             <Star className="size-3.5" />
           )}
-          {state === 'starring' ? 'Starring…' : state === 'error' ? 'Try Again' : 'Star'}
+          {state === 'starring'
+            ? copy.support.starring
+            : state === 'error'
+              ? copy.support.tryAgain
+              : copy.support.starButton}
         </Button>
       )}
     </SearchableSetting>
   )
 }
 
-function SupportRowThanks(): React.JSX.Element {
+function SupportRowThanks({
+  copy
+}: {
+  copy: ReturnType<typeof useI18n>['messages']['settings']['general']
+}): React.JSX.Element {
   // Why: match the size="sm" button's h-8 / gap-1.5 / px-3 dimensions so the
   // row height stays identical when the button is swapped out. Without the
   // fixed height, the text baseline collapses ~6px and the entire row
@@ -862,7 +899,7 @@ function SupportRowThanks(): React.JSX.Element {
       aria-live="polite"
     >
       <Star className="size-3.5 fill-amber-400/80 text-amber-400/80" aria-hidden="true" />
-      Thanks for the support!
+      {copy.support.thanks}
     </div>
   )
 }

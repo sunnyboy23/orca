@@ -1,22 +1,9 @@
 import type { SettingsSearchEntry } from './settings-search'
+import { inputEn } from '@/i18n/settings-core-panes-en'
+import type { InputMessages } from '@/i18n/settings-core-panes-types'
 
-export const INPUT_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Middle-click Paste from Selection',
-    description:
-      'Enabled by default on Linux and macOS. Linux uses the system selection clipboard; other platforms use a private buffer.',
-    keywords: [
-      'input',
-      'editing',
-      'selection',
-      'primary selection',
-      'middle click',
-      'middle mouse',
-      'paste',
-      'clipboard',
-      'x11',
-      'linux',
-      'macos'
-    ]
-  }
-]
+export function getInputPaneSearchEntries(messages: InputMessages = inputEn): SettingsSearchEntry[] {
+  return [messages.middleClickPaste]
+}
+
+export const INPUT_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = getInputPaneSearchEntries()

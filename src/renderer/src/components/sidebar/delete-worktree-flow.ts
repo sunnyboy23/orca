@@ -4,6 +4,7 @@ import { getWorktreeMapFromState } from '@/store/selectors'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { getDeleteWorktreeToastCopy } from './delete-worktree-toast'
 import { getWorkspaceDeleteLineage } from './workspace-delete-lineage'
+import { getMessages, resolveLocale } from '@/i18n'
 import {
   isPathInsideOrEqual,
   normalizeRuntimePathForComparison
@@ -99,6 +100,7 @@ export function runWorktreeDeleteWithToast(
   worktreeName: string
 ): Promise<boolean> {
   const removeWorktree = useAppStore.getState().removeWorktree
+  const copy = getMessages(resolveLocale(useAppStore.getState().settings)).workspace.menu
 
   return removeWorktree(worktreeId, false)
     .then((result) => {
@@ -107,38 +109,38 @@ export function runWorktreeDeleteWithToast(
       }
       const state = useAppStore.getState().deleteStateByWorktreeId[worktreeId]
       const canForceDelete = state?.canForceDelete ?? false
-      const toastCopy = getDeleteWorktreeToastCopy(worktreeName, canForceDelete, result.error)
+      const toastCopy = getDeleteWorktreeToastCopy(worktreeName, canForceDelete, result.error, copy)
       const showToast = toastCopy.isDestructive ? toast.error : toast.info
       showToast(toastCopy.title, {
         description: toastCopy.description,
         duration: 10000,
         cancel: {
-          label: 'View',
+          label: copy.view,
           onClick: () => viewWorktreeDiff(worktreeId)
         },
         action: canForceDelete
           ? {
-              label: 'Force Delete',
+              label: copy.forceDelete,
               onClick: () => {
                 useAppStore
                   .getState()
                   .removeWorktree(worktreeId, true)
                   .then((forceResult) => {
                     if (!forceResult.ok) {
-                      toast.error('Force delete failed', {
+                      toast.error(copy.forceDeleteFailed, {
                         description: forceResult.error,
                         action: {
-                          label: 'View',
+                          label: copy.view,
                           onClick: () => viewWorktreeDiff(worktreeId)
                         }
                       })
                     }
                   })
                   .catch((err: unknown) => {
-                    toast.error('Failed to delete workspace', {
+                    toast.error(copy.deleteFailed, {
                       description: err instanceof Error ? err.message : String(err),
                       action: {
-                        label: 'View',
+                        label: copy.view,
                         onClick: () => viewWorktreeDiff(worktreeId)
                       }
                     })
@@ -150,7 +152,7 @@ export function runWorktreeDeleteWithToast(
       return false
     })
     .catch((err: unknown) => {
-      toast.error('Failed to delete workspace', {
+      toast.error(copy.deleteFailed, {
         description: err instanceof Error ? err.message : String(err)
       })
       return false
@@ -211,8 +213,9 @@ export function runWorktreeBatchDelete(
     .filter((worktree): worktree is Worktree => worktree != null && !worktree.isMainWorktree)
 
   if (targets.length === 0) {
-    toast.info('No deletable workspaces selected', {
-      description: 'Refresh Space and try again if the workspace list looks stale.'
+    const copy = getMessages(resolveLocale(state.settings)).workspace.menu
+    toast.info(copy.noDeletableWorkspacesSelected, {
+      description: copy.staleWorkspaceList
     })
     return false
   }

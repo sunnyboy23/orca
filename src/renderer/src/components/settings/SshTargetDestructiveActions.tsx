@@ -3,6 +3,8 @@ import type { ReactNode } from 'react'
 import type { SshConnectionState } from '../../../../shared/ssh-types'
 import { SshDestructiveActionDialog } from './SshDestructiveActionDialog'
 import { isSshTargetConnecting, type SshTargetBusyAction } from './ssh-target-action-state'
+import { sshEn } from '@/i18n/settings-ssh-en'
+import type { SshSettingsMessages } from '@/i18n/settings-ssh-types'
 
 type PendingTargetAction = { id: string; label: string }
 
@@ -15,6 +17,7 @@ type SshTargetDestructiveActionsRenderProps = {
 
 type SshTargetDestructiveActionsProps = {
   connectionStates: Map<string, SshConnectionState>
+  copy?: SshSettingsMessages
   onRemove: (targetId: string) => Promise<void>
   onResetRelay: (targetId: string) => Promise<void>
   onTerminateSessions: (targetId: string) => Promise<void>
@@ -23,6 +26,7 @@ type SshTargetDestructiveActionsProps = {
 
 export function SshTargetDestructiveActions({
   connectionStates,
+  copy = sshEn,
   onRemove,
   onResetRelay,
   onTerminateSessions,
@@ -140,11 +144,12 @@ export function SshTargetDestructiveActions({
 
       <SshDestructiveActionDialog
         open={!!pendingRemove}
-        title="Remove SSH Target"
-        description="This will remove the target and end any active remote terminals."
+        title={copy.dialogs.remove.title}
+        description={copy.dialogs.remove.description}
         targetLabel={pendingRemove?.label}
-        actionLabel="Remove"
-        busyLabel="Removing"
+        actionLabel={copy.dialogs.remove.action}
+        cancelLabel={copy.dialogs.cancel}
+        busyLabel={copy.dialogs.remove.busy}
         isBusy={pendingRemoveIsBusy}
         onOpenChange={(open) => {
           if (pendingRemoveIsBusy) {
@@ -161,11 +166,12 @@ export function SshTargetDestructiveActions({
 
       <SshDestructiveActionDialog
         open={!!pendingReset && (!pendingResetBlockedByConnection || pendingResetIsBusy)}
-        title="Reset Remote Relay?"
-        description="This force-stops the remote relay for this SSH target. Active remote terminals and port forwards for this target will end."
+        title={copy.dialogs.resetRelay.title}
+        description={copy.dialogs.resetRelay.description}
         targetLabel={pendingReset?.label}
-        actionLabel="Reset Relay"
-        busyLabel="Resetting"
+        actionLabel={copy.dialogs.resetRelay.action}
+        cancelLabel={copy.dialogs.cancel}
+        busyLabel={copy.dialogs.resetRelay.busy}
         isBusy={pendingResetIsBusy}
         onOpenChange={(open) => {
           if (pendingResetIsBusy) {
@@ -180,11 +186,12 @@ export function SshTargetDestructiveActions({
 
       <SshDestructiveActionDialog
         open={!!pendingTerminate}
-        title="End Remote Terminals?"
-        description="This will stop active terminal sessions on this SSH target. Reconnecting will not restore them."
+        title={copy.dialogs.terminate.title}
+        description={copy.dialogs.terminate.description}
         targetLabel={pendingTerminate?.label}
-        actionLabel="End Terminals"
-        busyLabel="Ending"
+        actionLabel={copy.dialogs.terminate.action}
+        cancelLabel={copy.dialogs.cancel}
+        busyLabel={copy.dialogs.terminate.busy}
         isBusy={pendingTerminateIsBusy}
         onOpenChange={(open) => {
           if (pendingTerminateIsBusy) {

@@ -13,6 +13,9 @@ import {
 import RepoBadgeLabel from '@/components/repo/RepoBadgeLabel'
 import { searchRepos } from '@/lib/repo-search'
 import type { Repo } from '../../../../shared/types'
+import { useI18n, type I18nMessages } from '@/i18n'
+
+type WorkspaceMenuCopy = I18nMessages['workspace']['menu']
 
 function projectCommandFilter(_value: string, search: string, keywords?: string[]): number {
   const query = search.trim().toLowerCase()
@@ -38,6 +41,8 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
   const filterRepoIds = useAppStore((s) => s.filterRepoIds)
   const setFilterRepoIds = useAppStore((s) => s.setFilterRepoIds)
   const repos = useAppStore((s) => s.repos)
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
 
   const [query, setQuery] = useState('')
   const [highlightedRepoId, setHighlightedRepoId] = useState('')
@@ -138,6 +143,7 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
         hasRepoFilter={hasRepoFilter}
         selectedCount={selectedCount}
         onClear={clearRepos}
+        copy={copy}
       />
 
       <Command
@@ -145,10 +151,14 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
         onValueChange={setHighlightedRepoId}
         className="bg-transparent"
       >
-        <SelectedProjectPills selectedRepos={selectedRepos} onRemoveRepo={handleRemoveRepo} />
+        <SelectedProjectPills
+          selectedRepos={selectedRepos}
+          onRemoveRepo={handleRemoveRepo}
+          copy={copy}
+        />
         <CommandInput
           autoFocus
-          placeholder={selectedRepos.length > 0 ? 'Add project...' : 'Filter projects...'}
+          placeholder={selectedRepos.length > 0 ? copy.addProject : copy.filterProjects}
           value={query}
           onValueChange={setQuery}
           onKeyDown={handleInputKeyDown}
@@ -158,7 +168,7 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
         />
         <CommandList className="max-h-40 py-1">
           <CommandEmpty className="py-4 text-[11px]">
-            {hasRepoFilter ? 'No unselected projects match' : 'No projects match'}
+            {hasRepoFilter ? copy.noUnselectedProjects : copy.noProjects}
           </CommandEmpty>
           {availableRepos.map((repo) => (
             <CommandItem
@@ -191,10 +201,12 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
 
 function SelectedProjectPills({
   selectedRepos,
-  onRemoveRepo
+  onRemoveRepo,
+  copy
 }: {
   selectedRepos: Repo[]
   onRemoveRepo: (repoId: string) => void
+  copy: WorkspaceMenuCopy
 }) {
   if (selectedRepos.length === 0) {
     return null
@@ -218,7 +230,7 @@ function SelectedProjectPills({
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label={`Remove ${repo.displayName} filter`}
+            aria-label={copy.removeProjectFilter(repo.displayName)}
             className="-mr-1 size-4 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             onMouseDown={(event) => event.preventDefault()}
             onClick={() => onRemoveRepo(repo.id)}
@@ -234,16 +246,18 @@ function SelectedProjectPills({
 function ProjectFilterHeader({
   hasRepoFilter,
   selectedCount,
-  onClear
+  onClear,
+  copy
 }: {
   hasRepoFilter: boolean
   selectedCount: number
   onClear: () => void
+  copy: WorkspaceMenuCopy
 }) {
   return (
     <div className="flex items-center justify-between px-2 py-1">
       <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground">
-        Projects
+        {copy.projects}
         {hasRepoFilter && (
           <Badge
             variant="outline"
@@ -259,7 +273,7 @@ function ProjectFilterHeader({
         className="rounded-full px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-40 disabled:hover:bg-transparent"
         disabled={!hasRepoFilter}
       >
-        Clear
+        {copy.clear}
       </button>
     </div>
   )

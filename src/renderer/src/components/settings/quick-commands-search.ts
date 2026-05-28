@@ -1,26 +1,11 @@
+import { quickCommandsEn } from '@/i18n/settings-panes-en'
+import type { QuickCommandsMessages } from '@/i18n/settings-panes-types'
 import type { SettingsSearchEntry } from './settings-search'
 
-export const QUICK_COMMANDS_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Quick Commands',
-    description:
-      'Saved terminal commands that can be launched from any terminal, scoped globally or to a specific project.',
-    keywords: [
-      'quick',
-      'command',
-      'commands',
-      'terminal',
-      'shortcut',
-      'snippet',
-      'global',
-      'project',
-      'repo',
-      'repository',
-      'run',
-      'launch',
-      'pnpm',
-      'npm',
-      'yarn'
-    ]
-  }
-]
+export function getQuickCommandsPaneSearchEntries(
+  messages: QuickCommandsMessages = quickCommandsEn
+): SettingsSearchEntry[] {
+  return [messages.search]
+}
+
+export const QUICK_COMMANDS_PANE_SEARCH_ENTRIES = getQuickCommandsPaneSearchEntries()

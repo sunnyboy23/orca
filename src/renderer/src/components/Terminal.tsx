@@ -82,6 +82,7 @@ import {
 } from '../../../shared/keybindings'
 import { matchesRecentTabSwitcherChord } from '../../../shared/window-shortcut-policy'
 import { showTerminalShortcutCaptureNotification } from '@/lib/terminal-shortcut-capture-notification'
+import { useI18n } from '@/i18n'
 
 const EditorPanel = lazy(() => import('./editor/EditorPanel'))
 
@@ -99,6 +100,7 @@ function getKeybindingContext(target: EventTarget | null): KeybindingContext {
 }
 
 function Terminal(): React.JSX.Element | null {
+  const { messages } = useI18n()
   const allWorktrees = useAllWorktrees()
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const activeView = useAppStore((s) => s.activeView)
@@ -433,7 +435,7 @@ function Terminal(): React.JSX.Element | null {
         }, CLOSE_DIALOG_DEBOUNCE_MS)
         return
       }
-      toast.error('Save timed out or failed. Fix errors before closing.')
+      toast.error(messages.terminal.saveTimedOut)
       setSaveDialogFileId(fileId)
       // Why: a genuine timeout leaves the user back on the same dialog, so
       // release the guard immediately — a new click here is a deliberate
@@ -448,7 +450,7 @@ function Terminal(): React.JSX.Element | null {
     setTimeout(() => {
       isClosingRef.current = false
     }, CLOSE_DIALOG_DEBOUNCE_MS)
-  }, [advanceEditorCloseQueue, saveDialogFileId, waitForFileClosed])
+  }, [advanceEditorCloseQueue, messages.terminal.saveTimedOut, saveDialogFileId, waitForFileClosed])
 
   const handleSaveDialogDiscard = useCallback(async () => {
     if (isClosingRef.current) {
@@ -1660,7 +1662,7 @@ function Terminal(): React.JSX.Element | null {
             <Suspense
               fallback={
                 <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-                  Loading editor...
+                  {messages.terminal.loadingEditor}
                 </div>
               }
             >
@@ -1681,22 +1683,22 @@ function Terminal(): React.JSX.Element | null {
       >
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-sm">Unsaved Changes</DialogTitle>
+            <DialogTitle className="text-sm">{messages.terminal.unsavedChangesTitle}</DialogTitle>
             <DialogDescription className="text-xs">
               {saveDialogFile
-                ? `"${basename(saveDialogFile.relativePath)}" has unsaved changes. Do you want to save before closing?`
-                : 'This file has unsaved changes.'}
+                ? messages.terminal.unsavedFileChanges(basename(saveDialogFile.relativePath))
+                : messages.terminal.unsavedGenericChanges}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <Button type="button" variant="outline" size="sm" onClick={handleSaveDialogCancel}>
-              Cancel
+              {messages.terminal.cancel}
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={handleSaveDialogDiscard}>
-              Don&apos;t Save
+              {messages.terminal.dontSave}
             </Button>
             <Button type="button" size="sm" onClick={handleSaveDialogSave}>
-              Save
+              {messages.terminal.save}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1713,9 +1715,9 @@ function Terminal(): React.JSX.Element | null {
       >
         <DialogContent className="max-w-sm" showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle className="text-sm">Close Window?</DialogTitle>
+            <DialogTitle className="text-sm">{messages.terminal.closeWindowTitle}</DialogTitle>
             <DialogDescription className="text-xs">
-              There are local terminals with running processes. Close the window anyway?
+              {messages.terminal.closeWindowDescription}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
@@ -1725,7 +1727,7 @@ function Terminal(): React.JSX.Element | null {
               size="sm"
               onClick={() => setWindowCloseDialogOpen(false)}
             >
-              Cancel
+              {messages.terminal.cancel}
             </Button>
             <Button
               type="button"
@@ -1737,7 +1739,7 @@ function Terminal(): React.JSX.Element | null {
                 window.api.ui.confirmWindowClose()
               }}
             >
-              Close
+              {messages.terminal.close}
             </Button>
           </DialogFooter>
         </DialogContent>

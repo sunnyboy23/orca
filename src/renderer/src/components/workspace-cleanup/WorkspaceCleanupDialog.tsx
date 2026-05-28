@@ -26,60 +26,45 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
+import { useI18n, type I18nMessages } from '@/i18n'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { isGitRepoKind } from '../../../../shared/repo-kind'
 import {
   canQueueWorkspaceCleanupCandidate,
-  type WorkspaceCleanupBlocker,
   type WorkspaceCleanupCandidate,
   type WorkspaceCleanupScanError,
   type WorkspaceCleanupTier
 } from '../../../../shared/workspace-cleanup'
 
-const TIER_LABELS: Record<WorkspaceCleanupTier, string> = {
-  ready: 'Suggested cleanup',
-  review: 'Needs a closer look',
-  protected: 'Not suggested for cleanup'
-}
-
 type CleanupView = WorkspaceCleanupTier | 'hidden'
 
-const BLOCKER_LABELS: Record<WorkspaceCleanupBlocker, string> = {
-  'main-worktree': 'Main workspace',
-  'folder-repo': 'Folder project',
-  pinned: 'Pinned',
-  'active-workspace': 'Active workspace',
-  'running-terminal': 'Running terminal process',
-  'terminal-liveness-unknown': 'Terminal liveness unknown',
-  'dirty-editor-buffer': 'Unsaved editor buffer',
-  'volatile-local-context': 'Volatile local context',
-  'recent-visible-context': 'Recently visited tabs',
-  'live-agent': 'Active agent',
-  'ssh-disconnected': 'Remote unavailable',
-  'git-status-error': 'Git status unavailable',
-  'dirty-files': 'Changed files',
-  'unpushed-commits': 'Unpushed commits',
-  'unknown-base': 'Could not verify unpushed commits',
-  dismissed: 'Ignored'
+type WorkspaceCleanupCopy = I18nMessages['workspace']['cleanup']
+
+function getTierLabels(copy: WorkspaceCleanupCopy): Record<WorkspaceCleanupTier, string> {
+  return {
+    ready: copy.suggestedCleanup,
+    review: copy.closerLook,
+    protected: copy.notSuggestedForCleanup
+  }
 }
 
-function formatRelativeTime(timestamp: number): string {
+function formatRelativeTime(timestamp: number, copy: WorkspaceCleanupCopy): string {
   if (!timestamp) {
-    return 'Never'
+    return copy.never
   }
   const deltaMs = Date.now() - timestamp
   if (deltaMs < 60_000) {
-    return 'Just now'
+    return copy.justNow
   }
   const minutes = Math.floor(deltaMs / 60_000)
   if (minutes < 60) {
-    return `${minutes}m ago`
+    return copy.minutesAgo(minutes)
   }
   const hours = Math.floor(minutes / 60)
   if (hours < 48) {
-    return `${hours}h ago`
+    return copy.hoursAgo(hours)
   }
-  return `${Math.floor(hours / 24)}d ago`
+  return copy.daysAgo(Math.floor(hours / 24))
 }
 
 function isDisconnectedRemoteScanError(message: string): boolean {
@@ -91,7 +76,8 @@ function isDisconnectedRemoteScanError(message: string): boolean {
 
 function formatScanNoticeMessage(
   errors: WorkspaceCleanupScanError[],
-  repoNameById: Map<string, string>
+  repoNameById: Map<string, string>,
+  copy: WorkspaceCleanupCopy
 ): string | null {
   const visibleErrors = errors.filter(
     (error) => !isDisconnectedRemoteScanError(error.message ?? '')
@@ -101,36 +87,36 @@ function formatScanNoticeMessage(
   }
   if (visibleErrors.length === 1) {
     const error = visibleErrors[0]
-    const repoName = formatScanErrorRepoName(error, repoNameById)
-    return `Could not check ${repoName}: ${formatScanErrorReason(error.message)}. Some inactive workspaces may be missing. Refresh to try again.`
+    const repoName = formatScanErrorRepoName(error, repoNameById, copy)
+    return copy.scanNotice.single(repoName, formatScanErrorReason(error.message, copy))
   }
   const repoNames = visibleErrors
     .slice(0, 3)
-    .map((error) => formatScanErrorRepoName(error, repoNameById))
+    .map((error) => formatScanErrorRepoName(error, repoNameById, copy))
     .join(', ')
   const moreCount = visibleErrors.length - 3
-  const suffix = moreCount > 0 ? `, +${moreCount} more` : ''
-  return `Could not check ${visibleErrors.length} repositories (${repoNames}${suffix}). Some inactive workspaces may be missing. Refresh to try again.`
+  return copy.scanNotice.multiple(visibleErrors.length, repoNames, moreCount)
 }
 
 function formatScanErrorRepoName(
   error: Partial<WorkspaceCleanupScanError>,
-  repoNameById: Map<string, string>
+  repoNameById: Map<string, string>,
+  copy: WorkspaceCleanupCopy
 ): string {
   const repoName = error.repoName?.trim()
   if (repoName) {
     return repoName
   }
   const fallback = error.repoId ? repoNameById.get(error.repoId)?.trim() : ''
-  return fallback || 'a repository'
+  return fallback || copy.scanNotice.repoFallback
 }
 
-function formatScanErrorReason(message: string | undefined): string {
+function formatScanErrorReason(message: string | undefined, copy: WorkspaceCleanupCopy): string {
   if (!message) {
-    return 'Git could not list worktrees'
+    return copy.scanNotice.defaultReason
   }
   if (message === 'Could not scan workspace cleanup for this repository.') {
-    return 'Git could not list worktrees'
+    return copy.scanNotice.defaultReason
   }
   return message.replace(/\.$/, '')
 }
@@ -168,6 +154,9 @@ function getCleanupCandidatePriority(candidate: WorkspaceCleanupCandidate): numb
 }
 
 export default function WorkspaceCleanupDialog(): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.workspace.cleanup
+  const tierLabels = useMemo(() => getTierLabels(copy), [copy])
   const activeModal = useAppStore((s) => s.activeModal)
   const closeModal = useAppStore((s) => s.closeModal)
   const scan = useAppStore((s) => s.workspaceCleanupScan)
@@ -195,12 +184,12 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
       setRowFailures({})
       setActiveView('ready')
       void scanWorkspaceCleanup().catch((err: unknown) => {
-        toast.error('Workspace cleanup scan failed', {
+        toast.error(copy.scanFailed, {
           description: err instanceof Error ? err.message : String(err)
         })
       })
     }
-  }, [open, scanWorkspaceCleanup])
+  }, [copy.scanFailed, open, scanWorkspaceCleanup])
 
   useEffect(() => {
     if (!open) {
@@ -281,8 +270,8 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
     [effectiveRepoSelection, scan?.errors]
   )
   const scanNoticeMessage = useMemo(
-    () => formatScanNoticeMessage(selectedScanErrors, repoNameById),
-    [repoNameById, selectedScanErrors]
+    () => formatScanNoticeMessage(selectedScanErrors, repoNameById, copy),
+    [copy, repoNameById, selectedScanErrors]
   )
   const readyCount = groups.ready.length
   const protectedCount = groups.protected.length
@@ -346,11 +335,11 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
   const refresh = useCallback(() => {
     setRowFailures({})
     void scanWorkspaceCleanup().catch((err: unknown) => {
-      toast.error('Workspace cleanup scan failed', {
+      toast.error(copy.scanFailed, {
         description: err instanceof Error ? err.message : String(err)
       })
     })
-  }, [scanWorkspaceCleanup])
+  }, [copy.scanFailed, scanWorkspaceCleanup])
 
   const toggleActiveSelection = useCallback(() => {
     if (activeQueueableRows.length === 0) {
@@ -382,12 +371,12 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
           })
         })
         .catch((err: unknown) => {
-          toast.error('Could not ignore cleanup suggestion', {
+          toast.error(copy.ignoreFailed, {
             description: err instanceof Error ? err.message : String(err)
           })
         })
     },
-    [dismissCandidates]
+    [copy.ignoreFailed, dismissCandidates]
   )
 
   const confirmRemove = useCallback(async () => {
@@ -413,21 +402,17 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
         return next
       })
       if (result.removedIds.length > 0) {
-        toast.success(
-          `Removed ${result.removedIds.length} workspace${result.removedIds.length === 1 ? '' : 's'}`
-        )
+        toast.success(copy.removed(result.removedIds.length))
       }
       if (result.failures.length > 0) {
-        toast.error(
-          `${result.failures.length} workspace${result.failures.length === 1 ? '' : 's'} could not be removed`
-        )
+        toast.error(copy.removeFailed(result.failures.length))
       } else {
         setConfirming(false)
       }
     } finally {
       setRemoving(false)
     }
-  }, [removeCandidates, selectedCandidates])
+  }, [copy, removeCandidates, selectedCandidates])
 
   const selectedCount = selectedCandidates.length
 
@@ -442,9 +427,9 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
             <DialogHeader className="border-b border-border px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <DialogTitle className="text-base">Delete Inactive Workspaces</DialogTitle>
+                  <DialogTitle className="text-base">{copy.title}</DialogTitle>
                   <DialogDescription className="mt-1 text-xs">
-                    Review inactive workspaces before deleting their local files and Orca state.
+                    {copy.description}
                   </DialogDescription>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -453,7 +438,7 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                       <Button
                         variant="outline"
                         size="icon-sm"
-                        aria-label="Refresh"
+                        aria-label={copy.refresh}
                         onClick={refresh}
                         disabled={loading}
                       >
@@ -461,13 +446,13 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={4}>
-                      Refresh
+                      {copy.refresh}
                     </TooltipContent>
                   </Tooltip>
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    aria-label="Close"
+                    aria-label={copy.close}
                     onClick={() => closeModal()}
                     disabled={removing}
                   >
@@ -482,11 +467,10 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                 <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-muted-foreground" />
                 <div className="min-w-0">
                   <div className="text-xs font-medium text-foreground">
-                    Checking workspace safety
+                    {copy.checkingSafety}
                   </div>
                   <div className="mt-0.5 text-xs text-muted-foreground">
-                    Scanning worktrees and git state, then combining open tab, terminal, live agent,
-                    and remote availability signals before suggesting deletions.
+                    {copy.checkingSafetyDescription}
                   </div>
                 </div>
               </div>
@@ -494,17 +478,17 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/25 px-4 py-2.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
                   <div className="min-w-0 text-sm font-medium text-foreground">
-                    {selectedCount} selected
+                    {copy.selected(selectedCount)}
                   </div>
-                  <StatusPill>{inactiveCount} inactive</StatusPill>
+                  <StatusPill>{copy.inactive(inactiveCount)}</StatusPill>
                   {readyCount > 0 ? (
-                    <StatusPill tone="ready">{readyCount} safe to remove</StatusPill>
+                    <StatusPill tone="ready">{copy.safeToRemove(readyCount)}</StatusPill>
                   ) : null}
                   {groups.review.length > 0 ? (
-                    <StatusPill tone="review">{groups.review.length} need review</StatusPill>
+                    <StatusPill tone="review">{copy.needReview(groups.review.length)}</StatusPill>
                   ) : null}
                   {protectedCount > 0 ? (
-                    <StatusPill>{protectedCount} not suggested</StatusPill>
+                    <StatusPill>{copy.notSuggested(protectedCount)}</StatusPill>
                   ) : null}
                 </div>
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -526,7 +510,7 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                     disabled={selectedCount === 0}
                   >
                     <Trash2 className="size-3.5" />
-                    Delete selected
+                    {copy.deleteSelected}
                   </Button>
                 </div>
               </div>
@@ -553,6 +537,7 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                   hidden: hiddenByKeepCount
                 }}
                 onViewChange={setActiveView}
+                copy={copy}
               />
               <div className="flex min-h-0 min-w-0 flex-col border-t border-border md:border-l md:border-t-0">
                 <div className="flex min-h-10 items-center justify-between gap-3 border-b border-border px-3 py-2">
@@ -566,8 +551,8 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                         }
                         aria-label={
                           allActiveQueueableSelected
-                            ? `Unselect all in ${TIER_LABELS[activeView]}`
-                            : `Select all in ${TIER_LABELS[activeView]}`
+                            ? copy.unselectAllIn(tierLabels[activeView])
+                            : copy.selectAllIn(tierLabels[activeView])
                         }
                         onClick={toggleActiveSelection}
                         className="flex size-4 shrink-0 items-center justify-center rounded border border-border bg-background text-primary hover:bg-accent"
@@ -581,8 +566,8 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                     ) : null}
                     <div className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
                       {activeView === 'hidden'
-                        ? 'Ignored cleanup suggestions'
-                        : TIER_LABELS[activeView]}
+                        ? copy.ignoredCleanupSuggestions
+                        : tierLabels[activeView]}
                     </div>
                   </div>
                   {activeView === 'hidden' && hiddenByKeepCount > 0 ? (
@@ -592,11 +577,11 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                       className="h-auto shrink-0 px-0 text-xs"
                       onClick={() => void resetDismissals()}
                     >
-                      Restore ignored suggestions
+                      {copy.restoreIgnoredSuggestions}
                     </Button>
                   ) : (
                     <div className="shrink-0 text-xs text-muted-foreground">
-                      Sorted by oldest activity
+                      {copy.sortedByOldestActivity}
                     </div>
                   )}
                 </div>
@@ -604,18 +589,18 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                   <div>
                     {initialLoading ? <SkeletonRows /> : null}
                     {!loading && scan && candidates.length === 0 && !scanNoticeMessage ? (
-                      <EmptyState title="No inactive workspaces to delete." />
+                      <EmptyState title={copy.emptyNoInactive} />
                     ) : null}
                     {!loading && scan && candidates.length === 0 && scanNoticeMessage ? (
-                      <EmptyState title="No inactive workspaces found in checked repositories." />
+                      <EmptyState title={copy.emptyNoInactiveInCheckedRepos} />
                     ) : null}
                     {!loading &&
                     scan &&
                     candidates.length > 0 &&
                     filteredCandidates.length === 0 ? (
                       <EmptyState
-                        title="No inactive workspaces match the selected repos."
-                        actionLabel="Show all repos"
+                        title={copy.emptyNoRepoMatch}
+                        actionLabel={copy.showAllRepos}
                         onAction={() => setRepoSelection(new Set(eligibleRepoIds))}
                       />
                     ) : null}
@@ -624,16 +609,17 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
                     filteredCandidates.length > 0 &&
                     visibleCandidates.length === 0 ? (
                       <EmptyState
-                        title="All cleanup suggestions are ignored."
-                        actionLabel="Review ignored workspaces"
+                        title={copy.emptyAllIgnored}
+                        actionLabel={copy.reviewIgnoredWorkspaces}
                         onAction={() => setActiveView('hidden')}
                       />
                     ) : null}
                     {!loading && scan && activeRows.length === 0 && visibleCandidates.length > 0 ? (
-                      <EmptyState title="No workspaces in this cleanup set." />
+                      <EmptyState title={copy.emptySet} />
                     ) : null}
                     {activeRows.map((candidate, index) => (
                       <CandidateRow
+                        copy={copy}
                         key={candidate.worktreeId}
                         candidate={candidate}
                         last={index === activeRows.length - 1}
@@ -656,7 +642,8 @@ export default function WorkspaceCleanupDialog(): React.JSX.Element {
             </div>
           </>
         ) : (
-          <ConfirmRemove
+            <ConfirmRemove
+              copy={copy}
             candidates={selectedCandidates}
             removing={removing}
             onCancel={() => setConfirming(false)}
@@ -699,17 +686,19 @@ function StatusPill({
 function CleanupViewNav({
   activeView,
   counts,
-  onViewChange
+  onViewChange,
+  copy
 }: {
   activeView: CleanupView
   counts: Record<CleanupView, number>
   onViewChange: (view: CleanupView) => void
+  copy: WorkspaceCleanupCopy
 }): React.JSX.Element {
   const items: { view: CleanupView; label: string }[] = [
-    { view: 'ready', label: 'Suggested' },
-    { view: 'review', label: 'Needs review' },
-    { view: 'protected', label: 'Not suggested' },
-    { view: 'hidden', label: 'Ignored' }
+    { view: 'ready', label: copy.suggested },
+    { view: 'review', label: copy.needsReview },
+    { view: 'protected', label: copy.notSuggestedNav },
+    { view: 'hidden', label: copy.ignored }
   ]
 
   return (
@@ -735,6 +724,7 @@ function CleanupViewNav({
 }
 
 function CandidateRow({
+  copy,
   candidate,
   last,
   selected,
@@ -744,6 +734,7 @@ function CandidateRow({
   onIgnore,
   onRemove
 }: {
+  copy: WorkspaceCleanupCopy
   candidate: WorkspaceCleanupCandidate
   last: boolean
   selected: boolean
@@ -755,10 +746,10 @@ function CandidateRow({
 }): React.JSX.Element {
   const selectable = canQueueWorkspaceCleanupCandidate(candidate)
   const ignored = candidate.blockers.includes('dismissed')
-  const blockers = candidate.blockers.map((blocker) => BLOCKER_LABELS[blocker])
-  const contextDetails = formatContextDetails(candidate)
-  const branchSafetyDetails = formatBranchSafetyDetails(candidate)
-  const status = getCandidateStatus(candidate)
+  const blockers = candidate.blockers.map((blocker) => copy.blockers[blocker])
+  const contextDetails = formatContextDetails(candidate, copy)
+  const branchSafetyDetails = formatBranchSafetyDetails(candidate, copy)
+  const status = getCandidateStatus(candidate, copy)
 
   return (
     <div
@@ -773,7 +764,7 @@ function CandidateRow({
             type="button"
             role="checkbox"
             aria-checked={selected}
-            aria-label={`Select ${candidate.displayName}`}
+            aria-label={copy.selectWorkspace(candidate.displayName)}
             onClick={() => onToggleSelected(candidate.worktreeId)}
             className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded border border-border bg-background text-primary hover:bg-accent"
           >
@@ -787,7 +778,7 @@ function CandidateRow({
             <span className="min-w-0 truncate text-sm font-medium">{candidate.displayName}</span>
             <StatusPill tone={status.tone}>{status.label}</StatusPill>
             <span className="text-xs text-muted-foreground">
-              Last active {formatRelativeTime(candidate.lastActivityAt)}
+              {copy.lastActive(formatRelativeTime(candidate.lastActivityAt, copy))}
             </span>
             {blockers.length > 0 ? (
               <span className="min-w-0 truncate text-xs text-muted-foreground">
@@ -799,9 +790,9 @@ function CandidateRow({
             {candidate.path}
           </div>
           <div className="mt-1 flex min-w-0 flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-            <span className="min-w-0 truncate">Repo {candidate.repoName}</span>
-            <span className="min-w-0 truncate font-mono">Branch {candidate.branch}</span>
-            <span>{formatGitStatus(candidate)}</span>
+            <span className="min-w-0 truncate">{copy.repo(candidate.repoName)}</span>
+            <span className="min-w-0 truncate font-mono">{copy.branch(candidate.branch)}</span>
+            <span>{formatGitStatus(candidate, copy)}</span>
             {branchSafetyDetails.slice(0, 1).map((detail) => (
               <span key={detail}>{detail}</span>
             ))}
@@ -820,14 +811,14 @@ function CandidateRow({
               <Button
                 variant="ghost"
                 size="icon-xs"
-                aria-label={`View ${candidate.displayName}`}
+                aria-label={copy.viewWorkspace(candidate.displayName)}
                 onClick={() => onView(candidate)}
               >
                 <Search className="size-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={4}>
-              View
+              {copy.view}
             </TooltipContent>
           </Tooltip>
           {!ignored ? (
@@ -836,14 +827,14 @@ function CandidateRow({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label={`Ignore ${candidate.displayName}`}
+                  aria-label={copy.ignoreWorkspace(candidate.displayName)}
                   onClick={() => onIgnore(candidate)}
                 >
                   <EyeOff className="size-3.5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={4}>
-                Ignore
+                {copy.ignore}
               </TooltipContent>
             </Tooltip>
           ) : null}
@@ -853,7 +844,7 @@ function CandidateRow({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  aria-label={`Remove ${candidate.displayName}`}
+                  aria-label={copy.removeWorkspace(candidate.displayName)}
                   className="text-destructive hover:text-destructive"
                   onClick={() => onRemove(candidate)}
                 >
@@ -861,7 +852,7 @@ function CandidateRow({
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={4}>
-                Remove
+                {copy.remove}
               </TooltipContent>
             </Tooltip>
           ) : null}
@@ -871,108 +862,99 @@ function CandidateRow({
   )
 }
 
-function getCandidateStatus(candidate: WorkspaceCleanupCandidate): {
+function getCandidateStatus(
+  candidate: WorkspaceCleanupCandidate,
+  copy: WorkspaceCleanupCopy
+): {
   label: string
   tone: 'neutral' | 'ready' | 'review' | 'destructive'
 } {
   if (candidate.blockers.includes('dismissed')) {
-    return { label: 'Ignored', tone: 'neutral' }
+    return { label: copy.status.ignored, tone: 'neutral' }
   }
   if (candidate.tier === 'ready') {
-    return { label: candidate.reasons.includes('archived') ? 'Archived' : 'Clean', tone: 'ready' }
+    return {
+      label: candidate.reasons.includes('archived') ? copy.status.archived : copy.status.clean,
+      tone: 'ready'
+    }
   }
   if (candidate.blockers.length > 0) {
-    return { label: BLOCKER_LABELS[candidate.blockers[0]], tone: 'neutral' }
+    return { label: copy.blockers[candidate.blockers[0]], tone: 'neutral' }
   }
   if (candidate.git.upstreamAhead && candidate.git.upstreamAhead > 0) {
-    return { label: 'Unpushed commits', tone: 'review' }
+    return { label: copy.status.unpushedCommits, tone: 'review' }
   }
   if (candidate.git.clean === false) {
-    return { label: 'Dirty', tone: 'review' }
+    return { label: copy.status.dirty, tone: 'review' }
   }
   if (candidate.tier === 'review') {
-    return { label: 'Review', tone: 'review' }
+    return { label: copy.status.review, tone: 'review' }
   }
-  return { label: 'Not suggested', tone: 'neutral' }
+  return { label: copy.status.notSuggested, tone: 'neutral' }
 }
 
-function formatGitStatus(candidate: WorkspaceCleanupCandidate): string {
+function formatGitStatus(candidate: WorkspaceCleanupCandidate, copy: WorkspaceCleanupCopy): string {
   if (candidate.git.clean === true) {
-    return 'Clean git'
+    return copy.git.clean
   }
   if (candidate.git.clean === false) {
-    return 'Dirty git'
+    return copy.git.dirty
   }
-  return 'Git unknown'
+  return copy.git.unknown
 }
 
-function formatBranchSafetyDetails(candidate: WorkspaceCleanupCandidate): string[] {
+function formatBranchSafetyDetails(
+  candidate: WorkspaceCleanupCandidate,
+  copy: WorkspaceCleanupCopy
+): string[] {
   const details: string[] = []
   if (candidate.git.upstreamAhead !== null) {
     details.push(
       candidate.git.upstreamAhead === 0
-        ? 'No unpushed commits'
-        : `${candidate.git.upstreamAhead} unpushed commit${
-            candidate.git.upstreamAhead === 1 ? '' : 's'
-          }`
+        ? copy.git.noUnpushedCommits
+        : copy.git.unpushedCommits(candidate.git.upstreamAhead)
     )
   }
   return details
 }
 
-function formatContextDetails(candidate: WorkspaceCleanupCandidate): string | null {
+function formatContextDetails(
+  candidate: WorkspaceCleanupCandidate,
+  copy: WorkspaceCleanupCopy
+): string | null {
   const parts: string[] = []
   if (candidate.localContext.terminalTabCount > 0) {
-    parts.push(
-      `${candidate.localContext.terminalTabCount} terminal tab${
-        candidate.localContext.terminalTabCount === 1 ? '' : 's'
-      }`
-    )
+    parts.push(copy.localContext.terminalTabs(candidate.localContext.terminalTabCount))
   }
   if (candidate.localContext.cleanEditorTabCount > 0) {
-    parts.push(
-      `${candidate.localContext.cleanEditorTabCount} editor tab${
-        candidate.localContext.cleanEditorTabCount === 1 ? '' : 's'
-      }`
-    )
+    parts.push(copy.localContext.editorTabs(candidate.localContext.cleanEditorTabCount))
   }
   if (candidate.localContext.browserTabCount > 0) {
-    parts.push(
-      `${candidate.localContext.browserTabCount} browser tab${
-        candidate.localContext.browserTabCount === 1 ? '' : 's'
-      }`
-    )
+    parts.push(copy.localContext.browserTabs(candidate.localContext.browserTabCount))
   }
   if (candidate.localContext.diffCommentCount > 0) {
-    parts.push(
-      `${candidate.localContext.diffCommentCount} diff note${
-        candidate.localContext.diffCommentCount === 1 ? '' : 's'
-      }`
-    )
+    parts.push(copy.localContext.diffNotes(candidate.localContext.diffCommentCount))
   }
   if (candidate.localContext.retainedDoneAgentCount > 0) {
-    parts.push(
-      `${candidate.localContext.retainedDoneAgentCount} completed agent${
-        candidate.localContext.retainedDoneAgentCount === 1 ? '' : 's'
-      }`
-    )
+    parts.push(copy.localContext.completedAgents(candidate.localContext.retainedDoneAgentCount))
   }
   return parts.length > 0 ? parts.join(', ') : null
 }
 
 function ConfirmRemove({
+  copy,
   candidates,
   removing,
   onCancel,
   onConfirm
 }: {
+  copy: WorkspaceCleanupCopy
   candidates: WorkspaceCleanupCandidate[]
   removing: boolean
   onCancel: () => void
   onConfirm: () => void
 }): React.JSX.Element {
   const count = candidates.length
-  const noun = count === 1 ? 'workspace' : 'workspaces'
   return (
     <>
       <DialogHeader className="border-b border-border px-5 py-4">
@@ -982,10 +964,10 @@ function ConfirmRemove({
           </div>
           <div className="min-w-0">
             <DialogTitle className="text-base">
-              Delete {count} {noun}?
+              {copy.confirmTitle(count)}
             </DialogTitle>
             <DialogDescription className="mt-1.5 text-xs leading-5">
-              This permanently deletes their local files. You can&apos;t undo this.
+              {copy.confirmDescription}
             </DialogDescription>
           </div>
         </div>
@@ -993,13 +975,14 @@ function ConfirmRemove({
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center justify-between border-b border-border px-5 py-2.5">
           <div className="text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-            {count} {noun} to delete
+            {copy.toDelete(count)}
           </div>
-          <div className="text-xs text-muted-foreground">Sorted by oldest activity</div>
+          <div className="text-xs text-muted-foreground">{copy.sortedByOldestActivity}</div>
         </div>
         <ScrollArea className="min-h-0 flex-1">
           {candidates.map((candidate, index) => (
             <ConfirmRemoveRow
+              copy={copy}
               key={candidate.worktreeId}
               candidate={candidate}
               last={index === candidates.length - 1}
@@ -1009,11 +992,11 @@ function ConfirmRemove({
       </div>
       <DialogFooter className="border-t border-border px-5 py-3">
         <Button variant="outline" onClick={onCancel} disabled={removing}>
-          Cancel
+          {copy.cancel}
         </Button>
         <Button variant="destructive" onClick={onConfirm} disabled={removing || count === 0}>
           {removing ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
-          Delete {count} {noun}
+          {copy.deleteCount(count)}
         </Button>
       </DialogFooter>
     </>
@@ -1021,20 +1004,22 @@ function ConfirmRemove({
 }
 
 function ConfirmRemoveRow({
+  copy,
   candidate,
   last
 }: {
+  copy: WorkspaceCleanupCopy
   candidate: WorkspaceCleanupCandidate
   last: boolean
 }): React.JSX.Element {
-  const dirtyLabel = getDirtyGitLabel(candidate)
+  const dirtyLabel = getDirtyGitLabel(candidate, copy)
   const branchDiffersFromName = candidate.branch !== candidate.displayName
   return (
     <div className={cn('border-b border-border/60 px-5 py-2.5', last && 'border-b-0')}>
       <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="min-w-0 truncate text-sm font-medium">{candidate.displayName}</span>
         <span className="text-xs text-muted-foreground">
-          Last active {formatRelativeTime(candidate.lastActivityAt)}
+          {copy.lastActive(formatRelativeTime(candidate.lastActivityAt, copy))}
         </span>
         {dirtyLabel ? <StatusPill tone="destructive">{dirtyLabel}</StatusPill> : null}
       </div>
@@ -1054,17 +1039,18 @@ function ConfirmRemoveRow({
   )
 }
 
-function getDirtyGitLabel(candidate: WorkspaceCleanupCandidate): string | null {
+function getDirtyGitLabel(
+  candidate: WorkspaceCleanupCandidate,
+  copy: WorkspaceCleanupCopy
+): string | null {
   if (candidate.git.upstreamAhead && candidate.git.upstreamAhead > 0) {
-    return `${candidate.git.upstreamAhead} unpushed commit${
-      candidate.git.upstreamAhead === 1 ? '' : 's'
-    }`
+    return copy.git.unpushedCommits(candidate.git.upstreamAhead)
   }
   if (candidate.git.clean === false) {
-    return 'Uncommitted changes'
+    return copy.git.uncommittedChanges
   }
   if (candidate.git.clean == null) {
-    return 'Git status unknown'
+    return copy.git.statusUnknown
   }
   return null
 }

@@ -1,53 +1,39 @@
 import type { SettingsSearchEntry } from './settings-search'
-import {
-  AGENT_AWAKE_TITLE,
-  getAgentAwakeDescription,
-  getAgentAwakeSearchKeywords
-} from './agent-awake-copy'
+import { agentsEn } from '@/i18n/settings-agents-en'
+import type { AgentsMessages } from '@/i18n/settings-agents-types'
 
-export const AGENTS_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Agents',
-    description: 'Configure AI coding agents, default agent, and command overrides.',
-    keywords: [
-      'agent',
-      'default',
-      'claude',
-      'codex',
-      'opencode',
-      'pi',
-      'gemini',
-      'aider',
-      'goose',
-      'amp',
-      'kilocode',
-      'kiro',
-      'charm',
-      'auggie',
-      'cline',
-      'codebuff',
-      'continue',
-      'cursor',
-      'droid',
-      'kimi',
-      'mistral',
-      'qwen',
-      'rovo',
-      'hermes',
-      'openclaw',
-      'copilot',
-      'grok',
-      'github',
-      'github copilot',
-      'command',
-      'override',
-      'install',
-      'detected'
-    ]
-  },
-  {
-    title: AGENT_AWAKE_TITLE,
-    description: getAgentAwakeDescription(),
-    keywords: getAgentAwakeSearchKeywords()
-  }
-]
+export function getAgentAwakeDescription(
+  messages: AgentsMessages = agentsEn,
+  userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent
+): string {
+  return userAgent.includes('Windows')
+    ? messages.search.awake.windowsDescription
+    : messages.search.awake.description
+}
+
+export function getAgentAwakeSearchKeywords(
+  messages: AgentsMessages = agentsEn,
+  userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent
+): string[] {
+  const keywords = messages.search.awake.keywords
+  return userAgent.includes('Linux') ? [...keywords, 'linux'] : keywords
+}
+
+export function getAgentsPaneSearchEntries(
+  messages: AgentsMessages = agentsEn,
+  userAgent?: string
+): SettingsSearchEntry[] {
+  const resolvedUserAgent =
+    userAgent ?? (typeof navigator === 'undefined' ? '' : navigator.userAgent)
+  return [
+    messages.search.agents,
+    messages.search.defaultAgent,
+    {
+      title: messages.search.awake.title,
+      description: getAgentAwakeDescription(messages, resolvedUserAgent),
+      keywords: getAgentAwakeSearchKeywords(messages, resolvedUserAgent)
+    }
+  ]
+}
+
+export const AGENTS_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = getAgentsPaneSearchEntries()

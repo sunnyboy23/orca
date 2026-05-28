@@ -283,65 +283,101 @@ export type UISlice = {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'orchestration'
     | 'space'
     | 'skills'
     | 'mobile'
+    | 'feishu'
   previousViewBeforeTasks:
     | 'terminal'
     | 'settings'
     | 'activity'
     | 'automations'
+    | 'orchestration'
     | 'space'
     | 'skills'
     | 'mobile'
+    | 'feishu'
   previousViewBeforeSettings:
     | 'terminal'
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'orchestration'
     | 'space'
     | 'skills'
     | 'mobile'
+    | 'feishu'
   previousViewBeforeActivity:
     | 'terminal'
     | 'settings'
     | 'tasks'
     | 'automations'
+    | 'orchestration'
     | 'space'
     | 'skills'
     | 'mobile'
+    | 'feishu'
   previousViewBeforeAutomations:
     | 'terminal'
     | 'settings'
     | 'tasks'
     | 'activity'
+    | 'orchestration'
     | 'space'
     | 'skills'
     | 'mobile'
+    | 'feishu'
+  previousViewBeforeOrchestration:
+    | 'terminal'
+    | 'settings'
+    | 'tasks'
+    | 'activity'
+    | 'automations'
+    | 'space'
+    | 'skills'
+    | 'mobile'
+    | 'feishu'
   previousViewBeforeSpace:
     | 'terminal'
     | 'settings'
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'orchestration'
     | 'skills'
     | 'mobile'
+    | 'feishu'
   previousViewBeforeSkills:
     | 'terminal'
     | 'settings'
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'orchestration'
     | 'space'
     | 'mobile'
+    | 'feishu'
   previousViewBeforeMobile:
     | 'terminal'
     | 'settings'
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'orchestration'
     | 'space'
     | 'skills'
+    | 'feishu'
+  previousViewBeforeFeishu:
+    | 'terminal'
+    | 'settings'
+    | 'tasks'
+    | 'activity'
+    | 'automations'
+    | 'orchestration'
+    | 'space'
+    | 'skills'
+    | 'mobile'
   setActiveView: (view: UISlice['activeView']) => void
   taskPageData: {
     preselectedRepoId?: string
@@ -386,12 +422,16 @@ export type UISlice = {
   setSelectedAutomationId: (id: string | null) => void
   openAutomationsPage: () => void
   closeAutomationsPage: () => void
+  openOrchestrationPage: () => void
+  closeOrchestrationPage: () => void
   openSpacePage: () => void
   closeSpacePage: () => void
   openSkillsPage: () => void
   closeSkillsPage: () => void
   openMobilePage: () => void
   closeMobilePage: () => void
+  openFeishuChannelPage: () => void
+  closeFeishuChannelPage: () => void
   setNewWorkspaceDraft: (draft: NonNullable<UISlice['newWorkspaceDraft']>) => void
   clearNewWorkspaceDraft: () => void
   openSettingsPage: () => void
@@ -611,9 +651,11 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   previousViewBeforeSettings: 'terminal',
   previousViewBeforeActivity: 'terminal',
   previousViewBeforeAutomations: 'terminal',
+  previousViewBeforeOrchestration: 'terminal',
   previousViewBeforeSpace: 'terminal',
   previousViewBeforeSkills: 'terminal',
   previousViewBeforeMobile: 'terminal',
+  previousViewBeforeFeishu: 'terminal',
   setActiveView: (view) => set({ activeView: view }),
   taskPageData: {},
   taskResumeState: undefined,
@@ -802,6 +844,18 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
         worktreeNavHistoryIndex: nextHistoryIndex
       }
     }),
+  openOrchestrationPage: () =>
+    set((state) => ({
+      activeView: 'orchestration',
+      previousViewBeforeOrchestration:
+        state.activeView === 'orchestration'
+          ? state.previousViewBeforeOrchestration
+          : state.activeView
+    })),
+  closeOrchestrationPage: () =>
+    set((state) => ({
+      activeView: state.previousViewBeforeOrchestration
+    })),
   openSpacePage: () =>
     set((state) => ({
       activeView: 'space',
@@ -831,6 +885,16 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   closeMobilePage: () =>
     set((state) => ({
       activeView: state.previousViewBeforeMobile
+    })),
+  openFeishuChannelPage: () =>
+    set((state) => ({
+      activeView: 'feishu',
+      previousViewBeforeFeishu:
+        state.activeView === 'feishu' ? state.previousViewBeforeFeishu : state.activeView
+    })),
+  closeFeishuChannelPage: () =>
+    set((state) => ({
+      activeView: state.previousViewBeforeFeishu
     })),
   setNewWorkspaceDraft: (draft) => set({ newWorkspaceDraft: draft }),
   clearNewWorkspaceDraft: () => set({ newWorkspaceDraft: null }),

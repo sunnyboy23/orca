@@ -1,5 +1,6 @@
 import { isFolderRepo } from '../../../../shared/repo-kind'
 import type { Repo, Worktree } from '../../../../shared/types'
+import type { I18nMessages } from '@/i18n'
 
 type WorktreeRepoRef = Pick<Worktree, 'repoId'>
 
@@ -22,6 +23,7 @@ export function countFolderWorkspaceDeletes(
 }
 
 export function getDeleteWorktreeDialogCopy(args: {
+  copy: I18nMessages['workspace']['delete']
   isBatchDelete: boolean
   worktree: Pick<Worktree, 'displayName'> | null
   worktreeCount: number
@@ -41,24 +43,25 @@ export function getDeleteWorktreeDialogCopy(args: {
     args.isBatchDelete &&
     args.folderWorkspaceDeleteCount > 0 &&
     args.folderWorkspaceDeleteCount < args.worktreeCount
+  const copy = args.copy
   return {
     targetLabel: args.isBatchDelete
-      ? `${args.worktreeCount} workspaces`
+      ? copy.targets(args.worktreeCount)
       : args.worktree?.displayName,
     targetClassName: args.isBatchDelete
       ? 'font-medium text-foreground'
       : 'break-all font-medium text-foreground',
     descriptionSuffix: args.isBatchDelete
       ? allFolderWorkspaceDeletes
-        ? 'from Orca. Project folders on disk will not be deleted.'
+        ? copy.suffix.batchFolder
         : mixedFolderWorkspaceDeletes
-          ? 'from Orca. Git worktrees will also be removed from git and disk; folder workspaces will only remove the Orca workspace entry.'
-          : 'from git and delete their workspace folders.'
+          ? copy.suffix.batchMixed
+          : copy.suffix.batchGit
       : args.isFolderWorkspaceDelete
-        ? 'from Orca. The project folder on disk will not be deleted.'
-        : 'from git and delete its workspace folder.',
+        ? copy.suffix.folder
+        : copy.suffix.git,
     mainWorktreeBlocker: args.isFolderWorkspaceDelete
-      ? 'Remove the folder project instead of deleting this workspace.'
-      : 'Git does not allow removing the main worktree.'
+      ? copy.mainWorktreeBlocker.folder
+      : copy.mainWorktreeBlocker.git
   }
 }

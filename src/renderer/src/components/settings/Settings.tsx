@@ -51,6 +51,7 @@ import {
   isWebClientLocation,
   useSettingsNavigationMetadata
 } from '@/hooks/useSettingsNavigationMetadata'
+import { useI18n } from '@/i18n'
 import type {
   SettingsNavGroup,
   SettingsNavSection,
@@ -64,13 +65,13 @@ import {
 } from './settings-load-performance'
 
 const SETTINGS_NAV_GROUPS = [
-  { id: 'setup', title: 'Set Up' },
-  { id: 'workflows', title: 'Workflows' },
-  { id: 'interface', title: 'Interface' },
-  { id: 'capabilities', title: 'AI Capabilities' },
-  { id: 'remote', title: 'Remote Access' },
-  { id: 'safety', title: 'Safety' },
-  { id: 'experimental', title: 'Experimental' }
+  { id: 'setup' },
+  { id: 'workflows' },
+  { id: 'interface' },
+  { id: 'capabilities' },
+  { id: 'remote' },
+  { id: 'safety' },
+  { id: 'experimental' }
 ] as const
 
 function getSettingsSectionId(pane: SettingsNavTarget, repoId: string | null): string {
@@ -82,16 +83,6 @@ function getSettingsSectionId(pane: SettingsNavTarget, repoId: string | null): s
 
 function getFallbackVisibleSection(sections: SettingsNavSection[]): SettingsNavSection | undefined {
   return sections.at(0)
-}
-
-function computerUsePlatformLabel(args: { isWindows: boolean; isMac: boolean }): string {
-  if (args.isWindows) {
-    return 'Windows'
-  }
-  if (!args.isMac) {
-    return 'Linux'
-  }
-  return 'This platform'
 }
 
 function getSettingsScrollTarget(
@@ -136,6 +127,8 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 function Settings(): React.JSX.Element {
+  const { messages } = useI18n()
+  const settingsCopy = messages.settings
   const settings = useAppStore((s) => s.settings)
   const keybindings = useAppStore((s) => s.keybindings)
   const updateSettings = useAppStore((s) => s.updateSettings)
@@ -161,7 +154,12 @@ function Settings(): React.JSX.Element {
   const isWebClient = isWebClientLocation()
   const showDesktopOnlySettings = !isWebClient
   const showComputerUsePreviewTooltip = !isMac
-  const computerUsePlatform = computerUsePlatformLabel({ isWindows, isMac })
+  const computerUsePlatform =
+    isWindows
+      ? settingsCopy.computerUse.platformLabel.windows
+      : !isMac
+        ? settingsCopy.computerUse.platformLabel.linux
+        : settingsCopy.computerUse.platformLabel.fallback
   // Why: the Terminal settings section shares one search index with the
   // sidebar. We trim platform-only entries on other platforms so search never
   // reveals controls that the renderer will intentionally hide.
@@ -363,6 +361,14 @@ function Settings(): React.JSX.Element {
   )
   const getSectionSearchEntries = (sectionId: string) =>
     navSectionById.get(sectionId)?.searchEntries ?? []
+  const getSectionCopy = (sectionId: string) => {
+    const section = navSectionById.get(sectionId)
+    return {
+      title: section?.title ?? sectionId,
+      description: section?.description ?? '',
+      badge: section?.badge
+    }
+  }
 
   const visibleNavSections = useMemo(
     () =>
@@ -638,14 +644,15 @@ function Settings(): React.JSX.Element {
   if (!settings) {
     return (
       <div className="flex flex-1 items-center justify-center text-muted-foreground">
-        Loading settings...
+        {settingsCopy.common.loadingSettings}
       </div>
     )
   }
 
   const generalNavSections = visibleNavSections.filter((section) => !section.id.startsWith('repo-'))
   const generalNavGroups: SettingsNavGroup[] = SETTINGS_NAV_GROUPS.map((group) => ({
-    ...group,
+    id: group.id,
+    title: settingsCopy.groups[group.id],
     sections: generalNavSections.filter((section) => section.group === group.id)
   })).filter((group) => group.sections.length > 0)
   const repoNavSections = visibleNavSections
@@ -675,14 +682,14 @@ function Settings(): React.JSX.Element {
           <div className="flex w-full max-w-4xl flex-col gap-10 px-8 pb-24 pt-10">
             {visibleNavSections.length === 0 ? (
               <div className="flex min-h-[24rem] items-center justify-center rounded-2xl border border-dashed border-border/60 bg-card/30 text-sm text-muted-foreground">
-                No settings found for &quot;{settingsSearchQuery.trim()}&quot;
+                {settingsCopy.common.noSettingsFound(settingsSearchQuery.trim())}
               </div>
             ) : (
               <ActiveSettingsSectionProvider value={activeSectionId}>
                 <SettingsSection
                   id="general"
-                  title="General"
-                  description="Workspace defaults, app setup, and maintenance."
+                  title={getSectionCopy('general').title}
+                  description={getSectionCopy('general').description}
                   searchEntries={getSectionSearchEntries('general')}
                 >
                   {isSectionMounted('general') ? (
@@ -692,8 +699,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="agents"
-                  title="Agents"
-                  description="Manage AI agents, set a default, and customize commands."
+                  title={getSectionCopy('agents').title}
+                  description={getSectionCopy('agents').description}
                   searchEntries={getSectionSearchEntries('agents')}
                 >
                   {isSectionMounted('agents') ? (
@@ -703,9 +710,9 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="accounts"
-                  title="AI Provider Accounts"
-                  description="Optional. Orca works with your existing provider logins; add accounts only if you want Orca to help switch between them."
-                  badge="Optional"
+                  title={getSectionCopy('accounts').title}
+                  description={getSectionCopy('accounts').description}
+                  badge={getSectionCopy('accounts').badge}
                   searchEntries={getSectionSearchEntries('accounts')}
                 >
                   {isSectionMounted('accounts') ? (
@@ -715,8 +722,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="integrations"
-                  title="Integrations"
-                  description="Connect GitHub, GitLab, Linear, and source-hosting services."
+                  title={getSectionCopy('integrations').title}
+                  description={getSectionCopy('integrations').description}
                   searchEntries={getSectionSearchEntries('integrations')}
                 >
                   {isSectionMounted('integrations') ? <IntegrationsPane /> : null}
@@ -724,8 +731,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="git"
-                  title="Git & Source Control"
-                  description="Branch naming, base refs, attribution, and AI commit messages."
+                  title={getSectionCopy('git').title}
+                  description={getSectionCopy('git').description}
                   searchEntries={getSectionSearchEntries('git')}
                   forceVisible={hasUnsavedCommitPromptChanges}
                 >
@@ -748,8 +755,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="tasks"
-                  title="Task Sources"
-                  description="Choose which task providers appear in the Tasks page and sidebar."
+                  title={getSectionCopy('tasks').title}
+                  description={getSectionCopy('tasks').description}
                   searchEntries={getSectionSearchEntries('tasks')}
                 >
                   {isSectionMounted('tasks') ? (
@@ -759,8 +766,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="floating-workspace"
-                  title="Floating Workspace"
-                  description="Global terminal, browser, and markdown tabs."
+                  title={getSectionCopy('floating-workspace').title}
+                  description={getSectionCopy('floating-workspace').description}
                   searchEntries={getSectionSearchEntries('floating-workspace')}
                 >
                   {isSectionMounted('floating-workspace') ? (
@@ -770,8 +777,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="terminal"
-                  title="Terminal"
-                  description="Shells, terminal appearance, and pane behavior."
+                  title={getSectionCopy('terminal').title}
+                  description={getSectionCopy('terminal').description}
                   searchEntries={getSectionSearchEntries('terminal')}
                   headerAction={
                     <Button
@@ -781,7 +788,7 @@ function Settings(): React.JSX.Element {
                       onClick={() => void ghostty.handleClick()}
                     >
                       <img src={ghosttyIcon} alt="" aria-hidden="true" className="size-4" />
-                      Import from Ghostty
+                      {settingsCopy.common.importFromGhostty}
                     </Button>
                   }
                 >
@@ -804,8 +811,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="quick-commands"
-                  title="Quick Commands"
-                  description="Saved terminal commands, scoped globally or per project."
+                  title={getSectionCopy('quick-commands').title}
+                  description={getSectionCopy('quick-commands').description}
                   searchEntries={getSectionSearchEntries('quick-commands')}
                 >
                   {isSectionMounted('quick-commands') ? (
@@ -820,8 +827,8 @@ function Settings(): React.JSX.Element {
                 {showDesktopOnlySettings ? (
                   <SettingsSection
                     id="browser"
-                    title="Browser"
-                    description="Home page, link routing, and session cookies."
+                    title={getSectionCopy('browser').title}
+                    description={getSectionCopy('browser').description}
                     searchEntries={getSectionSearchEntries('browser')}
                   >
                     {isSectionMounted('browser') ? (
@@ -836,8 +843,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="appearance"
-                  title="Appearance"
-                  description="Theme, zoom, app font, sidebars, and status bar."
+                  title={getSectionCopy('appearance').title}
+                  description={getSectionCopy('appearance').description}
                   searchEntries={getSectionSearchEntries('appearance')}
                 >
                   {isSectionMounted('appearance') ? (
@@ -852,8 +859,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="input"
-                  title="Input & Editing"
-                  description="Selection and editing behavior."
+                  title={getSectionCopy('input').title}
+                  description={getSectionCopy('input').description}
                   searchEntries={getSectionSearchEntries('input')}
                 >
                   <InputPane settings={settings} updateSettings={updateSettings} />
@@ -862,8 +869,8 @@ function Settings(): React.JSX.Element {
                 {showDesktopOnlySettings ? (
                   <SettingsSection
                     id="notifications"
-                    title="Notifications"
-                    description="Native desktop notifications for agent activity and terminal events."
+                    title={getSectionCopy('notifications').title}
+                    description={getSectionCopy('notifications').description}
                     searchEntries={getSectionSearchEntries('notifications')}
                   >
                     {isSectionMounted('notifications') ? (
@@ -874,8 +881,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="shortcuts"
-                  title="Shortcuts"
-                  description="Keyboard shortcuts for common actions."
+                  title={getSectionCopy('shortcuts').title}
+                  description={getSectionCopy('shortcuts').description}
                   searchEntries={getSectionSearchEntries('shortcuts')}
                 >
                   {isSectionMounted('shortcuts') ? <ShortcutsPane /> : null}
@@ -883,8 +890,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="stats"
-                  title="Stats & Usage"
-                  description="Orca stats plus Claude, Codex, and OpenCode usage analytics."
+                  title={getSectionCopy('stats').title}
+                  description={getSectionCopy('stats').description}
                   searchEntries={getSectionSearchEntries('stats')}
                 >
                   {isSectionMounted('stats') ? <StatsPane /> : null}
@@ -892,8 +899,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="orchestration"
-                  title="Orchestration"
-                  description="Coordinate multiple coding agents through Orca."
+                  title={getSectionCopy('orchestration').title}
+                  description={getSectionCopy('orchestration').description}
                   searchEntries={getSectionSearchEntries('orchestration')}
                 >
                   {isSectionMounted('orchestration') ? <OrchestrationPane /> : null}
@@ -903,8 +910,8 @@ function Settings(): React.JSX.Element {
                   <>
                     <SettingsSection
                       id="computer-use"
-                      title="Computer Use"
-                      badge="Beta"
+                      title={getSectionCopy('computer-use').title}
+                      badge={getSectionCopy('computer-use').badge}
                       badgeAccessory={
                         showComputerUsePreviewTooltip ? (
                           <TooltipProvider delayDuration={250}>
@@ -913,22 +920,23 @@ function Settings(): React.JSX.Element {
                                 <button
                                   type="button"
                                   className="text-muted-foreground transition-colors hover:text-foreground"
-                                  aria-label={`${computerUsePlatform} Computer Use preview details`}
+                                  aria-label={settingsCopy.computerUse.previewDetailsAria(
+                                    computerUsePlatform
+                                  )}
                                 >
                                   <Info className="size-3.5" />
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent side="top" sideOffset={6} className="max-w-72">
                                 <span>
-                                  {computerUsePlatform} Computer Use is an early preview. Some apps
-                                  and desktop environments may behave inconsistently.
+                                  {settingsCopy.computerUse.previewDetails(computerUsePlatform)}
                                 </span>
                               </TooltipContent>
                             </Tooltip>
                           </TooltipProvider>
                         ) : null
                       }
-                      description="Enable agents to control any app on your computer."
+                      description={getSectionCopy('computer-use').description}
                       searchEntries={getSectionSearchEntries('computer-use')}
                     >
                       {isSectionMounted('computer-use') ? <ComputerUsePane /> : null}
@@ -936,9 +944,9 @@ function Settings(): React.JSX.Element {
 
                     <SettingsSection
                       id="voice"
-                      title="Voice"
-                      badge="Beta"
-                      description="Local speech-to-text dictation with on-device models."
+                      title={getSectionCopy('voice').title}
+                      badge={getSectionCopy('voice').badge}
+                      description={getSectionCopy('voice').description}
                       searchEntries={getSectionSearchEntries('voice')}
                     >
                       {isSectionMounted('voice') ? (
@@ -950,13 +958,9 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="servers"
-                  title="Remote Orca Servers"
-                  badge="Beta"
-                  description={
-                    isWebClient
-                      ? 'Connect this browser to a saved Orca server.'
-                      : 'Switch between local desktop mode and paired remote Orca runtimes.'
-                  }
+                  title={getSectionCopy('servers').title}
+                  badge={getSectionCopy('servers').badge}
+                  description={getSectionCopy('servers').description}
                   searchEntries={getSectionSearchEntries('servers')}
                 >
                   {isSectionMounted('servers') ? (
@@ -973,8 +977,8 @@ function Settings(): React.JSX.Element {
                   <>
                     <SettingsSection
                       id="ssh"
-                      title="SSH Hosts"
-                      description="Remote SSH hosts for files, terminals, and git."
+                      title={getSectionCopy('ssh').title}
+                      description={getSectionCopy('ssh').description}
                       searchEntries={getSectionSearchEntries('ssh')}
                     >
                       {isSectionMounted('ssh') ? <SshPane /> : null}
@@ -982,9 +986,9 @@ function Settings(): React.JSX.Element {
 
                     <SettingsSection
                       id="mobile"
-                      title="Mobile"
-                      badge="Beta"
-                      description="Control terminals and agents from your phone."
+                      title={getSectionCopy('mobile').title}
+                      badge={getSectionCopy('mobile').badge}
+                      description={getSectionCopy('mobile').description}
                       searchEntries={getSectionSearchEntries('mobile')}
                     >
                       {isSectionMounted('mobile') ? (
@@ -997,8 +1001,8 @@ function Settings(): React.JSX.Element {
                 {showDesktopOnlySettings && isMac ? (
                   <SettingsSection
                     id="developer-permissions"
-                    title="macOS Permissions"
-                    description="macOS privacy access for terminal-launched developer tools."
+                    title={getSectionCopy('developer-permissions').title}
+                    description={getSectionCopy('developer-permissions').description}
                     searchEntries={getSectionSearchEntries('developer-permissions')}
                   >
                     {isSectionMounted('developer-permissions') ? (
@@ -1009,8 +1013,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="privacy"
-                  title="Privacy & Telemetry"
-                  description="Anonymous usage data and telemetry controls."
+                  title={getSectionCopy('privacy').title}
+                  description={getSectionCopy('privacy').description}
                   searchEntries={getSectionSearchEntries('privacy')}
                 >
                   {isSectionMounted('privacy') ? <PrivacyPane settings={settings} /> : null}
@@ -1018,8 +1022,8 @@ function Settings(): React.JSX.Element {
 
                 <SettingsSection
                   id="experimental"
-                  title="Experimental"
-                  description="New features that are still taking shape. Give them a try."
+                  title={getSectionCopy('experimental').title}
+                  description={getSectionCopy('experimental').description}
                   searchEntries={getSectionSearchEntries('experimental')}
                 >
                   {isSectionMounted('experimental') ? (
@@ -1039,7 +1043,7 @@ function Settings(): React.JSX.Element {
                     <SettingsSection
                       key={repo.id}
                       id={repoSectionId}
-                      title={`Project Settings > ${repo.displayName}`}
+                      title={settingsCopy.repository.sectionTitle(repo.displayName)}
                       description={repo.path}
                       searchEntries={getSectionSearchEntries(repoSectionId)}
                     >

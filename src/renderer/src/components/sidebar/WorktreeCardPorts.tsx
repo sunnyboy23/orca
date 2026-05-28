@@ -22,6 +22,7 @@ import {
   WorktreeCardDetailSection,
   WorktreeCardDetailSectionContent
 } from './WorktreeCardDetailSection'
+import { useI18n } from '@/i18n'
 
 type WorktreeCardPortsProps = {
   ports: WorkspacePort[]
@@ -87,6 +88,8 @@ function PortAction({
 }
 
 function WorktreePortRow({ port }: { port: WorkspacePort }): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
   const settings = useAppStore((s) => s.settings)
   const createBrowserTab = useAppStore((s) => s.createBrowserTab)
   const setRemoteBrowserPageHandle = useAppStore((s) => s.setRemoteBrowserPageHandle)
@@ -108,11 +111,11 @@ function WorktreePortRow({ port }: { port: WorkspacePort }): React.JSX.Element {
         openInOrcaBrowser: shouldOpenWorkspacePortInOrcaBrowser(settings)
       }).then((result) => {
         if (!result.ok) {
-          toast.error('Failed to open browser', { description: result.reason })
+          toast.error(copy.openBrowserFailed, { description: result.reason })
         }
       })
     },
-    [createBrowserTab, port, runtimeTarget, setRemoteBrowserPageHandle, settings]
+    [copy.openBrowserFailed, createBrowserTab, port, runtimeTarget, setRemoteBrowserPageHandle, settings]
   )
 
   const handleCopy = useCallback(
@@ -120,9 +123,9 @@ function WorktreePortRow({ port }: { port: WorkspacePort }): React.JSX.Element {
       event.stopPropagation()
       const address = addressForPort(port)
       void window.api.ui.writeClipboardText(address)
-      toast.success(`Copied ${address}`)
+      toast.success(copy.copiedAddress(address))
     },
-    [port]
+    [copy, port]
   )
 
   const handleStop = useCallback(
@@ -141,21 +144,21 @@ function WorktreePortRow({ port }: { port: WorkspacePort }): React.JSX.Element {
           toast.error(result.reason)
           return
         }
-        toast.success(`Stopped process on ${port.port}`)
+        toast.success(copy.stoppedProcess(port.port))
         const refreshResult = await refreshWorkspacePortScanAfterStop({
           runtimeTarget,
           setWorkspacePortScan,
           setWorkspacePortScanRefreshing
         })
         if (!refreshResult.ok) {
-          toast.error('Failed to refresh ports', {
+          toast.error(copy.refreshPortsFailed, {
             description: refreshResult.reason
           })
         }
       }
       void run()
     },
-    [port, runtimeTarget, setWorkspacePortScan, setWorkspacePortScanRefreshing]
+    [copy, port, runtimeTarget, setWorkspacePortScan, setWorkspacePortScanRefreshing]
   )
 
   return (
@@ -183,13 +186,13 @@ function WorktreePortRow({ port }: { port: WorkspacePort }): React.JSX.Element {
           </TooltipContent>
         </Tooltip>
         <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 rounded-md border border-border/40 bg-popover/95 px-0.5 opacity-0 shadow-xs transition-opacity group-hover/port:opacity-100 group-focus-within/port:opacity-100">
-          <PortAction label="Open in Browser" onClick={handleOpen}>
+          <PortAction label={copy.openInBrowser} onClick={handleOpen}>
             <ExternalLink className="size-3" />
           </PortAction>
-          <PortAction label={`Copy ${address}`} onClick={handleCopy}>
+          <PortAction label={copy.copyAddress(address)} onClick={handleCopy}>
             <Copy className="size-3" />
           </PortAction>
-          <PortAction label="Stop Process" disabled={!canStop} onClick={handleStop}>
+          <PortAction label={copy.stopProcess} disabled={!canStop} onClick={handleStop}>
             <Trash2 className="size-3" />
           </PortAction>
         </div>
@@ -201,15 +204,17 @@ function WorktreePortRow({ port }: { port: WorkspacePort }): React.JSX.Element {
 export function WorktreeCardPortsDetails({
   ports
 }: WorktreeCardPortsProps): React.JSX.Element | null {
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
   const handleGoToWorktree = useCallback(
     (event: React.MouseEvent<HTMLButtonElement>) => {
       event.stopPropagation()
       const ownerPort = ports[0]
       if (!ownerPort || !goToWorkspacePortOwner(ownerPort)) {
-        toast.error('Workspace unavailable')
+        toast.error(copy.workspaceUnavailable)
       }
     },
-    [ports]
+    [copy.workspaceUnavailable, ports]
   )
 
   if (ports.length === 0) {
@@ -220,9 +225,9 @@ export function WorktreeCardPortsDetails({
     <WorktreeCardDetailSection>
       <div className="flex items-center gap-1.5 px-1 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
         <Plug className="size-3" />
-        <span>Live Ports</span>
+        <span>{copy.livePorts}</span>
         <div className="ml-auto flex items-center gap-1">
-          <PortAction label="Go to Worktree" onClick={handleGoToWorktree}>
+          <PortAction label={copy.goToWorktree} onClick={handleGoToWorktree}>
             <FolderOpen className="size-3" />
           </PortAction>
           <span className="font-normal tabular-nums text-muted-foreground/70">{ports.length}</span>

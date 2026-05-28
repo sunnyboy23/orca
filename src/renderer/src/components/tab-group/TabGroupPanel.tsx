@@ -20,6 +20,7 @@ import {
   type TabDropZone
 } from './useTabDragSplit'
 import { tabGroupBodyAnchorName } from './tab-group-body-anchor'
+import { EditorLoadingFallback } from '@/components/editor/EditorLoadingFallback'
 
 const EditorPanel = lazy(() => import('../editor/EditorPanel'))
 
@@ -350,11 +351,7 @@ export default function TabGroupPanel({
                   overflow containers like MarkdownPreview can actually scroll
                   instead of expanding to content height. */}
               <Suspense
-                fallback={
-                  <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                    Loading editor...
-                  </div>
-                }
+                fallback={<EditorLoadingFallback />}
               >
                 <EditorPanel activeFileId={activeTab.entityId} activeViewStateId={activeTab.id} />
               </Suspense>

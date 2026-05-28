@@ -2,6 +2,7 @@
    splitting individual settings into separate files would scatter related controls without a
    meaningful abstraction boundary. Mirrors the same decision made for GeneralPane.tsx. */
 import { useState } from 'react'
+import type React from 'react'
 import type { GlobalSettings, SetupScriptLaunchMode } from '../../../../shared/types'
 import {
   DEFAULT_TERMINAL_FONT_WEIGHT,
@@ -38,22 +39,22 @@ import { matchesSettingsSearch } from './settings-search'
 import { useAppStore } from '../../store'
 import { isMacUserAgent, isWindowsUserAgent } from '@/components/terminal-pane/pane-helpers'
 import {
-  MANAGE_SESSIONS_SEARCH_ENTRIES,
-  TERMINAL_ADVANCED_SEARCH_ENTRIES,
-  TERMINAL_CURSOR_SEARCH_ENTRIES,
-  TERMINAL_DARK_THEME_SEARCH_ENTRIES,
-  TERMINAL_LIGHT_THEME_SEARCH_ENTRIES,
-  TERMINAL_MAC_OPTION_SEARCH_ENTRIES,
-  TERMINAL_PANE_STYLE_SEARCH_ENTRIES,
-  TERMINAL_RENDERING_SEARCH_ENTRIES,
-  TERMINAL_SETUP_SCRIPT_SEARCH_ENTRIES,
-  TERMINAL_TYPOGRAPHY_SEARCH_ENTRIES,
-  TERMINAL_WINDOW_SEARCH_ENTRIES
+  getManageSessionsSearchEntries,
+  getTerminalAdvancedSearchEntries,
+  getTerminalCursorSearchEntries,
+  getTerminalDarkThemeSearchEntries,
+  getTerminalLightThemeSearchEntries,
+  getTerminalMacOptionSearchEntries,
+  getTerminalPaneStyleSearchEntries,
+  getTerminalRenderingSearchEntries,
+  getTerminalSetupScriptSearchEntries,
+  getTerminalTypographySearchEntries,
+  getTerminalWindowSearchEntries
 } from './terminal-search'
 import {
-  TERMINAL_RIGHT_CLICK_TO_PASTE_SEARCH_ENTRY,
-  TERMINAL_WINDOWS_POWERSHELL_IMPLEMENTATION_SEARCH_ENTRY,
-  TERMINAL_WINDOWS_SHELL_SEARCH_ENTRY
+  getTerminalRightClickToPasteSearchEntry,
+  getTerminalWindowsPowerShellImplementationSearchEntry,
+  getTerminalWindowsShellSearchEntry
 } from './terminal-windows-search'
 import { useDetectedOptionAsAlt } from '@/lib/keyboard-layout/use-effective-mac-option-as-alt'
 import { DarkTerminalThemeSection, LightTerminalThemeSection } from './TerminalThemeSections'
@@ -61,6 +62,7 @@ import { TerminalWindowSection } from './TerminalWindowSection'
 import { GhosttyImportModal } from './GhosttyImportModal'
 import type { UseGhosttyImportReturn } from './useGhosttyImport'
 import { ManageSessionsSection } from './ManageSessionsSection'
+import { useI18n } from '@/i18n'
 
 type TerminalPaneProps = {
   settings: GlobalSettings
@@ -90,11 +92,28 @@ export function TerminalPane({
   wslAvailable,
   pwshAvailable
 }: TerminalPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.terminal
   const searchQuery = useAppStore((state) => state.settingsSearchQuery)
   const isWindows = isWindowsUserAgent()
   const isMac = isMacUserAgent()
   const [themeSearchDark, setThemeSearchDark] = useState('')
   const [themeSearchLight, setThemeSearchLight] = useState('')
+  const typographySearchEntries = getTerminalTypographySearchEntries(copy)
+  const renderingSearchEntries = getTerminalRenderingSearchEntries(copy)
+  const cursorSearchEntries = getTerminalCursorSearchEntries(copy)
+  const paneStyleSearchEntries = getTerminalPaneStyleSearchEntries(copy)
+  const darkThemeSearchEntries = getTerminalDarkThemeSearchEntries(copy)
+  const lightThemeSearchEntries = getTerminalLightThemeSearchEntries(copy)
+  const windowSearchEntries = getTerminalWindowSearchEntries(copy)
+  const setupScriptSearchEntries = getTerminalSetupScriptSearchEntries(copy)
+  const manageSessionsSearchEntries = getManageSessionsSearchEntries(copy)
+  const advancedSearchEntries = getTerminalAdvancedSearchEntries(copy)
+  const macOptionSearchEntries = getTerminalMacOptionSearchEntries(copy)
+  const windowsShellSearchEntry = getTerminalWindowsShellSearchEntry(copy)
+  const windowsPowerShellImplementationSearchEntry =
+    getTerminalWindowsPowerShellImplementationSearchEntry(copy)
+  const rightClickToPasteSearchEntry = getTerminalRightClickToPasteSearchEntry(copy)
 
   const darkPreviewAppearance = resolveEffectiveTerminalAppearance(
     { ...settings, theme: 'dark' },
@@ -108,10 +127,10 @@ export function TerminalPane({
   const detectedLayout = useDetectedOptionAsAlt()
   const detectedLayoutLabel =
     detectedLayout === 'us'
-      ? 'US English — Option sends Alt/Esc sequences'
+      ? copy.macOption.detected.us
       : detectedLayout === 'non-us'
-        ? 'non-US layout — Option composes characters like @, €, [, ]'
-        : 'unknown layout — Option composes characters (safe default)'
+        ? copy.macOption.detected.nonUs
+        : copy.macOption.detected.unknown
   const scrollbackMb = Math.max(1, Math.round(settings.terminalScrollbackBytes / 1_000_000))
   const isPreset = SCROLLBACK_PRESETS_MB.includes(
     scrollbackMb as (typeof SCROLLBACK_PRESETS_MB)[number]
@@ -123,17 +142,17 @@ export function TerminalPane({
   const showWindowsPowerShellImplementation = isWindows && windowsShell === 'powershell.exe'
 
   const visibleSections = [
-    isWindows && matchesSettingsSearch(searchQuery, TERMINAL_WINDOWS_SHELL_SEARCH_ENTRY) ? (
+    isWindows && matchesSettingsSearch(searchQuery, windowsShellSearchEntry) ? (
       <section key="windows-shell" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Windows Shell"
-          description="Default shell for new terminal panes on Windows."
+          title={copy.sections.windowsShell.title}
+          description={copy.sections.windowsShell.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Default Shell"
-            description="Choose the default shell for new terminal panes on Windows."
+            title={copy.windowsShell.defaultShell.title}
+            description={copy.windowsShell.defaultShell.description}
             keywords={[
               'terminal',
               'windows',
@@ -145,16 +164,16 @@ export function TerminalPane({
             ]}
           >
             <SettingsRow
-              label="Default Shell"
-              description="Shell used when opening a new terminal pane. Takes effect for new terminals."
+              label={copy.windowsShell.defaultShell.title}
+              description={copy.windowsShell.defaultShell.rowDescription}
               control={
                 <SettingsSegmentedControl
-                  ariaLabel="Default Shell"
+                  ariaLabel={copy.windowsShell.defaultShell.title}
                   value={windowsShell}
                   onChange={(value) => updateSettings({ terminalWindowsShell: value })}
                   options={[
                     { value: 'powershell.exe', label: 'PowerShell' },
-                    { value: 'cmd.exe', label: 'Command Prompt' },
+                    { value: 'cmd.exe', label: copy.options.commandPrompt },
                     ...(wslAvailable ? [{ value: 'wsl.exe', label: 'WSL' }] : [])
                   ]}
                 />
@@ -164,22 +183,22 @@ export function TerminalPane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_TYPOGRAPHY_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, typographySearchEntries) ? (
       <section key="typography" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Typography"
-          description="Default terminal typography for new panes and live updates."
+          title={copy.sections.typography.title}
+          description={copy.sections.typography.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Font Size"
-            description="Default terminal font size for new panes and live updates."
+            title={copy.typography.fontSize.title}
+            description={copy.typography.fontSize.description}
             keywords={['terminal', 'typography', 'text size']}
           >
             <SettingsRow
-              label="Font Size"
-              description="Default terminal font size for new panes and live updates."
+              label={copy.typography.fontSize.title}
+              description={copy.typography.fontSize.description}
               control={
                 <div className="flex items-center gap-2">
                   <Button
@@ -224,38 +243,40 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Font Family"
-            description="Default terminal font family for new panes and live updates."
+            title={copy.typography.fontFamily.title}
+            description={copy.typography.fontFamily.description}
             keywords={['terminal', 'typography', 'font']}
           >
             <SettingsRow
               alignTop
-              label="Font Family"
-              description="Default terminal font family for new panes and live updates."
+              label={copy.typography.fontFamily.title}
+              description={copy.typography.fontFamily.description}
               control={
                 <FontAutocomplete
                   value={settings.terminalFontFamily}
                   suggestions={terminalFontSuggestions}
                   onChange={(value) => updateSettings({ terminalFontFamily: value })}
+                  copy={copy.formControls}
                 />
               }
             />
           </SearchableSetting>
 
           <SearchableSetting
-            title="Font Weight"
-            description="Controls the terminal text font weight."
+            title={copy.typography.fontWeight.title}
+            description={copy.typography.fontWeight.description}
             keywords={['terminal', 'typography', 'weight']}
           >
             <NumberField
-              label="Font Weight"
-              description="Controls the terminal text font weight."
+              label={copy.typography.fontWeight.title}
+              description={copy.typography.fontWeight.description ?? ''}
               value={normalizeTerminalFontWeight(settings.terminalFontWeight)}
               defaultValue={DEFAULT_TERMINAL_FONT_WEIGHT}
               min={TERMINAL_FONT_WEIGHT_MIN}
               max={TERMINAL_FONT_WEIGHT_MAX}
               step={TERMINAL_FONT_WEIGHT_STEP}
               suffix="100–900"
+              defaultValueLabel={copy.formControls.defaultValue}
               onChange={(value) =>
                 updateSettings({
                   terminalFontWeight: normalizeTerminalFontWeight(value)
@@ -265,19 +286,20 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Line Height"
-            description="Controls the terminal line height multiplier."
+            title={copy.typography.lineHeight.title}
+            description={copy.typography.lineHeight.description}
             keywords={['terminal', 'typography', 'line height', 'spacing']}
           >
             <NumberField
-              label="Line Height"
-              description="Controls the terminal line height multiplier."
+              label={copy.typography.lineHeight.title}
+              description={copy.typography.lineHeight.description ?? ''}
               value={settings.terminalLineHeight}
               defaultValue={1}
               min={1}
               max={3}
               step={0.1}
               suffix="1–3"
+              defaultValueLabel={copy.formControls.defaultValue}
               onChange={(value) =>
                 updateSettings({
                   terminalLineHeight: clampNumber(value, 1, 3)
@@ -287,8 +309,8 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Font Ligatures"
-            description='Render programming ligatures (e.g. =>, !=, ===) for fonts that ship them. "Auto" enables ligatures only for known ligature fonts (Fira Code, JetBrains Mono, Cascadia Code, Iosevka, etc.).'
+            title={copy.typography.fontLigatures.title}
+            description={copy.typography.fontLigatures.description}
             keywords={[
               'terminal',
               'typography',
@@ -303,27 +325,27 @@ export function TerminalPane({
             ]}
           >
             <SettingsRow
-              label="Font Ligatures"
+              label={copy.typography.fontLigatures.title}
               description={
                 settings.terminalLigatures === 'on'
-                  ? 'Always on. Fonts without ligatures simply render as-is.'
+                  ? copy.ligatures.alwaysOn
                   : settings.terminalLigatures === 'off'
-                    ? 'Always off, even for fonts that ship them.'
+                    ? copy.ligatures.alwaysOff
                     : fontFamilyHasKnownLigatures(settings.terminalFontFamily)
-                      ? `Auto — enabled for "${settings.terminalFontFamily}".`
-                      : `Auto — disabled for "${
-                          settings.terminalFontFamily || 'the current font'
-                        }".`
+                      ? copy.ligatures.autoEnabled(settings.terminalFontFamily)
+                      : copy.ligatures.autoDisabled(
+                          settings.terminalFontFamily || copy.ligatures.currentFont
+                        )
               }
               control={
                 <SettingsSegmentedControl
-                  ariaLabel="Font Ligatures"
+                  ariaLabel={copy.typography.fontLigatures.title}
                   value={settings.terminalLigatures ?? 'auto'}
                   onChange={(option) => updateSettings({ terminalLigatures: option })}
                   options={[
-                    { value: 'auto', label: 'Auto' },
-                    { value: 'on', label: 'On' },
-                    { value: 'off', label: 'Off' }
+                    { value: 'auto', label: copy.options.auto },
+                    { value: 'on', label: copy.options.on },
+                    { value: 'off', label: copy.options.off }
                   ]}
                 />
               }
@@ -331,30 +353,28 @@ export function TerminalPane({
             {/* Why: surface the resolved state explicitly so the "Auto" label
                 isn't ambiguous when a user is staring at it. */}
             <p className="sr-only" aria-live="polite">
-              Ligatures are currently{' '}
-              {resolveTerminalLigaturesEnabled(
-                settings.terminalLigatures,
-                settings.terminalFontFamily
-              )
-                ? 'enabled'
-                : 'disabled'}
-              .
+              {copy.ligatures.liveStatus(
+                resolveTerminalLigaturesEnabled(
+                  settings.terminalLigatures,
+                  settings.terminalFontFamily
+                )
+              )}
             </p>
           </SearchableSetting>
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_RENDERING_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, renderingSearchEntries) ? (
       <section key="rendering" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Rendering"
-          description="Terminal renderer behavior for live panes and new panes."
+          title={copy.sections.rendering.title}
+          description={copy.sections.rendering.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="GPU Acceleration"
-            description="Controls whether the terminal uses xterm.js WebGL rendering. Auto uses DOM on Linux to avoid driver glyph corruption, and otherwise tries WebGL with DOM fallback."
+            title={copy.rendering.gpuAcceleration.title}
+            description={copy.rendering.gpuAcceleration.description}
             keywords={[
               'terminal',
               'gpu',
@@ -368,23 +388,23 @@ export function TerminalPane({
             ]}
           >
             <SettingsRow
-              label="GPU Acceleration"
+              label={copy.rendering.gpuAcceleration.title}
               description={
                 settings.terminalGpuAcceleration === 'off'
-                  ? 'WebGL disabled; DOM renderer for max compatibility.'
+                  ? copy.gpu.off
                   : settings.terminalGpuAcceleration === 'on'
-                    ? 'WebGL is always attempted for terminal panes.'
-                    : 'Auto uses DOM on Linux; tries WebGL with DOM fallback elsewhere.'
+                    ? copy.gpu.on
+                    : copy.gpu.auto
               }
               control={
                 <SettingsSegmentedControl
-                  ariaLabel="GPU Acceleration"
+                  ariaLabel={copy.rendering.gpuAcceleration.title}
                   value={settings.terminalGpuAcceleration ?? 'auto'}
                   onChange={(option) => updateSettings({ terminalGpuAcceleration: option })}
                   options={[
-                    { value: 'auto', label: 'Auto' },
-                    { value: 'on', label: 'On' },
-                    { value: 'off', label: 'Off' }
+                    { value: 'auto', label: copy.options.auto },
+                    { value: 'on', label: copy.options.on },
+                    { value: 'off', label: copy.options.off }
                   ]}
                 />
               }
@@ -393,31 +413,31 @@ export function TerminalPane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_CURSOR_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, cursorSearchEntries) ? (
       <section key="cursor" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Cursor"
-          description="Default cursor appearance for Orca terminal panes."
+          title={copy.sections.cursor.title}
+          description={copy.sections.cursor.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Cursor Shape"
-            description="Default cursor appearance for Orca terminal panes."
+            title={copy.cursor.shape.title}
+            description={copy.cursor.shape.description}
             keywords={['terminal', 'cursor', 'bar', 'block', 'underline']}
           >
             <SettingsRow
-              label="Cursor Shape"
-              description="Default cursor appearance for Orca terminal panes."
+              label={copy.cursor.shape.title}
+              description={copy.cursor.shape.description}
               control={
                 <SettingsSegmentedControl
-                  ariaLabel="Cursor Shape"
+                  ariaLabel={copy.cursor.shape.title}
                   value={settings.terminalCursorStyle}
                   onChange={(option) => updateSettings({ terminalCursorStyle: option })}
                   options={[
-                    { value: 'bar', label: 'Bar' },
-                    { value: 'block', label: 'Block' },
-                    { value: 'underline', label: 'Underline' }
+                    { value: 'bar', label: copy.cursor.options.bar },
+                    { value: 'block', label: copy.cursor.options.block },
+                    { value: 'underline', label: copy.cursor.options.underline }
                   ]}
                 />
               }
@@ -425,13 +445,13 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Blinking Cursor"
-            description="Uses the blinking variant of the selected cursor shape."
+            title={copy.cursor.blink.title}
+            description={copy.cursor.blink.description}
             keywords={['terminal', 'cursor', 'blink']}
           >
             <SettingsSwitchRow
-              label="Blinking Cursor"
-              description="Uses the blinking variant of the selected cursor shape."
+              label={copy.cursor.blink.title}
+              description={copy.cursor.blink.description}
               checked={settings.terminalCursorBlink}
               onChange={() =>
                 updateSettings({ terminalCursorBlink: !settings.terminalCursorBlink })
@@ -440,19 +460,20 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Cursor Opacity"
-            description="Opacity of the terminal cursor."
+            title={copy.cursor.opacity.title}
+            description={copy.cursor.opacity.description}
             keywords={['terminal', 'cursor', 'opacity', 'transparency']}
           >
             <NumberField
-              label="Cursor Opacity"
-              description="Opacity of the terminal cursor."
+              label={copy.cursor.opacity.title}
+              description={copy.cursor.opacity.description ?? ''}
               value={settings.terminalCursorOpacity ?? 1}
               defaultValue={1}
               min={0}
               max={1}
               step={0.05}
               suffix="0–1"
+              defaultValueLabel={copy.formControls.defaultValue}
               onChange={(value) =>
                 updateSettings({
                   terminalCursorOpacity: clampNumber(value, 0, 1)
@@ -463,30 +484,30 @@ export function TerminalPane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_PANE_STYLE_SEARCH_ENTRIES) ||
-    (isWindows &&
-      matchesSettingsSearch(searchQuery, TERMINAL_RIGHT_CLICK_TO_PASTE_SEARCH_ENTRY)) ? (
+    matchesSettingsSearch(searchQuery, paneStyleSearchEntries) ||
+    (isWindows && matchesSettingsSearch(searchQuery, rightClickToPasteSearchEntry)) ? (
       <section key="pane-styling" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Pane Styling"
-          description="Control inactive pane dimming, divider thickness, mouse behavior, and transition timing."
+          title={copy.sections.paneStyling.title}
+          description={copy.sections.paneStyling.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Inactive Pane Opacity"
-            description="Opacity applied to panes that are not currently active."
+            title={copy.paneStyle.inactivePaneOpacity.title}
+            description={copy.paneStyle.inactivePaneOpacity.description}
             keywords={['pane', 'opacity', 'dimming']}
           >
             <NumberField
-              label="Inactive Pane Opacity"
-              description="Opacity applied to panes that are not currently active."
+              label={copy.paneStyle.inactivePaneOpacity.title}
+              description={copy.paneStyle.inactivePaneOpacity.description ?? ''}
               value={paneStyleOptions.inactivePaneOpacity}
               defaultValue={0.8}
               min={0}
               max={1}
               step={0.05}
               suffix="0–1"
+              defaultValueLabel={copy.formControls.defaultValue}
               onChange={(value) =>
                 updateSettings({
                   terminalInactivePaneOpacity: clampNumber(value, 0, 1)
@@ -495,19 +516,20 @@ export function TerminalPane({
             />
           </SearchableSetting>
           <SearchableSetting
-            title="Divider Thickness"
-            description="Thickness of the pane divider line."
+            title={copy.paneStyle.dividerThickness.title}
+            description={copy.paneStyle.dividerThickness.description}
             keywords={['pane', 'divider', 'thickness']}
           >
             <NumberField
-              label="Divider Thickness"
-              description="Thickness of the pane divider line."
+              label={copy.paneStyle.dividerThickness.title}
+              description={copy.paneStyle.dividerThickness.description ?? ''}
               value={paneStyleOptions.dividerThicknessPx}
               defaultValue={1}
               min={1}
               max={32}
               step={1}
               suffix="px"
+              defaultValueLabel={copy.formControls.defaultValue}
               onChange={(value) =>
                 updateSettings({
                   terminalDividerThicknessPx: clampNumber(value, 1, 32)
@@ -520,15 +542,15 @@ export function TerminalPane({
               section must also match that search term or settings search would hide
               the control even though it is present. */}
           {isWindows &&
-            matchesSettingsSearch(searchQuery, TERMINAL_RIGHT_CLICK_TO_PASTE_SEARCH_ENTRY) && (
+            matchesSettingsSearch(searchQuery, rightClickToPasteSearchEntry) && (
               <SearchableSetting
-                title="Right-click to paste"
-                description="On Windows, right-click pastes the clipboard into the terminal. Use Ctrl+right-click to open the context menu."
+                title={copy.windowsShell.rightClickToPaste.title}
+                description={copy.windowsShell.rightClickToPaste.description}
                 keywords={['terminal', 'windows', 'right click', 'paste', 'context menu']}
               >
                 <SettingsSwitchRow
-                  label="Right-click to paste"
-                  description="On Windows, right-click pastes the clipboard. Ctrl+right-click opens the context menu."
+                  label={copy.windowsShell.rightClickToPaste.title}
+                  description={copy.windowsShell.rightClickToPaste.rowDescription}
                   checked={settings.terminalRightClickToPaste}
                   onChange={() =>
                     updateSettings({
@@ -540,13 +562,13 @@ export function TerminalPane({
             )}
 
           <SearchableSetting
-            title="Focus Follows Mouse"
-            description="Hovering a terminal pane activates it without needing to click."
+            title={copy.paneStyle.focusFollowsMouse.title}
+            description={copy.paneStyle.focusFollowsMouse.description}
             keywords={['focus', 'follows', 'mouse', 'hover', 'pane', 'ghostty', 'active']}
           >
             <SettingsSwitchRow
-              label="Focus Follows Mouse"
-              description="Hovering a terminal pane activates it without needing to click."
+              label={copy.paneStyle.focusFollowsMouse.title}
+              description={copy.paneStyle.focusFollowsMouse.description}
               checked={settings.terminalFocusFollowsMouse}
               onChange={() =>
                 updateSettings({
@@ -557,8 +579,8 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Copy on Select"
-            description="Automatically copy terminal selections to the clipboard."
+            title={copy.paneStyle.copyOnSelect.title}
+            description={copy.paneStyle.copyOnSelect.description}
             keywords={[
               'clipboard',
               'copy',
@@ -573,8 +595,8 @@ export function TerminalPane({
             ]}
           >
             <SettingsSwitchRow
-              label="Copy on Select"
-              description="Automatically copy terminal selections to the clipboard."
+              label={copy.paneStyle.copyOnSelect.title}
+              description={copy.paneStyle.copyOnSelect.description}
               checked={settings.terminalClipboardOnSelect}
               onChange={() =>
                 updateSettings({
@@ -585,8 +607,8 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Allow TUI Clipboard Writes (OSC 52)"
-            description="Let tmux, Neovim, and fzf copy to the system clipboard over the PTY (including over SSH)."
+            title={copy.paneStyle.osc52.title}
+            description={copy.paneStyle.osc52.description}
             keywords={[
               'osc 52',
               'osc52',
@@ -602,8 +624,8 @@ export function TerminalPane({
             ]}
           >
             <SettingsSwitchRow
-              label="Allow TUI Clipboard Writes (OSC 52)"
-              description="Let programs in the terminal (tmux, Neovim, fzf, SSH) copy to your system clipboard."
+              label={copy.paneStyle.osc52.title}
+              description={copy.paneStyle.osc52.rowDescription}
               checked={settings.terminalAllowOsc52Clipboard}
               onChange={() =>
                 updateSettings({
@@ -615,10 +637,15 @@ export function TerminalPane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_WINDOW_SEARCH_ENTRIES) ? (
-      <TerminalWindowSection key="window" settings={settings} updateSettings={updateSettings} />
+    matchesSettingsSearch(searchQuery, windowSearchEntries) ? (
+      <TerminalWindowSection
+        key="window"
+        settings={settings}
+        updateSettings={updateSettings}
+        copy={copy}
+      />
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_DARK_THEME_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, darkThemeSearchEntries) ? (
       <DarkTerminalThemeSection
         key="dark-theme"
         settings={settings}
@@ -628,9 +655,10 @@ export function TerminalPane({
         updateSettings={updateSettings}
         previewProps={paneStyleOptions}
         darkPreviewAppearance={darkPreviewAppearance}
+        copy={copy}
       />
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_LIGHT_THEME_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, lightThemeSearchEntries) ? (
       <LightTerminalThemeSection
         key="light-theme"
         settings={settings}
@@ -639,19 +667,20 @@ export function TerminalPane({
         updateSettings={updateSettings}
         previewProps={paneStyleOptions}
         lightPreviewAppearance={lightPreviewAppearance}
+        copy={copy}
       />
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_SETUP_SCRIPT_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, setupScriptSearchEntries) ? (
       <section key="setup-script" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Workspace Setup Script"
-          description="Where the repository setup script runs when a new workspace is created."
+          title={copy.sections.setupScript.title}
+          description={copy.sections.setupScript.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Setup Script Location"
-            description="Where the repository setup script runs when a new workspace is created."
+            title={copy.setupScript.location.title}
+            description={copy.setupScript.location.description}
             keywords={[
               'setup',
               'script',
@@ -666,8 +695,8 @@ export function TerminalPane({
             ]}
           >
             <SettingsRow
-              label="Setup Script Location"
-              description='"New Tab" opens the setup command in a background tab titled "Setup" without stealing focus.'
+              label={copy.setupScript.location.title}
+              description={copy.setupScript.location.rowDescription}
               control={
                 <ToggleGroup
                   type="single"
@@ -687,23 +716,23 @@ export function TerminalPane({
                   <ToggleGroupItem
                     value="new-tab"
                     className="h-8 px-3 text-xs"
-                    aria-label="Run in a new tab"
+                    aria-label={copy.setupScript.options.newTabAria}
                   >
-                    New Tab
+                    {copy.setupScript.options.newTab}
                   </ToggleGroupItem>
                   <ToggleGroupItem
                     value="split-vertical"
                     className="h-8 px-3 text-xs"
-                    aria-label="Split vertically"
+                    aria-label={copy.setupScript.options.splitVerticallyAria}
                   >
-                    Split Vertically
+                    {copy.setupScript.options.splitVertically}
                   </ToggleGroupItem>
                   <ToggleGroupItem
                     value="split-horizontal"
                     className="h-8 px-3 text-xs"
-                    aria-label="Split horizontally"
+                    aria-label={copy.setupScript.options.splitHorizontallyAria}
                   >
-                    Split Horizontally
+                    {copy.setupScript.options.splitHorizontally}
                   </ToggleGroupItem>
                 </ToggleGroup>
               }
@@ -712,32 +741,29 @@ export function TerminalPane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, MANAGE_SESSIONS_SEARCH_ENTRIES) ? (
-      <ManageSessionsSection key="manage-sessions" />
+    matchesSettingsSearch(searchQuery, manageSessionsSearchEntries) ? (
+      <ManageSessionsSection key="manage-sessions" copy={copy} />
     ) : null,
-    matchesSettingsSearch(searchQuery, TERMINAL_ADVANCED_SEARCH_ENTRIES) ||
+    matchesSettingsSearch(searchQuery, advancedSearchEntries) ||
     (showWindowsPowerShellImplementation &&
-      matchesSettingsSearch(
-        searchQuery,
-        TERMINAL_WINDOWS_POWERSHELL_IMPLEMENTATION_SEARCH_ENTRY
-      )) ||
-    (isMac && matchesSettingsSearch(searchQuery, TERMINAL_MAC_OPTION_SEARCH_ENTRIES)) ? (
+      matchesSettingsSearch(searchQuery, windowsPowerShellImplementationSearchEntry)) ||
+    (isMac && matchesSettingsSearch(searchQuery, macOptionSearchEntries)) ? (
       <section key="advanced" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Advanced"
-          description="Scrollback, word boundaries, and platform-specific terminal behaviors."
+          title={copy.sections.advanced.title}
+          description={copy.sections.advanced.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Scrollback Size"
-            description="Maximum terminal scrollback buffer size."
+            title={copy.advanced.scrollback.title}
+            description={copy.advanced.scrollback.description}
             keywords={['terminal', 'scrollback', 'buffer', 'memory']}
           >
             <SettingsRow
               alignTop={scrollbackMode === 'custom'}
-              label="Scrollback Size"
-              description="Maximum terminal scrollback buffer size for new terminal panes."
+              label={copy.advanced.scrollback.title}
+              description={copy.advanced.scrollback.rowDescription}
               control={
                 <div className="flex flex-col items-end gap-2">
                   <ToggleGroup
@@ -774,9 +800,9 @@ export function TerminalPane({
                     <ToggleGroupItem
                       value="custom"
                       className="h-8 px-3 text-xs"
-                      aria-label="Custom"
+                      aria-label={copy.options.custom}
                     >
-                      Custom
+                      {copy.options.custom}
                     </ToggleGroupItem>
                   </ToggleGroup>
                   {scrollbackMode === 'custom' ? (
@@ -806,13 +832,13 @@ export function TerminalPane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Word Separators"
-            description="Characters treated as word boundaries for double-click selection."
+            title={copy.advanced.wordSeparators.title}
+            description={copy.advanced.wordSeparators.description}
             keywords={['word', 'separator', 'boundary', 'double-click', 'selection']}
           >
             <SettingsRow
-              label="Word Separators"
-              description="Characters treated as word boundaries for double-click selection."
+              label={copy.advanced.wordSeparators.title}
+              description={copy.advanced.wordSeparators.description}
               control={
                 <Input
                   value={settings.terminalWordSeparator ?? ''}
@@ -830,11 +856,11 @@ export function TerminalPane({
           {showWindowsPowerShellImplementation &&
           matchesSettingsSearch(
             searchQuery,
-            TERMINAL_WINDOWS_POWERSHELL_IMPLEMENTATION_SEARCH_ENTRY
+            windowsPowerShellImplementationSearchEntry
           ) ? (
             <SearchableSetting
-              title="PowerShell Version"
-              description="Choose whether the PowerShell shell option launches Windows PowerShell or PowerShell 7+ for new terminal panes."
+              title={copy.windowsShell.powerShellVersion.title}
+              description={copy.windowsShell.powerShellVersion.description}
               keywords={[
                 'terminal',
                 'windows',
@@ -848,20 +874,20 @@ export function TerminalPane({
             >
               <SettingsRow
                 alignTop
-                label="PowerShell Version"
+                label={copy.windowsShell.powerShellVersion.title}
                 description={
                   pwshAvailable ? (
-                    'Choose between Windows PowerShell and PowerShell 7+ for new terminal panes.'
+                    copy.windowsShell.powerShellVersion.rowDescription
                   ) : (
                     <>
-                      Auto uses Windows PowerShell now and switches to PowerShell 7+ when installed.{' '}
+                      {copy.windowsShell.powerShellVersion.autoFallback}{' '}
                       <a
                         href="https://github.com/PowerShell/PowerShell/releases/latest"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="underline hover:text-foreground"
                       >
-                        Download PowerShell 7+
+                        {copy.windowsShell.powerShellVersion.downloadPowerShell}
                       </a>
                       .
                     </>
@@ -869,13 +895,13 @@ export function TerminalPane({
                 }
                 control={
                   <SettingsSegmentedControl
-                    ariaLabel="PowerShell Version"
+                    ariaLabel={copy.windowsShell.powerShellVersion.title}
                     value={powerShellImplementation}
                     onChange={(value) =>
                       updateSettings({ terminalWindowsPowerShellImplementation: value })
                     }
                     options={[
-                      { value: 'auto', label: 'Auto' },
+                      { value: 'auto', label: copy.options.auto },
                       { value: 'powershell.exe', label: 'Windows PowerShell' },
                       { value: 'pwsh.exe', label: 'PowerShell 7+', disabled: !pwshAvailable }
                     ]}
@@ -887,8 +913,8 @@ export function TerminalPane({
 
           {isMac ? (
             <SearchableSetting
-              title="Option as Alt"
-              description="Controls whether the macOS Option key sends Alt/Esc sequences or composes characters."
+              title={copy.macOption.optionAsAlt.title}
+              description={copy.macOption.optionAsAlt.description}
               keywords={[
                 'terminal',
                 'option',
@@ -907,27 +933,27 @@ export function TerminalPane({
             >
               <SettingsRow
                 alignTop
-                label="Option as Alt"
+                label={copy.macOption.optionAsAlt.title}
                 description={
                   settings.terminalMacOptionAsAlt === 'auto'
-                    ? `Auto — detected: ${detectedLayoutLabel}.`
+                    ? copy.macOption.autoDetected(detectedLayoutLabel)
                     : settings.terminalMacOptionAsAlt === 'false'
-                      ? 'Option composes special characters for your keyboard layout.'
+                      ? copy.macOption.offDescription
                       : settings.terminalMacOptionAsAlt === 'true'
-                        ? 'Both Option keys send Alt/Esc sequences.'
-                        : `The ${settings.terminalMacOptionAsAlt} Option key sends Alt/Esc; the other composes special characters.`
+                        ? copy.macOption.bothDescription
+                        : copy.macOption.singleDescription(settings.terminalMacOptionAsAlt)
                 }
                 control={
                   <SettingsSegmentedControl
-                    ariaLabel="Option as Alt"
+                    ariaLabel={copy.macOption.optionAsAlt.title}
                     value={settings.terminalMacOptionAsAlt}
                     onChange={(option) => updateSettings({ terminalMacOptionAsAlt: option })}
                     options={[
-                      { value: 'auto', label: 'Auto' },
-                      { value: 'true', label: 'Both' },
-                      { value: 'left', label: 'Left' },
-                      { value: 'right', label: 'Right' },
-                      { value: 'false', label: 'Off' }
+                      { value: 'auto', label: copy.options.auto },
+                      { value: 'true', label: copy.options.both },
+                      { value: 'left', label: copy.options.left },
+                      { value: 'right', label: copy.options.right },
+                      { value: 'false', label: copy.options.off }
                     ]}
                   />
                 }

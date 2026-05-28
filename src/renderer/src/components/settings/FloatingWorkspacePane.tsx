@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FolderOpen } from 'lucide-react'
 import type { FloatingTerminalTriggerLocation, GlobalSettings } from '../../../../shared/types'
+import { useI18n } from '@/i18n'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group'
@@ -33,6 +34,8 @@ export function FloatingWorkspacePane({
   settings,
   updateSettings
 }: FloatingWorkspacePaneProps): React.JSX.Element | null {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.floatingWorkspace
   const searchQuery = useAppStore((state) => state.settingsSearchQuery)
   const [resolvedFloatingWorkspacePath, setResolvedFloatingWorkspacePath] = useState('')
 
@@ -77,24 +80,14 @@ export function FloatingWorkspacePane({
   return (
     <section className="space-y-4">
       <SearchableSetting
-        title="Floating Workspace"
-        description="Enable the floating workspace and choose where new tabs start."
-        keywords={[
-          'floating workspace',
-          'floating terminal',
-          'terminal',
-          'browser',
-          'markdown',
-          'note',
-          'global',
-          'quick panel',
-          'launch directory'
-        ]}
+        title={copy.search.title}
+        description={copy.search.description}
+        keywords={copy.search.keywords}
         className="divide-y divide-border/40"
       >
         <SettingsSwitchRow
-          label="Enable Floating Workspace"
-          description="Shows the floating workspace button and panel."
+          label={copy.enable.label}
+          description={copy.enable.description}
           checked={settings.floatingTerminalEnabled}
           onChange={() =>
             updateSettings({
@@ -105,8 +98,8 @@ export function FloatingWorkspacePane({
 
         <SettingsRow
           alignTop
-          label="Terminal Directory"
-          description="New floating terminal tabs start here. Markdown notes are saved in Orca's app-owned floating workspace."
+          label={copy.directory.label}
+          description={copy.directory.description}
           control={
             <div className="flex w-72 max-w-full gap-2">
               <Input
@@ -119,7 +112,7 @@ export function FloatingWorkspacePane({
                 type="button"
                 variant="outline"
                 size="icon"
-                aria-label="Choose floating workspace directory"
+                aria-label={copy.directory.chooseAria}
                 onClick={() => void pickFloatingWorkspaceDirectory()}
               >
                 <FolderOpen className="size-4" />
@@ -129,8 +122,8 @@ export function FloatingWorkspacePane({
         />
 
         <SettingsRow
-          label="Toggle Button Location"
-          description="The keyboard shortcut works regardless of where the toggle is shown."
+          label={copy.toggleLocation.label}
+          description={copy.toggleLocation.description}
           control={
             <ToggleGroup
               type="single"
@@ -144,8 +137,10 @@ export function FloatingWorkspacePane({
                 })
               }}
             >
-              <ToggleGroupItem value="floating-button">Floating Button</ToggleGroupItem>
-              <ToggleGroupItem value="status-bar">Status Bar</ToggleGroupItem>
+              <ToggleGroupItem value="floating-button">
+                {copy.toggleLocation.floatingButton}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="status-bar">{copy.toggleLocation.statusBar}</ToggleGroupItem>
             </ToggleGroup>
           }
         />

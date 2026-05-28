@@ -3,10 +3,15 @@ import { Label } from '../ui/label'
 import { useAppStore } from '../../store'
 import { SearchableSetting } from './SearchableSetting'
 import { matchesSettingsSearch } from './settings-search'
-import { EXPERIMENTAL_PANE_SEARCH_ENTRIES, EXPERIMENTAL_SEARCH_ENTRY } from './experimental-search'
+import {
+  EXPERIMENTAL_PANE_SEARCH_ENTRIES,
+  getExperimentalPaneSearchEntries,
+  getExperimentalSearchEntry
+} from './experimental-search'
 import { HiddenExperimentalGroup } from './HiddenExperimentalGroup'
+import { useI18n } from '@/i18n'
 
-export { EXPERIMENTAL_PANE_SEARCH_ENTRIES }
+export { EXPERIMENTAL_PANE_SEARCH_ENTRIES, getExperimentalPaneSearchEntries }
 
 type ExperimentalPaneProps = {
   settings: GlobalSettings
@@ -21,32 +26,30 @@ export function ExperimentalPane({
   updateSettings,
   hiddenExperimentalUnlocked = false
 }: ExperimentalPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.experimental
+  const experimentalSearchEntry = getExperimentalSearchEntry(copy)
   const searchQuery = useAppStore((s) => s.settingsSearchQuery)
-  const showPet = matchesSettingsSearch(searchQuery, [EXPERIMENTAL_SEARCH_ENTRY.pet])
-  const showAgentsView = matchesSettingsSearch(searchQuery, [EXPERIMENTAL_SEARCH_ENTRY.activity])
+  const showPet = matchesSettingsSearch(searchQuery, [experimentalSearchEntry.pet])
+  const showAgentsView = matchesSettingsSearch(searchQuery, [experimentalSearchEntry.activity])
   const showWorktreeSymlinks = matchesSettingsSearch(searchQuery, [
-    EXPERIMENTAL_SEARCH_ENTRY.symlinks
+    experimentalSearchEntry.symlinks
   ])
 
   return (
     <div className="space-y-4">
       {showPet ? (
         <SearchableSetting
-          title="Pet"
-          description="Floating animated pet in the bottom-right corner."
-          keywords={EXPERIMENTAL_SEARCH_ENTRY.pet.keywords}
+          title={copy.pet.title}
+          description={copy.pet.description}
+          keywords={copy.pet.keywords}
           className="space-y-3 py-2"
           id="experimental-pet"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 shrink space-y-1.5">
-              <Label>Pet</Label>
-              <p className="text-xs text-muted-foreground">
-                Shows a small animated pet pinned to the bottom-right corner. Pick a character
-                (Claudino, OpenCode, Gremlin) or upload your own PNG, APNG, GIF, WebP, JPG, or SVG
-                from the status-bar pet menu. Hide it any time from the same menu without disabling
-                this setting.
-              </p>
+              <Label>{copy.pet.title}</Label>
+              <p className="text-xs text-muted-foreground">{copy.pet.description}</p>
             </div>
             <button
               type="button"
@@ -71,19 +74,15 @@ export function ExperimentalPane({
 
       {showAgentsView ? (
         <SearchableSetting
-          title="Agents View"
-          description="Threaded left-sidebar feed for agent completions and blocking states."
-          keywords={EXPERIMENTAL_SEARCH_ENTRY.activity.keywords}
+          title={copy.agentsView.title}
+          description={copy.agentsView.description}
+          keywords={copy.agentsView.keywords}
           className="space-y-3 py-2"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 shrink space-y-0.5">
-              <Label>Agents View</Label>
-              <p className="text-xs text-muted-foreground">
-                Adds an Agents entry to the left sidebar with a threaded worktree feed for completed
-                agents, blocking questions, unread state, and worktree creation events. Experimental
-                — the event model and UI may change.
-              </p>
+              <Label>{copy.agentsView.title}</Label>
+              <p className="text-xs text-muted-foreground">{copy.agentsView.description}</p>
             </div>
             <button
               type="button"
@@ -110,18 +109,15 @@ export function ExperimentalPane({
 
       {showWorktreeSymlinks ? (
         <SearchableSetting
-          title="Symlinks on worktrees"
-          description="Automatically symlink configured files or folders into newly created worktrees."
-          keywords={EXPERIMENTAL_SEARCH_ENTRY.symlinks.keywords}
+          title={copy.symlinks.title}
+          description={copy.symlinks.description}
+          keywords={copy.symlinks.keywords}
           className="space-y-3 py-2"
         >
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 shrink space-y-0.5">
-              <Label>Symlinks on worktrees</Label>
-              <p className="text-xs text-muted-foreground">
-                Allows for automatic symlinks of certain folders or files that must be connected to
-                created worktrees.
-              </p>
+              <Label>{copy.symlinks.title}</Label>
+              <p className="text-xs text-muted-foreground">{copy.symlinks.description}</p>
             </div>
             <button
               type="button"

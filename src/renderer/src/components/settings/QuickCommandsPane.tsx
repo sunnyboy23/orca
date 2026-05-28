@@ -20,6 +20,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
 import RepoBadgeLabel, { RepoBadgeMark } from '../repo/RepoBadgeLabel'
 import { cn } from '@/lib/utils'
 import { useConfirmationDialog } from '@/components/confirmation-dialog'
+import { useI18n } from '@/i18n'
+import { quickCommandsEn } from '@/i18n/settings-panes-en'
+import type { QuickCommandsMessages } from '@/i18n/settings-panes-types'
 
 type QuickCommandsPaneProps = {
   settings: GlobalSettings
@@ -53,13 +56,14 @@ export function shouldOpenQuickCommandAddIntent(
 
 function getScopeLabel(
   scope: TerminalQuickCommandScope,
-  repoById: Map<string, Pick<Repo, 'displayName' | 'path' | 'badgeColor'>>
+  repoById: Map<string, Pick<Repo, 'displayName' | 'path' | 'badgeColor'>>,
+  copy: QuickCommandsMessages = quickCommandsEn
 ): string {
   if (scope.type === 'global') {
-    return 'Global'
+    return copy.scope.global
   }
   const repo = repoById.get(scope.repoId)
-  return repo ? getRepoLabel(repo) : 'Missing project'
+  return repo ? getRepoLabel(repo) : copy.scope.missingProject
 }
 
 export function QuickCommandsPane({
@@ -67,6 +71,8 @@ export function QuickCommandsPane({
   updateSettings,
   addCommandIntentSignal
 }: QuickCommandsPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.quickCommands
   const repos = useAppStore((s) => s.repos)
   const activeRepoId = useAppStore((s) => s.activeRepoId)
   const commands = settings.terminalQuickCommands ?? []
@@ -159,19 +165,19 @@ export function QuickCommandsPane({
 
   const renderTriggerLabel = (): React.JSX.Element => {
     if (showAll) {
-      return <span>All commands</span>
+      return <span>{copy.scope.allCommands}</span>
     }
     const includesGlobal = effectiveSelection.has(GLOBAL_SCOPE_KEY)
     const selectedRepos = repos.filter((r) => effectiveSelection.has(r.id))
     const parts: string[] = []
     if (includesGlobal) {
-      parts.push('Global')
+      parts.push(copy.scope.global)
     }
     if (selectedRepos.length > 0) {
       const [first, ...rest] = selectedRepos
       parts.push(rest.length > 0 ? `${first.displayName} +${rest.length}` : first.displayName)
     }
-    return <span className="truncate">{parts.join(', ') || 'None'}</span>
+    return <span className="truncate">{parts.join(', ') || copy.scope.none}</span>
   }
 
   const saveCommand = (next: TerminalQuickCommand): void => {
@@ -187,9 +193,9 @@ export function QuickCommandsPane({
 
   const removeCommand = async (command: TerminalQuickCommand): Promise<void> => {
     const confirmed = await confirm({
-      title: `Delete "${command.label || 'Untitled'}"?`,
-      description: 'This quick command will be removed from your saved list.',
-      confirmLabel: 'Delete',
+      title: copy.deleteDialog.title(command.label || copy.savedCommands.untitled),
+      description: copy.deleteDialog.description,
+      confirmLabel: copy.deleteDialog.confirm,
       confirmVariant: 'destructive'
     })
     if (!confirmed) {
@@ -208,10 +214,9 @@ export function QuickCommandsPane({
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 py-2">
         <div className="space-y-1">
-          <Label>Saved Commands</Label>
+          <Label>{copy.savedCommands.title}</Label>
           <p className="text-xs text-muted-foreground">
-            Run them from the Quick Commands button in the tab bar, or right-click inside any
-            terminal.
+            {copy.savedCommands.description}
           </p>
         </div>
         <Button
@@ -221,7 +226,7 @@ export function QuickCommandsPane({
           onClick={() => setEditor({ mode: 'add', command: createDraftForCurrentFilter() })}
         >
           <Plus />
-          Add Command
+          {copy.savedCommands.add}
         </Button>
       </div>
 
@@ -260,7 +265,7 @@ export function QuickCommandsPane({
                       showAll ? 'opacity-70' : 'opacity-0'
                     )}
                   />
-                  <span>All commands</span>
+                  <span>{copy.scope.allCommands}</span>
                 </button>
               </div>
               <CommandList>
@@ -275,7 +280,7 @@ export function QuickCommandsPane({
                       effectiveSelection.has(GLOBAL_SCOPE_KEY) ? 'opacity-70' : 'opacity-0'
                     )}
                   />
-                  <span>Global</span>
+                  <span>{copy.scope.global}</span>
                 </CommandItem>
                 {repos.map((repo) => {
                   const isSelected = effectiveSelection.has(repo.id)
@@ -310,8 +315,8 @@ export function QuickCommandsPane({
         {visibleCommands.length === 0 ? (
           <div className="px-3 py-6 text-sm text-muted-foreground">
             {commands.length === 0
-              ? 'No quick commands saved.'
-              : 'No commands in the selected scopes.'}
+              ? copy.savedCommands.empty
+              : copy.savedCommands.emptyForScope}
           </div>
         ) : (
           <div className="max-h-[60vh] space-y-2 overflow-y-auto p-2 scrollbar-sleek">
@@ -325,31 +330,33 @@ export function QuickCommandsPane({
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
                       <div className="truncate text-sm font-medium">
-                        {command.label || 'Untitled'}
+                        {command.label || copy.savedCommands.untitled}
                       </div>
                       <Badge variant="outline" className="max-w-44 gap-1.5">
                         {scope.type === 'repo' ? (
                           <>
                             <RepoBadgeMark color={repoById.get(scope.repoId)?.badgeColor} />
-                            <span className="truncate">{getScopeLabel(scope, repoById)}</span>
+                            <span className="truncate">{getScopeLabel(scope, repoById, copy)}</span>
                           </>
                         ) : (
-                          <span className="truncate">{getScopeLabel(scope, repoById)}</span>
+                          <span className="truncate">{getScopeLabel(scope, repoById, copy)}</span>
                         )}
                       </Badge>
                     </div>
                     <div className="truncate font-mono text-xs text-foreground/80">
-                      {command.command || 'No command text'}
+                      {command.command || copy.savedCommands.noCommandText}
                     </div>
                   </div>
                   <div className="shrink-0 text-[11px] font-medium text-foreground/75">
-                    {command.appendEnter ? 'Enter' : 'Insert'}
+                    {command.appendEnter ? copy.savedCommands.enter : copy.savedCommands.insert}
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Edit ${command.label || 'quick command'}`}
+                    aria-label={copy.savedCommands.editAria(
+                      command.label || copy.savedCommands.untitled
+                    )}
                     onClick={() => setEditor({ mode: 'edit', command })}
                   >
                     <Pencil />
@@ -358,7 +365,9 @@ export function QuickCommandsPane({
                     type="button"
                     variant="ghost"
                     size="icon-sm"
-                    aria-label={`Remove ${command.label || 'quick command'}`}
+                    aria-label={copy.savedCommands.removeAria(
+                      command.label || copy.savedCommands.untitled
+                    )}
                     onClick={() => void removeCommand(command)}
                     className="text-muted-foreground hover:text-destructive"
                   >

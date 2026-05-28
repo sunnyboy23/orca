@@ -2,6 +2,8 @@ import React from 'react'
 import { ChevronDown, Code2, ExternalLink, FileText, FolderOpen, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import { useI18n } from '@/i18n'
+import type { ShortcutsMessages } from '@/i18n/settings-shortcuts-types'
 import { useAppStore } from '../../store'
 import { TOGGLE_FLOATING_TERMINAL_EVENT } from '../../lib/floating-terminal'
 import { isFloatingWorkspacePanelVisible } from '../../lib/floating-workspace-terminal-actions'
@@ -15,20 +17,22 @@ import {
   DropdownMenuTrigger
 } from '../ui/dropdown-menu'
 
-function openFailureMessage(reason: string): string {
+function openFailureMessage(reason: string, copy: ShortcutsMessages['file']): string {
   switch (reason) {
     case 'not-absolute':
-      return 'Keybindings path is not absolute.'
+      return copy.openFailures.notAbsolute
     case 'not-found':
-      return 'Keybindings file was not found.'
+      return copy.openFailures.notFound
     case 'launch-failed':
-      return 'Could not launch that editor.'
+      return copy.openFailures.launchFailed
     default:
-      return 'Could not open keybindings file.'
+      return copy.openFailures.fallback
   }
 }
 
 export function KeybindingsFileActions(): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.shortcuts.file
   const keybindingSnapshot = useAppStore((state) => state.keybindingSnapshot)
   const ensureKeybindingsFile = useAppStore((state) => state.ensureKeybindingsFile)
   const openKeybindingsFile = useAppStore((state) => state.openKeybindingsFile)
@@ -51,7 +55,7 @@ export function KeybindingsFileActions(): React.JSX.Element {
     try {
       const filePath = await prepareKeybindingsPath()
       if (!filePath) {
-        toast.error('Keybindings file is not available.')
+        toast.error(copy.notAvailable)
         return
       }
       const existingFile = openFiles.find(
@@ -82,7 +86,7 @@ export function KeybindingsFileActions(): React.JSX.Element {
         }
       })
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open keybindings in Orca.')
+      toast.error(error instanceof Error ? error.message : copy.failedOpenOrca)
     }
   }
 
@@ -90,15 +94,15 @@ export function KeybindingsFileActions(): React.JSX.Element {
     try {
       const filePath = await prepareKeybindingsPath()
       if (!filePath) {
-        toast.error('Keybindings file is not available.')
+        toast.error(copy.notAvailable)
         return
       }
       const result = await window.api.shell.openInExternalEditor(filePath, command)
       if (!result.ok) {
-        toast.error(openFailureMessage(result.reason))
+        toast.error(openFailureMessage(result.reason, copy))
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open external editor.')
+      toast.error(error instanceof Error ? error.message : copy.failedExternal)
     }
   }
 
@@ -107,10 +111,10 @@ export function KeybindingsFileActions(): React.JSX.Element {
       <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <p className="shrink-0 text-xs font-medium">Keybindings JSON</p>
+            <p className="shrink-0 text-xs font-medium">{copy.title}</p>
           </div>
           <p className="truncate font-mono text-[11px] leading-4 text-muted-foreground">
-            {keybindingSnapshot?.path ?? '~/.orca/keybindings.json'}
+            {keybindingSnapshot?.path ?? copy.pathFallback}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
@@ -123,7 +127,7 @@ export function KeybindingsFileActions(): React.JSX.Element {
               onClick={() => void editKeybindingsInOrca()}
             >
               <FileText className="size-3" />
-              Edit File in Orca
+              {copy.editInOrca}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -132,7 +136,7 @@ export function KeybindingsFileActions(): React.JSX.Element {
                   variant="ghost"
                   size="icon-xs"
                   className="rounded-none border-l border-border"
-                  aria-label="Open keybindings file menu"
+                  aria-label={copy.menuAria}
                 >
                   <ChevronDown className="size-3" />
                 </Button>
@@ -140,24 +144,24 @@ export function KeybindingsFileActions(): React.JSX.Element {
               <DropdownMenuContent align="start">
                 <DropdownMenuItem onSelect={() => void openKeybindingsFile()}>
                   <ExternalLink className="size-3.5" />
-                  Open with Default App
+                  {copy.openDefault}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void openKeybindingsInExternalEditor('code')}>
                   <Code2 className="size-3.5" />
-                  Open in VS Code
+                  {copy.openVSCode}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void openKeybindingsInExternalEditor('cursor')}>
                   <Code2 className="size-3.5" />
-                  Open in Cursor
+                  {copy.openCursor}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => void revealKeybindingsFile()}>
                   <FolderOpen className="size-3.5" />
-                  Reveal in File Manager
+                  {copy.reveal}
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => void reloadKeybindings()}>
                   <RefreshCw className="size-3.5" />
-                  Reload from Disk
+                  {copy.reload}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -6,6 +6,9 @@ import { Label } from '../ui/label'
 import { PRIVACY_URL, getConsentState, setOptIn as telemetrySetOptIn } from '../../lib/telemetry'
 import { useAppStore } from '../../store'
 import { PrivacyDiagnosticsSection } from './PrivacyDiagnosticsSection'
+import { useI18n } from '@/i18n'
+import { privacyEn } from '@/i18n/settings-core-panes-en'
+import type { PrivacyMessages } from '@/i18n/settings-core-panes-types'
 
 export type EnvBlockedReason = 'do_not_track' | 'orca_disabled' | 'ci'
 export type BlockedReason = { kind: 'env'; reason: EnvBlockedReason }
@@ -46,6 +49,8 @@ export function computeBlockedReason(consent: TelemetryConsentState | null): Blo
 }
 
 export function PrivacyPane({ settings }: PrivacyPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.privacy
   const [consent, setConsent] = useState<TelemetryConsentState | null>(null)
   const [inFlight, setInFlight] = useState(false)
   const fetchSettings = useAppStore((s) => s.fetchSettings)
@@ -84,17 +89,16 @@ export function PrivacyPane({ settings }: PrivacyPaneProps): React.JSX.Element {
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <ShieldCheck className="size-4" />
-            <Label>Share anonymous usage data</Label>
+            <Label>{copy.telemetry.title}</Label>
           </div>
           <p className="text-xs text-muted-foreground">
-            Help us figure out what to build next. Orca sends anonymous counts of which features you
-            use and where things break.{' '}
+            {copy.telemetry.description}{' '}
             <button
               type="button"
               className="underline underline-offset-2 hover:text-foreground"
               onClick={() => void window.api.shell.openUrl(PRIVACY_URL)}
             >
-              Privacy policy
+              {copy.telemetry.policyLink}
             </button>
             .
           </p>
@@ -102,7 +106,7 @@ export function PrivacyPane({ settings }: PrivacyPaneProps): React.JSX.Element {
         <button
           role="switch"
           aria-checked={toggleChecked}
-          aria-label="Share anonymous usage data"
+          aria-label={copy.telemetry.ariaLabel}
           aria-describedby={blocked ? PRIVACY_PANE_BLOCKED_HELPER_ID : undefined}
           disabled={blocked !== null || inFlight}
           onClick={handleToggle}
@@ -118,26 +122,42 @@ export function PrivacyPane({ settings }: PrivacyPaneProps): React.JSX.Element {
         </button>
       </div>
 
-      {blocked ? <BlockedHelper blocked={blocked} id={PRIVACY_PANE_BLOCKED_HELPER_ID} /> : null}
-      <PrivacyDiagnosticsSection />
+      {blocked ? (
+        <BlockedHelper blocked={blocked} id={PRIVACY_PANE_BLOCKED_HELPER_ID} copy={copy} />
+      ) : null}
+      <PrivacyDiagnosticsSection copy={copy} />
     </div>
   )
 }
 
-function BlockedHelper({ blocked, id }: { blocked: BlockedReason; id: string }): React.JSX.Element {
+function BlockedHelper({
+  blocked,
+  id,
+  copy = privacyEn
+}: {
+  blocked: BlockedReason
+  id: string
+  copy?: PrivacyMessages
+}): React.JSX.Element {
   return (
     <div id={id} className="pb-2 text-xs text-muted-foreground">
       {blocked.reason === 'ci' ? (
-        <p>Telemetry is disabled because a CI environment variable is set. Unset it and restart.</p>
+        <p>{copy.blocked.ci}</p>
       ) : (
-        <p>
-          Telemetry is disabled by the{' '}
-          <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">
-            {envVarNameForReason(blocked.reason)}
-          </code>{' '}
-          environment variable. Unset it and restart to re-enable.
-        </p>
+        <p>{renderEnvBlockedMessage(copy, envVarNameForReason(blocked.reason))}</p>
       )}
     </div>
+  )
+}
+
+function renderEnvBlockedMessage(copy: PrivacyMessages, envName: string): React.ReactNode {
+  const message = copy.blocked.env(envName)
+  const [before, ...after] = message.split(envName)
+  return (
+    <>
+      {before}
+      <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">{envName}</code>
+      {after.join(envName)}
+    </>
   )
 }

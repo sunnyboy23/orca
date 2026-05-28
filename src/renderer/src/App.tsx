@@ -120,6 +120,7 @@ import {
 } from '../../shared/keybindings'
 import { isGitRepoKind } from '../../shared/repo-kind'
 import { showTerminalShortcutCaptureNotification } from '@/lib/terminal-shortcut-capture-notification'
+import { useI18n } from '@/i18n'
 
 const isMac = navigator.userAgent.includes('Mac')
 const isWindows = !isMac && navigator.userAgent.includes('Windows')
@@ -135,6 +136,7 @@ function getKeybindingContext(target: EventTarget | null): KeybindingContext {
 // so we render our own minimize/maximize/close buttons.  These SVG icons match
 // the Fluent/Win11 style: thin 10×10 paths on a 40×30 hit area.
 function WindowControls(): React.JSX.Element {
+  const { messages } = useI18n()
   const [maximized, setMaximized] = useState(false)
   useEffect(() => {
     // Why: window:maximize-changed only fires on transitions, so a window
@@ -156,7 +158,7 @@ function WindowControls(): React.JSX.Element {
     <div className="window-controls">
       <button
         className="window-controls-btn"
-        aria-label="Minimize"
+        aria-label={messages.window.minimize}
         onClick={() => window.api.ui.minimize()}
       >
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
@@ -165,7 +167,7 @@ function WindowControls(): React.JSX.Element {
       </button>
       <button
         className="window-controls-btn"
-        aria-label={maximized ? 'Restore' : 'Maximize'}
+        aria-label={maximized ? messages.window.restore : messages.window.maximize}
         onClick={() => window.api.ui.maximize()}
       >
         {maximized ? (
@@ -182,7 +184,7 @@ function WindowControls(): React.JSX.Element {
       </button>
       <button
         className="window-controls-btn window-controls-close"
-        aria-label="Close"
+        aria-label={messages.window.close}
         // Why: IPC to main so the BrowserWindow 'close' event fires, which
         // sends 'window:close-requested' back to the renderer and keeps the
         // terminal-running confirmation guard active. window.close() is
@@ -200,6 +202,8 @@ function WindowControls(): React.JSX.Element {
 const Landing = lazy(() => import('./components/Landing'))
 const TaskPage = lazy(() => import('./components/TaskPage'))
 const AutomationsPage = lazy(() => import('./components/automations/AutomationsPage'))
+const OrchestrationRunsPage = lazy(() => import('./components/orchestration/OrchestrationRunsPage'))
+const FeishuChannelPage = lazy(() => import('./components/feishu-channel/FeishuChannelPage'))
 const ActivityPrototypePage = lazy(() => import('./components/activity/ActivityPrototypePage'))
 const Settings = lazy(() => import('./components/settings/Settings'))
 const SkillsPage = lazy(() => import('./components/skills/SkillsPage'))
@@ -982,8 +986,10 @@ function App(): React.JSX.Element {
   const showSidebar =
     activeView !== 'settings' &&
     activeView !== 'activity' &&
+    activeView !== 'orchestration' &&
     activeView !== 'space' &&
-    activeView !== 'skills'
+    activeView !== 'skills' &&
+    activeView !== 'feishu'
   // Why: only the terminal workspace replaces the full-width titlebar with
   // split-column chrome. Full-page navigation views keep the draggable app
   // titlebar so their page-level controls can live in that window strip.
@@ -995,9 +1001,11 @@ function App(): React.JSX.Element {
     activeView !== 'tasks' &&
     activeView !== 'activity' &&
     activeView !== 'automations' &&
+    activeView !== 'orchestration' &&
     activeView !== 'space' &&
     activeView !== 'skills' &&
-    activeView !== 'mobile'
+    activeView !== 'mobile' &&
+    activeView !== 'feishu'
 
   const handleToggleExpand = (): void => {
     if (!effectiveActiveTabId) {
@@ -1060,9 +1068,11 @@ function App(): React.JSX.Element {
         activeView !== 'tasks' &&
         activeView !== 'activity' &&
         activeView !== 'automations' &&
+        activeView !== 'orchestration' &&
         activeView !== 'space' &&
         activeView !== 'skills' &&
-        activeView !== 'mobile'
+        activeView !== 'mobile' &&
+        activeView !== 'feishu'
 
       const openSearchSidebar = (query: string | null): void => {
         if (query && activeWorktreeId) {
@@ -1457,9 +1467,11 @@ function App(): React.JSX.Element {
       (activeView === 'tasks' ||
         activeView === 'activity' ||
         activeView === 'automations' ||
+        activeView === 'orchestration' ||
         activeView === 'space' ||
         activeView === 'skills' ||
-        activeView === 'mobile') &&
+        activeView === 'mobile' ||
+        activeView === 'feishu') &&
       rightSidebarOpen
     ) {
       // Why: hide the right sidebar immediately when entering full-page
@@ -1643,6 +1655,8 @@ function App(): React.JSX.Element {
                       {activeView === 'skills' ? <SkillsPage /> : null}
                       {activeView === 'tasks' ? <TaskPage /> : null}
                       {activeView === 'automations' ? <AutomationsPage /> : null}
+                      {activeView === 'orchestration' ? <OrchestrationRunsPage /> : null}
+                      {activeView === 'feishu' ? <FeishuChannelPage /> : null}
                       {activeView === 'activity' ? <ActivityPrototypePage /> : null}
                       {activeView === 'space' ? <WorkspaceSpacePage /> : null}
                       {activeView === 'mobile' ? <MobilePage /> : null}

@@ -5,6 +5,7 @@ import { OnboardingInlineCommandTerminal } from '../onboarding/OnboardingInlineC
 import { Button } from '../ui/button'
 import { isOrcaCliAvailableOnPath } from '@/lib/agent-skill-cli-prerequisite'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 type AgentSkillSetupPanelVariant = 'card' | 'inline'
 
@@ -51,6 +52,7 @@ export function AgentSkillSetupPanel({
   showRecheckWhenInstalled = true,
   onRecheck
 }: AgentSkillSetupPanelProps): React.JSX.Element {
+  const { messages } = useI18n()
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [preInstallNoticeVisible, setPreInstallNoticeVisible] = useState(Boolean(preInstallNotice))
 
@@ -120,7 +122,7 @@ export function AgentSkillSetupPanel({
             disabled={terminalOpen || installDisabled}
           >
             <Terminal className="size-3.5" />
-            Install
+            {messages.common.install}
           </Button>
         ) : null}
         {!installed || showRecheckWhenInstalled ? (
@@ -131,7 +133,7 @@ export function AgentSkillSetupPanel({
             onClick={() => void onRecheck()}
             disabled={loading}
           >
-            Re-check
+            {messages.common.recheck}
           </Button>
         ) : null}
       </div>
@@ -158,11 +160,17 @@ export function AgentSkillSetupPanel({
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-[15px] font-semibold leading-tight text-foreground">{title}</h3>
               {loading && !installed ? (
-                <IntegrationStatusPill tone="neutral">Checking...</IntegrationStatusPill>
+                <IntegrationStatusPill tone="neutral">
+                  {messages.common.checking}
+                </IntegrationStatusPill>
               ) : installed ? (
-                <IntegrationStatusPill tone="connected">Installed</IntegrationStatusPill>
+                <IntegrationStatusPill tone="connected">
+                  {messages.common.installed}
+                </IntegrationStatusPill>
               ) : (
-                <IntegrationStatusPill tone="attention">Not installed</IntegrationStatusPill>
+                <IntegrationStatusPill tone="attention">
+                  {messages.common.notInstalled}
+                </IntegrationStatusPill>
               )}
             </div>
             {error ? <p className="mt-1 text-[12px] text-destructive">{error}</p> : null}

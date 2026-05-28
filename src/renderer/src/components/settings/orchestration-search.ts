@@ -1,21 +1,13 @@
 import type { SettingsSearchEntry } from './settings-search'
+import { getMessages, isChineseLocale } from '@/i18n'
+import type { AppLanguage } from '../../../../shared/types'
 
-export const ORCHESTRATION_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Agent Orchestration',
-    description:
-      'Coordinate multiple coding agents via messaging, task DAGs, dispatch, and decision gates.',
-    keywords: [
-      'orchestration',
-      'multi-agent',
-      'agents',
-      'coordination',
-      'messaging',
-      'dispatch',
-      'task',
-      'DAG',
-      'worker',
-      'coordinator'
-    ]
-  }
-]
+export function getOrchestrationPaneSearchEntries(settings?: {
+  appLanguage?: AppLanguage
+} | null): SettingsSearchEntry[] {
+  const messages = getMessages(isChineseLocale(settings) ? 'zh-CN' : 'en')
+  return [messages.settingsSearch.orchestration]
+}
+
+export const ORCHESTRATION_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] =
+  getOrchestrationPaneSearchEntries({ appLanguage: 'en' })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Workflow } from 'lucide-react'
+import type { FeishuIntegrationSettings } from '../../../../shared/types'
 import { Label } from '../ui/label'
 import { ORCHESTRATION_SKILL_NAME } from '@/lib/agent-feature-install-commands'
 import {
@@ -20,17 +21,25 @@ import {
 import { SearchableSetting } from './SearchableSetting'
 import { matchesSettingsSearch } from './settings-search'
 import { useAppStore } from '../../store'
-import { ORCHESTRATION_PANE_SEARCH_ENTRIES } from './orchestration-search'
+import { getOrchestrationPaneSearchEntries } from './orchestration-search'
 import { AgentSkillSetupPanel } from './AgentSkillSetupPanel'
+import { SettingsSwitch } from './SettingsFormControls'
+import { FeishuSetupCard, patchFeishuSettings } from './FeishuSetupCard'
+import { useI18n } from '@/i18n'
 
 export function OrchestrationPane(): React.JSX.Element {
   const searchQuery = useAppStore((s) => s.settingsSearchQuery)
-  const showOrchestration = matchesSettingsSearch(searchQuery, ORCHESTRATION_PANE_SEARCH_ENTRIES)
+  const settings = useAppStore((s) => s.settings)
+  const updateSettings = useAppStore((s) => s.updateSettings)
+  const { messages } = useI18n()
+  const searchEntries = getOrchestrationPaneSearchEntries(settings ?? undefined)
+  const showOrchestration = matchesSettingsSearch(searchQuery, searchEntries)
 
   const [orchestrationEnabled, setOrchestrationEnabled] = useState<boolean>(() => {
     return isOrchestrationSetupEnabled()
   })
 
+  const feishuSettings = patchFeishuSettings(settings?.feishuIntegration, {})
   const {
     installed: orchestrationSkillDetected,
     loading: orchestrationSkillLoading,
@@ -57,59 +66,58 @@ export function OrchestrationPane(): React.JSX.Element {
     notifyOrchestrationSetupStateChanged()
   }
 
+  const updateFeishuSettings = (updates: Partial<FeishuIntegrationSettings>): void => {
+    void updateSettings({
+      feishuIntegration: patchFeishuSettings(feishuSettings, updates)
+    })
+  }
+
   if (!showOrchestration) {
     return <div />
   }
 
   return (
     <SearchableSetting
-      title="Agent Orchestration"
-      description="Coordinate multiple coding agents via messaging, task DAGs, dispatch, and decision gates."
-      keywords={ORCHESTRATION_PANE_SEARCH_ENTRIES[0].keywords}
-      className="space-y-3 py-2"
+      title={messages.orchestration.title}
+      description={messages.orchestration.description}
+      keywords={searchEntries[0].keywords}
+      className="space-y-4 py-2"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 shrink space-y-0.5">
-          <Label>Agent Orchestration</Label>
+          <Label>{messages.orchestration.title}</Label>
           <p className="text-xs text-muted-foreground">
-            Coordinate multiple coding agents with messaging, task DAGs, dispatch with preamble
-            injection, decision gates, and coordinator loops.
+            {messages.orchestration.switchDescription}
           </p>
         </div>
-        <button
-          role="switch"
-          aria-checked={orchestrationEnabled}
-          onClick={() => toggleOrchestration(!orchestrationEnabled)}
-          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border border-transparent transition-colors ${
-            orchestrationEnabled ? 'bg-foreground' : 'bg-muted-foreground/30'
-          }`}
-        >
-          <span
-            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-background shadow-sm transition-transform ${
-              orchestrationEnabled ? 'translate-x-4' : 'translate-x-0.5'
-            }`}
-          />
-        </button>
+        <SettingsSwitch
+          checked={orchestrationEnabled}
+          onChange={() => toggleOrchestration(!orchestrationEnabled)}
+          ariaLabel={messages.orchestration.ariaEnable}
+        />
       </div>
 
       {orchestrationEnabled ? (
-        <AgentSkillSetupPanel
-          title="Orchestration skill"
-          description="Enables agents to hand off context and coordinate work through Orca."
-          command={ORCHESTRATION_SKILL_INSTALL_COMMAND}
-          terminalTitle="Orchestration setup"
-          terminalAriaLabel="Orchestration skill install terminal"
-          terminalWorktreeId="settings-orchestration-skill-terminal"
-          installed={orchestrationSkillDetected}
-          loading={orchestrationSkillLoading}
-          error={orchestrationSkillError}
-          icon={<Workflow className="size-5" />}
-          preInstallNotice={AGENT_SKILL_CLI_PREREQUISITE_NOTICE}
-          onBeforeOpenTerminal={async () => {
-            await ensureOrcaCliAvailableForAgentSkillTerminal()
-          }}
-          onRecheck={refreshOrchestrationSkill}
-        />
+        <>
+          <AgentSkillSetupPanel
+            title={messages.orchestration.skillTitle}
+            description={messages.orchestration.skillDescription}
+            command={ORCHESTRATION_SKILL_INSTALL_COMMAND}
+            terminalTitle={messages.orchestration.terminalTitle}
+            terminalAriaLabel={messages.orchestration.terminalAriaLabel}
+            terminalWorktreeId="settings-orchestration-skill-terminal"
+            installed={orchestrationSkillDetected}
+            loading={orchestrationSkillLoading}
+            error={orchestrationSkillError}
+            icon={<Workflow className="size-5" />}
+            preInstallNotice={AGENT_SKILL_CLI_PREREQUISITE_NOTICE}
+            onBeforeOpenTerminal={async () => {
+              await ensureOrcaCliAvailableForAgentSkillTerminal()
+            }}
+            onRecheck={refreshOrchestrationSkill}
+          />
+          <FeishuSetupCard settings={feishuSettings} onChange={updateFeishuSettings} />
+        </>
       ) : null}
     </SearchableSetting>
   )

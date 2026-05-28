@@ -9,9 +9,11 @@ export function resolveZoomTarget(args: {
     | 'tasks'
     | 'activity'
     | 'automations'
+    | 'orchestration'
     | 'space'
     | 'skills'
     | 'mobile'
+    | 'feishu'
   activeTabType: 'terminal' | 'editor' | 'browser'
   activeElement: unknown
 }): 'terminal' | 'editor' | 'ui' {

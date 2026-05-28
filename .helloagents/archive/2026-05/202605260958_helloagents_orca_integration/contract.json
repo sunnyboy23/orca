@@ -1,0 +1,56 @@
+{
+  "updatedAt": "2026-05-26T09:58:00.000Z",
+  "version": 2,
+  "source": "~plan",
+  "originCommand": "plan",
+  "qaMode": "deep",
+  "qaFocus": [
+    "Orchestrator Terminal 与 Worker Terminal 的生命周期边界",
+    "DAG 环检测、依赖排序、并发上限和失败阻断",
+    "Artifact manifest 校验和下游上下文注入",
+    ".helloagents/ 文件落盘一致性和恢复能力",
+    "飞书 Base 团队配置同步、离线缓存和 .orca-team.yaml 快照 fallback",
+    "飞书签名校验、确认回灌绑定和敏感信息脱敏",
+    "SSH workspace、跨平台路径、GitLab/Gitea/Bitbucket provider 兼容性"
+  ],
+  "ui": {
+    "required": true,
+    "designContract": true,
+    "sourcePriority": [
+      ".helloagents/plans/202605260958_helloagents_orca_integration/plan.md",
+      "docs/STYLEGUIDE.md",
+      "src/renderer/src/assets/main.css",
+      "src/renderer/src/components/ui/"
+    ],
+    "styleAdvisor": {
+      "required": false,
+      "reason": "",
+      "focus": []
+    },
+    "visualValidation": {
+      "required": true,
+      "reason": "Run 详情、任务 DAG、确认卡片和团队配置状态是用户执行编排任务的主要操作界面，需要发布前验证关键状态不重叠、不泄露敏感信息且符合现有设计系统。",
+      "screens": [
+        "Orchestration Run 列表",
+        "Run 详情与任务 DAG",
+        "等待确认 Gate 卡片",
+        "团队配置状态面板"
+      ],
+      "states": [
+        "loading",
+        "empty",
+        "waiting",
+        "running",
+        "blocked",
+        "failed",
+        "completed"
+      ]
+    }
+  },
+  "advisor": {
+    "required": false,
+    "reason": "",
+    "focus": [],
+    "preferredSources": []
+  }
+}

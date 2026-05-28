@@ -20,6 +20,7 @@ import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
 import { WORKSPACE_FILE_PATH_MIME } from '@/lib/workspace-file-drag'
 import { getScreenSubmitModifierLabel } from '@/lib/screen-submit-shortcut'
+import { useI18n } from '@/i18n'
 import type {
   GitHubWorkItem,
   GitLabWorkItem,
@@ -83,23 +84,16 @@ type NewWorkspaceComposerCardProps = {
   onSparseSelectPreset: (preset: SparsePreset | null) => void
 }
 
-const SSH_STATUS_LABELS: Record<SshConnectionStatus, string> = {
-  disconnected: 'SSH not connected',
-  connecting: 'Connecting SSH...',
-  'auth-failed': 'SSH authentication failed',
-  'deploying-relay': 'Preparing SSH connection...',
-  connected: 'Connected',
-  reconnecting: 'Reconnecting SSH...',
-  'reconnection-failed': 'SSH reconnection failed',
-  error: 'SSH connection error'
-}
-
 function SetupCommandPreview({
   setupConfig,
-  headerAction
+  headerAction,
+  combinedSetupCommandLabel,
+  localSetupCommandLabel
 }: {
   setupConfig: SetupConfig
   headerAction?: React.ReactNode
+  combinedSetupCommandLabel: string
+  localSetupCommandLabel: string
 }): React.JSX.Element {
   if (setupConfig.source === 'yaml') {
     return (
@@ -116,10 +110,10 @@ function SetupCommandPreview({
   }
 
   return (
-    <div className="rounded-2xl border border-border/60 bg-muted/35 px-4 py-3 shadow-inner">
+      <div className="rounded-2xl border border-border/60 bg-muted/35 px-4 py-3 shadow-inner">
       <div className="mb-2 flex items-center justify-between gap-3">
         <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          {setupConfig.source === 'both' ? 'Combined setup command' : 'Local setup command'}
+          {setupConfig.source === 'both' ? combinedSetupCommandLabel : localSetupCommandLabel}
         </div>
         {headerAction}
       </div>
@@ -247,21 +241,23 @@ export default function NewWorkspaceComposerCard({
   onSparseSelectPreset
 }: NewWorkspaceComposerCardProps): React.JSX.Element {
   const { isFileDragOver, dragHandlers } = useComposerFileDragOver()
+  const { messages } = useI18n()
+  const copy = messages.workspace.create
   const openModal = useAppStore((s) => s.openModal)
   const defaultTuiAgent = useAppStore((s) => s.settings?.defaultTuiAgent ?? null)
   const updateSettings = useAppStore((s) => s.updateSettings)
   const submitShortcutModifierLabel = getScreenSubmitModifierLabel()
   const selectedRepoName = React.useMemo(() => {
     const repo = eligibleRepos.find((candidate) => candidate.id === repoId)
-    return repo?.displayName ?? repo?.path ?? 'This project'
-  }, [eligibleRepos, repoId])
+    return repo?.displayName ?? repo?.path ?? copy.thisProject
+  }, [copy.thisProject, eligibleRepos, repoId])
   const sshStatusLabel = selectedRepoSshStatus
-    ? SSH_STATUS_LABELS[selectedRepoSshStatus]
-    : 'Not connected'
+    ? copy.sshStatus[selectedRepoSshStatus]
+    : copy.notConnected
   const connectButtonLabel =
     selectedRepoSshStatus === 'disconnected' || selectedRepoSshStatus === null
-      ? 'Connect'
-      : 'Reconnect'
+      ? copy.connect
+      : copy.reconnect
 
   const handleSetDefaultAgent = React.useCallback(
     (next: TuiAgent | 'blank' | null) => {
@@ -309,7 +305,7 @@ export default function NewWorkspaceComposerCard({
       <div className="min-w-0 space-y-4 pt-3">
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <label className="text-xs font-medium text-muted-foreground">Project</label>
+            <label className="text-xs font-medium text-muted-foreground">{copy.project}</label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -318,13 +314,13 @@ export default function NewWorkspaceComposerCard({
                   size="icon-xs"
                   onClick={handleAddRepo}
                   className="size-5 shrink-0 rounded-sm text-muted-foreground hover:text-foreground"
-                  aria-label="Add project"
+                  aria-label={copy.addProject}
                 >
                   <FolderPlus className="size-3" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={6}>
-                Add project
+                {copy.addProject}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -333,7 +329,7 @@ export default function NewWorkspaceComposerCard({
             value={repoId}
             onValueChange={onRepoChange}
             onValueSelected={focusNameInput}
-            placeholder="Choose project"
+            placeholder={copy.chooseProject}
             // Why: programmatic .focus() from the Dialog's onOpenAutoFocus
             // handler does not reliably trigger :focus-visible in Chromium.
             // Mirror the Input component's standard ring (border-ring +
@@ -351,7 +347,7 @@ export default function NewWorkspaceComposerCard({
             >
               <div className="min-w-0">
                 <div className="truncate text-xs font-medium text-foreground">
-                  Connect {selectedRepoName}
+                  {copy.connectProject(selectedRepoName)}
                 </div>
                 <div className="mt-0.5 text-[11px] text-muted-foreground">{sshStatusLabel}</div>
               </div>
@@ -368,7 +364,7 @@ export default function NewWorkspaceComposerCard({
                 ) : (
                   <PlugZap className="size-3.5" />
                 )}
-                {selectedRepoConnectInProgress ? 'Connecting' : connectButtonLabel}
+                {selectedRepoConnectInProgress ? copy.connecting : connectButtonLabel}
               </Button>
             </div>
           ) : null}
@@ -376,8 +372,8 @@ export default function NewWorkspaceComposerCard({
 
         <div className="min-w-0 space-y-1">
           <label className="text-xs font-medium text-muted-foreground">
-            {selectedRepoIsGit ? "Name or 'Create From'" : 'Workspace name'}{' '}
-            <span className="text-muted-foreground/70">[Optional]</span>
+            {selectedRepoIsGit ? copy.nameOrCreateFrom : copy.workspaceName}{' '}
+            <span className="text-muted-foreground/70">[{copy.optional}]</span>
           </label>
           <SmartWorkspaceNameField
             inputRef={nameInputRef}
@@ -393,7 +389,7 @@ export default function NewWorkspaceComposerCard({
             selectedSource={smartNameSelection}
             onClearSelectedSource={onClearSmartNameSelection}
             disabled={selectedRepoRequiresConnection}
-            disabledPlaceholder="Connect this repo first"
+            disabledPlaceholder={copy.connectRepoFirst}
             textOnly={!selectedRepoIsGit}
             onPlainEnter={() => {
               // Why: Enter on the workspace name advances focus to the next
@@ -410,7 +406,7 @@ export default function NewWorkspaceComposerCard({
 
         <div className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <label className="text-xs font-medium text-muted-foreground">Agent</label>
+            <label className="text-xs font-medium text-muted-foreground">{copy.agent}</label>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -423,13 +419,13 @@ export default function NewWorkspaceComposerCard({
                   // on every workspace creation.
                   tabIndex={-1}
                   className="size-5 shrink-0 rounded-sm text-muted-foreground hover:text-foreground"
-                  aria-label="Open agent settings"
+                  aria-label={copy.openAgentSettings}
                 >
                   <Settings2 className="size-3" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={6}>
-                Configure agents
+                {copy.configureAgents}
               </TooltipContent>
             </Tooltip>
           </div>
@@ -453,7 +449,7 @@ export default function NewWorkspaceComposerCard({
             onClick={onToggleAdvanced}
             className="-ml-2 text-xs"
           >
-            Advanced
+            {copy.advanced}
             <ChevronDown
               className={cn('size-4 transition-transform', advancedOpen && 'rotate-180')}
             />
@@ -488,19 +484,19 @@ export default function NewWorkspaceComposerCard({
                 // explicit name there's no source pill — the smart input is
                 // already the name field, so we don't duplicate it here.
                 <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground">Name</label>
+                  <label className="text-xs font-medium text-muted-foreground">{copy.name}</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(event) => onNameValueChange(event.target.value)}
-                    placeholder="Workspace name"
+                    placeholder={copy.workspaceName}
                     className="w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   />
                 </div>
               ) : null}
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Note</label>
+                <label className="text-xs font-medium text-muted-foreground">{copy.note}</label>
                 <textarea
                   value={note}
                   onChange={(event) => onNoteChange(event.target.value)}
@@ -512,7 +508,7 @@ export default function NewWorkspaceComposerCard({
                     ta.style.height = 'auto'
                     ta.style.height = `${ta.scrollHeight}px`
                   }}
-                  placeholder="Write a note"
+                  placeholder={copy.writeNote}
                   rows={1}
                   className="w-full min-w-0 resize-none overflow-hidden rounded-md border border-input bg-transparent px-3 py-1.5 text-sm shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 max-h-40"
                 />
@@ -522,14 +518,14 @@ export default function NewWorkspaceComposerCard({
                 <div className="space-y-2">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label className="text-xs font-medium text-muted-foreground">
-                      Setup script
+                      {copy.setupScript}
                     </label>
                     <span className="rounded-full border border-border/70 bg-muted/45 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-foreground/70">
                       {setupConfig.source === 'yaml'
                         ? 'orca.yaml'
                         : setupConfig.source === 'both'
                           ? 'orca.yaml + local'
-                          : 'local settings'}
+                          : copy.localSettings}
                     </span>
                   </div>
 
@@ -538,6 +534,8 @@ export default function NewWorkspaceComposerCard({
                       shell blob that hides where the command came from. */}
                   <SetupCommandPreview
                     setupConfig={setupConfig}
+                    combinedSetupCommandLabel={copy.combinedSetupCommand}
+                    localSetupCommandLabel={copy.localSetupCommand}
                     headerAction={
                       requiresExplicitSetupChoice ? null : (
                         <label className="group flex items-center gap-2 text-xs text-foreground">
@@ -564,7 +562,7 @@ export default function NewWorkspaceComposerCard({
                             }
                             className="sr-only"
                           />
-                          <span>Run setup command</span>
+                          <span>{copy.runSetupCommand}</span>
                         </label>
                       )
                     }
@@ -573,7 +571,7 @@ export default function NewWorkspaceComposerCard({
                   {requiresExplicitSetupChoice ? (
                     <div className="space-y-2">
                       <div className="text-[11px] font-medium text-muted-foreground">
-                        Run setup now?
+                        {copy.runSetupNowQuestion}
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Button
@@ -582,7 +580,7 @@ export default function NewWorkspaceComposerCard({
                           variant={setupDecision === 'run' ? 'default' : 'outline'}
                           size="sm"
                         >
-                          Run setup now
+                          {copy.runSetupNow}
                         </Button>
                         <Button
                           type="button"
@@ -590,14 +588,14 @@ export default function NewWorkspaceComposerCard({
                           variant={setupDecision === 'skip' ? 'secondary' : 'outline'}
                           size="sm"
                         >
-                          Skip for now
+                          {copy.skipForNow}
                         </Button>
                       </div>
                       {!setupDecision ? (
                         <div className="text-xs text-muted-foreground">
                           {shouldWaitForSetupCheck
-                            ? 'Checking setup configuration...'
-                            : 'Choose whether to run setup before creating this workspace.'}
+                            ? copy.checkingSetupConfiguration
+                            : copy.chooseSetupBeforeCreate}
                         </div>
                       ) : null}
                     </div>
@@ -606,7 +604,9 @@ export default function NewWorkspaceComposerCard({
               ) : null}
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Sparse checkout</label>
+                <label className="text-xs font-medium text-muted-foreground">
+                  {copy.sparseCheckout}
+                </label>
                 <SparseCheckoutPresetSelect
                   repoId={repoId}
                   presets={sparsePresets}
@@ -616,7 +616,7 @@ export default function NewWorkspaceComposerCard({
                 />
                 {!canUseSparseCheckout ? (
                   <p className="text-[11px] text-muted-foreground">
-                    Only available for local Git projects.
+                    {copy.sparseCheckoutLocalOnly}
                   </p>
                 ) : null}
               </div>

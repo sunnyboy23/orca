@@ -14,6 +14,16 @@ import { createHash, randomUUID } from 'crypto'
 import { basename, isAbsolute, join } from 'path'
 import { mkdir, readFile, readdir, rm, stat } from 'fs/promises'
 import { OrchestrationDb } from './orchestration/db'
+import { FeishuBotService, type FeishuBotServiceStatus } from './integrations/feishu/bot-service'
+import type {
+  FeishuChannelConversation,
+  FeishuChannelCreateRunFromMessageParams,
+  FeishuChannelEvent,
+  FeishuChannelMarkReadParams,
+  FeishuChannelMessage,
+  FeishuChannelSendMessageParams,
+  FeishuChannelStatus
+} from '../../shared/feishu-collaboration-types'
 import { formatMessagesForInjection } from './orchestration/formatter'
 import type {
   Automation,
@@ -428,6 +438,7 @@ type RuntimeStore = {
     defaultLinearTeamSelection?: GlobalSettings['defaultLinearTeamSelection']
     githubProjects?: GlobalSettings['githubProjects']
     gitlabProjects?: GlobalSettings['gitlabProjects']
+    feishuIntegration?: GlobalSettings['feishuIntegration']
     experimentalWorktreeSymlinks?: boolean
     mobileAutoRestoreFitMs?: number | null
     voice?: VoiceSettings
@@ -998,6 +1009,8 @@ export class OrcaRuntimeService {
   private resolvedWorktreeGeneration = 0
   private agentDetector: AgentDetector | null = null
   private _orchestrationDb: OrchestrationDb | null = null
+  private feishuBotService: FeishuBotService | null = null
+  private feishuChannelSubscriptions = new Map<string, () => void>()
   private messageWaitersByHandle = new Map<string, Set<MessageWaiter>>()
   // Why: mobile clients subscribe to terminal output via terminal.subscribe.
   // These listeners fire on every onPtyData call, enabling real-time streaming
@@ -1532,6 +1545,70 @@ export class OrcaRuntimeService {
 
   setOrchestrationDb(db: OrchestrationDb): void {
     this._orchestrationDb = db
+    this.feishuBotService = null
+  }
+
+  getFeishuBotStatus(): FeishuBotServiceStatus {
+    return this.getFeishuBotService().getStatus()
+  }
+
+  startFeishuBot(): Promise<FeishuBotServiceStatus> {
+    if (!this.store?.getSettings) {
+      throw new Error('runtime_unavailable')
+    }
+    return this.getFeishuBotService().start(this.store.getSettings().feishuIntegration)
+  }
+
+  stopFeishuBot(): FeishuBotServiceStatus {
+    return this.getFeishuBotService().stop()
+  }
+
+  listFeishuChannelConversations(): FeishuChannelConversation[] {
+    return this.getFeishuBotService().listChannelConversations()
+  }
+
+  listFeishuChannelMessages(chatId: string): FeishuChannelMessage[] {
+    return this.getFeishuBotService().listChannelMessages(chatId)
+  }
+
+  getFeishuChannelStatus(): FeishuChannelStatus {
+    return this.getFeishuBotService().getChannelStatus()
+  }
+
+  sendFeishuChannelMessage(params: FeishuChannelSendMessageParams): Promise<FeishuChannelMessage> {
+    return this.getFeishuBotService().sendChannelMessage(params)
+  }
+
+  createFeishuRunFromChannelMessage(
+    params: FeishuChannelCreateRunFromMessageParams
+  ): Promise<{ runId: string }> {
+    return this.getFeishuBotService().createRunFromChannelMessage(params)
+  }
+
+  markFeishuChannelRead(params: FeishuChannelMarkReadParams): { ok: true } {
+    return this.getFeishuBotService().markChannelRead(params)
+  }
+
+  subscribeFeishuChannel(listener: (event: FeishuChannelEvent) => void): string {
+    const subscriptionId = randomUUID()
+    const unsubscribe = this.getFeishuBotService().subscribeChannel(listener)
+    this.feishuChannelSubscriptions.set(subscriptionId, unsubscribe)
+    return subscriptionId
+  }
+
+  unsubscribeFeishuChannel(subscriptionId: string): void {
+    this.feishuChannelSubscriptions.get(subscriptionId)?.()
+    this.feishuChannelSubscriptions.delete(subscriptionId)
+  }
+
+  private getFeishuBotService(): FeishuBotService {
+    if (!this.feishuBotService) {
+      this.feishuBotService = new FeishuBotService({
+        db: this.getOrchestrationDb(),
+        runtime: this
+      })
+    }
+    return this.feishuBotService
   }
 
   setAutomationService(service: AutomationService): void {

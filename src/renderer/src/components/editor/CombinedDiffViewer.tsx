@@ -43,6 +43,7 @@ import type {
 import { Check, Copy, MessageSquare, PanelLeftOpen, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { DiffSectionItem } from './DiffSectionItem'
+import { useI18n } from '@/i18n'
 import { DiffNotesSendMenu } from './DiffNotesSendMenu'
 import {
   CombinedDiffFileTree,
@@ -139,6 +140,7 @@ export default function CombinedDiffViewer({
   file: OpenFile
   viewStateKey: string
 }): React.JSX.Element {
+  const { messages } = useI18n()
   const settings = useAppStore((s) => s.settings)
   const gitStatusEntries = useAppStore(
     (s) => s.gitStatusByWorktree[file.worktreeId] ?? EMPTY_GIT_STATUS_ENTRIES
@@ -899,12 +901,18 @@ export default function CombinedDiffViewer({
       if (ok) {
         setClearNotesDialogOpen(false)
       } else {
-        toast.error('Failed to clear notes.')
+        toast.error(messages.sourceControl.failedToClearNotes)
       }
     } finally {
       setIsClearingNotes(false)
     }
-  }, [clearDiffComments, diffCommentCount, file.worktreeId, isClearingNotes])
+  }, [
+    clearDiffComments,
+    diffCommentCount,
+    file.worktreeId,
+    isClearingNotes,
+    messages.sourceControl.failedToClearNotes
+  ])
 
   const commitBody = commitMessageBody(commitCompare?.message, commitCompare?.subject)
   const commitHeader =

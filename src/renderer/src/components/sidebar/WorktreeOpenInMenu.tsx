@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useAppStore } from '@/store'
 import { isLocalPathOpenBlocked, showLocalPathOpenBlockedToast } from '@/lib/local-path-open-guard'
+import { getMessages, resolveLocale } from '@/i18n'
 import type { ShellOpenLocalPathFailureReason } from '../../../../shared/shell-open-types'
 import type { OpenInApplication } from '../../../../shared/types'
 
@@ -17,6 +18,7 @@ type WorktreeOpenInMenuItemsProps = {
   connectionId?: string | null
   disabled?: boolean
   labelPrefix?: string
+  openInLabel?: string
 }
 
 type OpenInMenuEntry = {
@@ -151,13 +153,17 @@ export function WorktreeOpenInMenuItems({
 export function WorktreeOpenInSubMenu({
   worktreePath,
   connectionId,
-  disabled
+  disabled,
+  openInLabel
 }: WorktreeOpenInMenuItemsProps): React.JSX.Element {
+  const label =
+    openInLabel ??
+    getMessages(resolveLocale(useAppStore.getState().settings)).workspace.menu.openIn
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger disabled={disabled}>
         <FolderOpen className="size-3.5" />
-        Open in
+        {label}
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent
         className="w-52"

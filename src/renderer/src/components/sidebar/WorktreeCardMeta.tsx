@@ -23,6 +23,7 @@ import {
   ReviewChecksBadge,
   ReviewStateBadge
 } from './WorktreeCardMetadataStatusBadges'
+import { useI18n } from '@/i18n'
 import type { WorktreeCardPrDisplay } from './worktree-card-pr-display'
 import type { IssueInfo } from '../../../../shared/types'
 
@@ -273,6 +274,8 @@ export function WorktreeCardDetailsHover({
   onOpenLinearIssueInOrca,
   onOpenReviewInOrca
 }: WorktreeCardDetailsHoverProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
   const [open, setOpen] = React.useState(false)
   const dismissAndRun = React.useCallback(
     (handler: ((event: React.MouseEvent) => void) | undefined) => (event: React.MouseEvent) => {
@@ -312,18 +315,18 @@ export function WorktreeCardDetailsHover({
                   <>
                     {issue.url && onOpenGitHubIssueInOrca && (
                       <MetadataActionIcon
-                        label="Open in Orca"
+                        label={copy.openInOrca}
                         onClick={dismissAndRun(onOpenGitHubIssueInOrca)}
                       >
                         <MonitorUp className="size-3" />
                       </MetadataActionIcon>
                     )}
                     {issue.url && (
-                      <MetadataActionIcon label="View on GitHub" href={issue.url}>
+                      <MetadataActionIcon label={copy.viewOnProvider('GitHub')} href={issue.url}>
                         <ExternalLink className="size-3" />
                       </MetadataActionIcon>
                     )}
-                    <MetadataActionIcon label="Edit issue" onClick={onEditIssue}>
+                    <MetadataActionIcon label={copy.editIssue} onClick={onEditIssue}>
                       <Pencil className="size-3" />
                     </MetadataActionIcon>
                   </>
@@ -356,14 +359,14 @@ export function WorktreeCardDetailsHover({
                   <>
                     {linearIssue.url && onOpenLinearIssueInOrca && (
                       <MetadataActionIcon
-                        label="Open in Orca"
+                        label={copy.openInOrca}
                         onClick={dismissAndRun(onOpenLinearIssueInOrca)}
                       >
                         <MonitorUp className="size-3" />
                       </MetadataActionIcon>
                     )}
                     {linearIssue.url && (
-                      <MetadataActionIcon label="View on Linear" href={linearIssue.url}>
+                      <MetadataActionIcon label={copy.viewOnProvider('Linear')} href={linearIssue.url}>
                         <ExternalLink className="size-3" />
                       </MetadataActionIcon>
                     )}
@@ -400,14 +403,14 @@ export function WorktreeCardDetailsHover({
                   <>
                     {review.url && onOpenReviewInOrca && (
                       <MetadataActionIcon
-                        label="Open in Orca"
+                        label={copy.openInOrca}
                         onClick={dismissAndRun(onOpenReviewInOrca)}
                       >
                         <MonitorUp className="size-3" />
                       </MetadataActionIcon>
                     )}
                     {review.url && (
-                      <MetadataActionIcon label={`View on ${reviewProvider}`} href={review.url}>
+                      <MetadataActionIcon label={copy.viewOnProvider(reviewProvider)} href={review.url}>
                         <ExternalLink className="size-3" />
                       </MetadataActionIcon>
                     )}

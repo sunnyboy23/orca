@@ -20,6 +20,7 @@ import {
   getDeleteWorktreeDialogCopy,
   isFolderWorkspaceDelete as getIsFolderWorkspaceDelete
 } from './delete-worktree-dialog-copy'
+import { useI18n } from '@/i18n'
 
 const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
   const activeModal = useAppStore((s) => s.activeModal)
@@ -33,6 +34,8 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
   const updateSettings = useAppStore((s) => s.updateSettings)
   const openSettingsTarget = useAppStore((s) => s.openSettingsTarget)
   const openSettingsPage = useAppStore((s) => s.openSettingsPage)
+  const { messages } = useI18n()
+  const copy = messages.workspace.delete
 
   const isOpen = activeModal === 'delete-worktree'
   const worktreeId = typeof modalData.worktreeId === 'string' ? modalData.worktreeId : ''
@@ -68,6 +71,7 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
     [repoMap, worktrees]
   )
   const deleteCopy = getDeleteWorktreeDialogCopy({
+    copy,
     isBatchDelete,
     worktree,
     worktreeCount: worktrees.length,
@@ -168,11 +172,11 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
     // Why: the toast confirms the preference was saved and points the user at
     // where to undo it. The "Open Settings" action deep-links to the General
     // pane so they never have to hunt for the toggle if they change their mind.
-    toast.success("We'll skip this confirmation next time.", {
-      description: 'You can change this in Settings.',
+    toast.success(copy.skipSavedTitle, {
+      description: copy.skipSavedDescription,
       duration: 8000,
       action: {
-        label: 'Open Settings',
+        label: copy.openSettings,
         onClick: () => {
           openSettingsPage()
           openSettingsTarget({
@@ -183,7 +187,14 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
         }
       }
     })
-  }, [openSettingsPage, openSettingsTarget, updateSettings])
+  }, [
+    copy.openSettings,
+    copy.skipSavedDescription,
+    copy.skipSavedTitle,
+    openSettingsPage,
+    openSettingsTarget,
+    updateSettings
+  ])
 
   const handleDelete = useCallback(
     (force = false) => {
@@ -207,7 +218,7 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
         deletePromise
           .then((result) => {
             if (!result.ok) {
-              toast.error('Force delete failed', {
+              toast.error(copy.forceDeleteFailed, {
                 description: result.error
               })
               return
@@ -215,7 +226,7 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
             onDeleted?.([worktreeId])
           })
           .catch((err: unknown) => {
-            toast.error('Failed to delete workspace', {
+            toast.error(copy.deleteFailed, {
               description: err instanceof Error ? err.message : String(err)
             })
           })
@@ -237,6 +248,8 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
       allowSkipConfirm,
       onDeleted,
       persistDontAskAgainPreference,
+      copy.deleteFailed,
+      copy.forceDeleteFailed,
       removeWorktree,
       worktreeIds.length,
       worktreeId,
@@ -278,10 +291,11 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
       >
         <DialogHeader>
           <DialogTitle className="text-sm">
-            {isBatchDelete ? 'Delete Workspaces' : 'Delete Workspace'}
+            {isBatchDelete ? copy.deleteWorkspaces : copy.deleteWorkspace}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Remove <span className={deleteCopy.targetClassName}>{deleteCopy.targetLabel}</span>{' '}
+            {copy.removePrefix}{' '}
+            <span className={deleteCopy.targetClassName}>{deleteCopy.targetLabel}</span>{' '}
             {deleteCopy.descriptionSuffix}
           </DialogDescription>
         </DialogHeader>
@@ -333,8 +347,7 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
             <div className="flex items-start gap-2">
               <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
               <div className="min-w-0 flex-1">
-                This is the <span className="font-semibold">main worktree</span> (the original clone
-                directory). {deleteCopy.mainWorktreeBlocker}
+                {copy.mainWorktreeNotice(deleteCopy.mainWorktreeBlocker)}
               </div>
             </div>
           </div>
@@ -369,13 +382,13 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
             >
               {dontAskAgain ? <Check className="size-3" strokeWidth={3} /> : null}
             </span>
-            Don&apos;t ask again
+            {copy.dontAskAgain}
           </button>
         )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isDeleting}>
-            {isMainWorktree ? 'Close' : 'Cancel'}
+            {isMainWorktree ? copy.close : copy.cancel}
           </Button>
           {!isMainWorktree &&
             (canForceDelete ? (
@@ -386,7 +399,7 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
                 disabled={isDeleting}
               >
                 {isDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 />}
-                {isDeleting ? 'Force Deleting…' : 'Force Delete'}
+                {isDeleting ? copy.forceDeleting : copy.forceDelete}
               </Button>
             ) : (
               <>
@@ -398,9 +411,7 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
                     disabled={isDeleting}
                   >
                     {isDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 />}
-                    {isDeleting
-                      ? 'Deleting…'
-                      : `Delete All ${lineageDelete.deleteAllTargets.length}`}
+                    {isDeleting ? copy.deleting : copy.deleteAll(lineageDelete.deleteAllTargets.length)}
                   </Button>
                 ) : null}
                 <Button
@@ -411,12 +422,12 @@ const DeleteWorktreeDialog = React.memo(function DeleteWorktreeDialog() {
                 >
                   {isDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 />}
                   {isDeleting
-                    ? 'Deleting…'
+                    ? copy.deleting
                     : isBatchDelete
-                      ? `Delete ${worktrees.length}`
+                      ? copy.deleteCount(worktrees.length)
                       : canDeleteAllLineage
-                        ? 'Delete Parent Only'
-                        : 'Delete'}
+                        ? copy.deleteParentOnly
+                        : copy.delete}
                 </Button>
               </>
             ))}

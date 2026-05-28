@@ -9,6 +9,15 @@ import type {
 } from '../shared/hosted-review'
 import type { AppIdentity } from '../shared/app-identity'
 import type {
+  FeishuChannelConversation,
+  FeishuChannelCreateRunFromMessageParams,
+  FeishuChannelEvent,
+  FeishuChannelMarkReadParams,
+  FeishuChannelMessage,
+  FeishuChannelSendMessageParams,
+  FeishuChannelStatus
+} from '../shared/feishu-collaboration-types'
+import type {
   BaseRefDefaultResult,
   BaseRefSearchResult,
   BrowserCookieImportResult,
@@ -27,6 +36,8 @@ import type {
   DirEntry,
   FsChangedPayload,
   GhosttyImportPreview,
+  FeishuCredentialCheckResult,
+  FeishuBotConnectionStatus,
   GlobalSettings,
   GitBranchCompareResult,
   GitCommitCompareResult,
@@ -1256,10 +1267,25 @@ export type PreloadApi = {
     set: (args: Partial<GlobalSettings>) => Promise<GlobalSettings>
     listFonts: () => Promise<string[]>
     previewGhosttyImport: () => Promise<GhosttyImportPreview>
+    feishuCheckConnection: () => Promise<FeishuCredentialCheckResult>
+    feishuBotGetStatus: () => Promise<FeishuBotConnectionStatus>
+    feishuBotStart: () => Promise<FeishuBotConnectionStatus>
+    feishuBotStop: () => Promise<FeishuBotConnectionStatus>
     /** Subscribe to out-of-band settings updates (e.g. the View > Appearance
      *  menu toggles) so the renderer can stay in sync with main's persisted
      *  state without round-tripping through settings:get. */
     onChanged: (callback: (updates: Partial<GlobalSettings>) => void) => () => void
+  }
+  feishuChannel: {
+    listConversations: () => Promise<FeishuChannelConversation[]>
+    listMessages: (args: { chatId: string }) => Promise<FeishuChannelMessage[]>
+    getStatus: () => Promise<FeishuChannelStatus>
+    sendMessage: (args: FeishuChannelSendMessageParams) => Promise<FeishuChannelMessage>
+    createRunFromMessage: (
+      args: FeishuChannelCreateRunFromMessageParams
+    ) => Promise<{ runId: string }>
+    markRead: (args: FeishuChannelMarkReadParams) => Promise<{ ok: true }>
+    subscribe: (callback: (event: FeishuChannelEvent) => void) => () => void
   }
   keybindings: {
     get: () => Promise<KeybindingFileSnapshot>

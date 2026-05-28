@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { getTerminalPaneSearchEntries } from './terminal-search'
+import { terminalZhCN } from '@/i18n/settings-terminal-zh-CN'
 
 describe('getTerminalPaneSearchEntries', () => {
   it('includes the Windows right-click setting on Windows', () => {
@@ -48,5 +49,15 @@ describe('getTerminalPaneSearchEntries', () => {
     expect(entriesWindows.some((entry) => entry.title === 'Import from Ghostty')).toBe(true)
     expect(entriesMac.some((entry) => entry.title === 'Import from Ghostty')).toBe(true)
     expect(entriesLinux.some((entry) => entry.title === 'Import from Ghostty')).toBe(true)
+  })
+
+  it('supports localized terminal search entries', () => {
+    const entries = getTerminalPaneSearchEntries(
+      { isWindows: true, isMac: true },
+      terminalZhCN
+    )
+    expect(entries.some((entry) => entry.title === '右键粘贴')).toBe(true)
+    expect(entries.some((entry) => entry.title === 'PowerShell 版本')).toBe(true)
+    expect(entries.some((entry) => entry.title === '管理会话')).toBe(true)
   })
 })

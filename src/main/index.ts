@@ -130,6 +130,10 @@ const devAgentHookEndpointNamespace = devInstanceIdentity.isDev
   ? devInstanceIdentity.appUserModelId
   : undefined
 
+type E2EMainGlobal = typeof globalThis & {
+  __orcaE2ERuntime?: OrcaRuntimeService
+}
+
 installUncaughtPipeErrorGuard()
 // Why: propagate the Orca app version into `process.env` so PTY-env
 // construction in both main (local-pty-provider) and the forked daemon
@@ -996,6 +1000,9 @@ app.whenReady().then(async () => {
     getLocalProvider: () => getLocalPtyProvider()
   })
   runtime = runtimeService
+  if (process.env.ORCA_E2E_USER_DATA_DIR) {
+    ;(globalThis as E2EMainGlobal).__orcaE2ERuntime = runtimeService
+  }
   automations = new AutomationService(store, { claudeUsage, codexUsage })
   runtimeService.setAutomationService(automations)
   runtimeService.setAccountServices({ claudeAccounts, codexAccounts, rateLimits })

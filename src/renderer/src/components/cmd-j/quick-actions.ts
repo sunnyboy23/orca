@@ -2,6 +2,7 @@ import { FileText, FolderPlus, Globe, Play, SquareTerminal } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { CmdJQuickActionAvailability, CmdJQuickActionContext } from './quick-action-context'
 import { getWorkspaceScopedActionAvailability } from './quick-action-context'
+import { getMessages, resolveLocale } from '@/i18n'
 
 export type CmdJQuickActionRunResult =
   | { status: 'ok' }
@@ -23,6 +24,14 @@ export type CmdJQuickAction = {
 
 function workspaceActionAvailability(ctx: CmdJQuickActionContext): CmdJQuickActionAvailability {
   return getWorkspaceScopedActionAvailability(ctx)
+}
+
+function getWorkspaceCreateCopy(): { title: string; description: string } {
+  const copy = getMessages(resolveLocale()).workspace.create
+  return {
+    title: copy.createWorkspace,
+    description: copy.createWorkspaceDescription
+  }
 }
 
 async function runWorkspaceAction(
@@ -77,8 +86,12 @@ export const CMD_J_QUICK_ACTIONS: readonly CmdJQuickAction[] = [
   {
     id: 'create-workspace',
     kind: 'action',
-    title: 'Create Workspace',
-    description: 'Start a new workspace.',
+    get title() {
+      return getWorkspaceCreateCopy().title
+    },
+    get description() {
+      return getWorkspaceCreateCopy().description
+    },
     icon: FolderPlus,
     verbKeywords: ['create workspace', 'add workspace', 'new workspace'],
     isAvailable: () => ({ available: true }),

@@ -7,12 +7,16 @@ export type DeleteWorktreeToastCopy = {
 export function getDeleteWorktreeToastCopy(
   worktreeName: string,
   canForceDelete: boolean,
-  error: string
+  error: string,
+  copy: {
+    deleteFailed: string
+    deleteChangedFilesHint: string
+  }
 ): DeleteWorktreeToastCopy {
   if (canForceDelete) {
     return {
-      title: `Failed to delete workspace ${worktreeName}`,
-      description: 'It has changed files. Use Force Delete to delete it anyway.',
+      title: `${copy.deleteFailed}: ${worktreeName}`,
+      description: copy.deleteChangedFilesHint,
       // Why: git commonly refuses the first delete when the worktree still has
       // modified or untracked files. Showing raw stderr in a destructive toast
       // made a normal cleanup step look like an Orca bug, so this common case
@@ -22,7 +26,7 @@ export function getDeleteWorktreeToastCopy(
   }
 
   return {
-    title: `Failed to delete workspace ${worktreeName}`,
+    title: `${copy.deleteFailed}: ${worktreeName}`,
     description: error,
     isDestructive: true
   }

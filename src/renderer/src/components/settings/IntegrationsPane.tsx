@@ -27,6 +27,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '../ui/dialog'
+import { useI18n } from '@/i18n'
 export { INTEGRATIONS_PANE_SEARCH_ENTRIES } from './integrations-search'
 
 function LinearIcon({ className }: { className?: string }): React.JSX.Element {
@@ -87,6 +88,8 @@ function giteaStatusFromPreflight(status: GiteaPreflightStatus | undefined): Git
 }
 
 export function IntegrationsPane(): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.integrations
   const linearStatus = useAppStore((s) => s.linearStatus)
   const preflightStatus = useAppStore((s) => s.preflightStatus)
   const connectLinear = useAppStore((s) => s.connectLinear)
@@ -180,7 +183,7 @@ export function IntegrationsPane(): React.JSX.Element {
       }
     } catch (error) {
       setLinearConnectState('error')
-      setLinearConnectError(error instanceof Error ? error.message : 'Connection failed')
+      setLinearConnectError(error instanceof Error ? error.message : copy.errors.connectionFailed)
     }
   }
 
@@ -251,19 +254,18 @@ export function IntegrationsPane(): React.JSX.Element {
           <div className="min-w-0 flex-1 space-y-0.5">
             <p className="text-sm font-medium">GitHub</p>
             <p className="text-xs text-muted-foreground">
-              Pull requests, issues, and checks via the{' '}
-              <span className="font-mono text-[11px]">gh</span> CLI.
+              {copy.github.description}
             </p>
           </div>
           {ghStatus === 'checking' ? (
             <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
           ) : ghStatus === 'connected' ? (
             <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              Connected
+              {copy.status.connected}
             </span>
           ) : (
             <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-              {ghStatus === 'not-installed' ? 'Not installed' : 'Not authenticated'}
+              {ghStatus === 'not-installed' ? copy.status.notInstalled : copy.status.notAuthenticated}
             </span>
           )}
         </div>
@@ -273,7 +275,7 @@ export function IntegrationsPane(): React.JSX.Element {
             {ghStatus === 'not-installed' ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Install the GitHub CLI to enable pull requests, issues, and checks.
+                  {copy.github.installHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -282,17 +284,17 @@ export function IntegrationsPane(): React.JSX.Element {
                     onClick={() => window.api.shell.openUrl('https://cli.github.com')}
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Install GitHub CLI
+                    {copy.actions.installGitHubCli}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshGh}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">
-                  The GitHub CLI is installed but not authenticated. Run this command in a terminal:
+                  {copy.github.authHelp}
                 </p>
                 <div className="flex items-center gap-2 rounded-md bg-muted/50 px-2.5 py-1.5 font-mono text-xs">
                   <Terminal className="size-3.5 shrink-0 text-muted-foreground" />
@@ -307,10 +309,10 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshGh}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
@@ -326,19 +328,20 @@ export function IntegrationsPane(): React.JSX.Element {
           <div className="min-w-0 flex-1 space-y-0.5">
             <p className="text-sm font-medium">GitLab</p>
             <p className="text-xs text-muted-foreground">
-              Merge requests, issues, todos, and pipelines via the{' '}
-              <span className="font-mono text-[11px]">glab</span> CLI.
+              {copy.gitlab.description}
             </p>
           </div>
           {glabStatus === 'checking' ? (
             <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
           ) : glabStatus === 'connected' ? (
             <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              Connected
+              {copy.status.connected}
             </span>
           ) : (
             <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-              {glabStatus === 'not-installed' ? 'Not installed' : 'Not authenticated'}
+              {glabStatus === 'not-installed'
+                ? copy.status.notInstalled
+                : copy.status.notAuthenticated}
             </span>
           )}
         </div>
@@ -348,7 +351,7 @@ export function IntegrationsPane(): React.JSX.Element {
             {glabStatus === 'not-installed' ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Install the GitLab CLI to enable merge requests, issues, and pipelines.
+                  {copy.gitlab.installHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -359,17 +362,17 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Install GitLab CLI
+                    {copy.actions.installGitLabCli}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshGlab}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">
-                  The GitLab CLI is installed but not authenticated. Run this command in a terminal:
+                  {copy.gitlab.authHelp}
                 </p>
                 <div className="flex items-center gap-2 rounded-md bg-muted/50 px-2.5 py-1.5 font-mono text-xs">
                   <Terminal className="size-3.5 shrink-0 text-muted-foreground" />
@@ -386,10 +389,10 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshGlab}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
@@ -406,21 +409,21 @@ export function IntegrationsPane(): React.JSX.Element {
             <p className="text-sm font-medium">Bitbucket</p>
             <p className="text-xs text-muted-foreground">
               {bitbucketStatus === 'connected'
-                ? bitbucketAccount
-                  ? `${bitbucketAccount} · Pull requests and build statuses`
-                  : 'Pull requests and build statuses'
-                : 'Pull requests and build statuses via Bitbucket Cloud API tokens.'}
+                ? copy.bitbucket.connectedDescription(bitbucketAccount)
+                : copy.bitbucket.setupDescription}
             </p>
           </div>
           {bitbucketStatus === 'checking' ? (
             <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
           ) : bitbucketStatus === 'connected' ? (
             <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              Connected
+              {copy.status.connected}
             </span>
           ) : (
             <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-              {bitbucketStatus === 'not-configured' ? 'Not configured' : 'Auth failed'}
+              {bitbucketStatus === 'not-configured'
+                ? copy.status.notConfigured
+                : copy.status.authFailed}
             </span>
           )}
         </div>
@@ -430,9 +433,7 @@ export function IntegrationsPane(): React.JSX.Element {
             {bitbucketStatus === 'not-configured' ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Set <span className="font-mono text-[11px]">ORCA_BITBUCKET_EMAIL</span> and{' '}
-                  <span className="font-mono text-[11px]">ORCA_BITBUCKET_API_TOKEN</span>, or set{' '}
-                  <span className="font-mono text-[11px]">ORCA_BITBUCKET_ACCESS_TOKEN</span>.
+                  {copy.bitbucket.configureHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -445,18 +446,17 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshBitbucket}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Bitbucket credentials are configured but could not authenticate. Check the token
-                  and repository permissions, then restart Orca if environment variables changed.
+                  {copy.bitbucket.authFailedHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -469,10 +469,10 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshBitbucket}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
@@ -489,23 +489,21 @@ export function IntegrationsPane(): React.JSX.Element {
             <p className="text-sm font-medium">Azure DevOps</p>
             <p className="text-xs text-muted-foreground">
               {azureDevOpsStatus === 'configured'
-                ? azureDevOpsAccount
-                  ? `${azureDevOpsAccount} · Pull requests and build statuses`
-                  : azureDevOpsBaseUrl
-                    ? `${azureDevOpsBaseUrl} · Pull requests and build statuses`
-                    : 'Pull requests and build statuses for detected Azure Repos'
-                : 'Pull requests and build statuses via Azure DevOps REST API tokens.'}
+                ? copy.azureDevOps.configuredDescription(azureDevOpsAccount, azureDevOpsBaseUrl)
+                : copy.azureDevOps.setupDescription}
             </p>
           </div>
           {azureDevOpsStatus === 'checking' ? (
             <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
           ) : azureDevOpsStatus === 'configured' ? (
             <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              {azureDevOpsAccount ? 'Connected' : 'Configured'}
+              {azureDevOpsAccount ? copy.status.connected : copy.status.configured}
             </span>
           ) : (
             <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-              {azureDevOpsStatus === 'not-configured' ? 'Not configured' : 'Auth failed'}
+              {azureDevOpsStatus === 'not-configured'
+                ? copy.status.notConfigured
+                : copy.status.authFailed}
             </span>
           )}
         </div>
@@ -515,10 +513,7 @@ export function IntegrationsPane(): React.JSX.Element {
             {azureDevOpsStatus === 'not-configured' ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Set <span className="font-mono text-[11px]">ORCA_AZURE_DEVOPS_TOKEN</span>, or set{' '}
-                  <span className="font-mono text-[11px]">ORCA_AZURE_DEVOPS_ACCESS_TOKEN</span>. Set{' '}
-                  <span className="font-mono text-[11px]">ORCA_AZURE_DEVOPS_API_BASE_URL</span> only
-                  when Orca cannot derive the API base URL from the git remote.
+                  {copy.azureDevOps.configureHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -531,19 +526,17 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshAzureDevOps}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Azure DevOps credentials are configured but could not authenticate. Check the
-                  token, API base URL, and repository permissions, then restart Orca if environment
-                  variables changed.
+                  {copy.azureDevOps.authFailedHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -556,10 +549,10 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshAzureDevOps}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
@@ -576,23 +569,21 @@ export function IntegrationsPane(): React.JSX.Element {
             <p className="text-sm font-medium">Gitea</p>
             <p className="text-xs text-muted-foreground">
               {giteaStatus === 'configured'
-                ? giteaAccount
-                  ? `${giteaAccount} · Pull requests and commit statuses`
-                  : giteaBaseUrl
-                    ? `${giteaBaseUrl} · Pull requests and commit statuses`
-                    : 'Pull requests and commit statuses for detected repositories'
-                : 'Pull requests and commit statuses via the Gitea REST API.'}
+                ? copy.gitea.configuredDescription(giteaAccount, giteaBaseUrl)
+                : copy.gitea.setupDescription}
             </p>
           </div>
           {giteaStatus === 'checking' ? (
             <LoaderCircle className="size-4 shrink-0 animate-spin text-muted-foreground" />
           ) : giteaStatus === 'configured' ? (
             <span className="shrink-0 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              {giteaAccount ? 'Connected' : 'Configured'}
+              {giteaAccount ? copy.status.connected : copy.status.configured}
             </span>
           ) : (
             <span className="shrink-0 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-              {giteaStatus === 'not-configured' ? 'Optional setup' : 'Auth failed'}
+              {giteaStatus === 'not-configured'
+                ? copy.status.optionalSetup
+                : copy.status.authFailed}
             </span>
           )}
         </div>
@@ -602,11 +593,7 @@ export function IntegrationsPane(): React.JSX.Element {
             {giteaStatus === 'not-configured' ? (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Public repositories are detected from their git remote. Set{' '}
-                  <span className="font-mono text-[11px]">ORCA_GITEA_TOKEN</span> for private
-                  repositories, and set{' '}
-                  <span className="font-mono text-[11px]">ORCA_GITEA_API_BASE_URL</span> only when
-                  Orca cannot derive the API URL from the remote.
+                  {copy.gitea.configureHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -617,19 +604,17 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshGitea}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
             ) : (
               <>
                 <p className="text-xs text-muted-foreground">
-                  Gitea credentials are configured but could not authenticate. Check the token, API
-                  base URL, and repository permissions, then restart Orca if environment variables
-                  changed.
+                  {copy.gitea.authFailedHelp}
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -640,10 +625,10 @@ export function IntegrationsPane(): React.JSX.Element {
                     }
                   >
                     <ExternalLink className="size-3.5 mr-1.5" />
-                    Learn more
+                    {copy.actions.learnMore}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={handleRefreshGitea}>
-                    Re-check
+                    {copy.actions.recheck}
                   </Button>
                 </div>
               </>
@@ -660,17 +645,17 @@ export function IntegrationsPane(): React.JSX.Element {
             <p className="text-sm font-medium">Linear</p>
             <p className="text-xs text-muted-foreground">
               {linearStatus.connected
-                ? `${linearWorkspaces.length} workspace${linearWorkspaces.length === 1 ? '' : 's'} connected`
-                : 'Browse and link issues to workspaces.'}
+                ? copy.linear.connectedDescription(linearWorkspaces.length)
+                : copy.linear.description}
             </p>
           </div>
           {linearStatus.connected ? (
             <div className="flex shrink-0 items-center gap-1.5">
               <Button variant="outline" size="sm" onClick={() => setLinearDialogOpen(true)}>
-                Add workspace
+                {copy.actions.addWorkspace}
               </Button>
               <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-                Connected
+                {copy.status.connected}
               </span>
             </div>
           ) : (
@@ -678,7 +663,7 @@ export function IntegrationsPane(): React.JSX.Element {
               className="shrink-0 rounded-full border border-border/50 bg-muted/40 px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               onClick={() => setLinearDialogOpen(true)}
             >
-              Connect
+              {copy.actions.connect}
             </button>
           )}
         </div>
@@ -705,7 +690,7 @@ export function IntegrationsPane(): React.JSX.Element {
                   {testResult?.state === 'ok' ? (
                     <span className="flex shrink-0 items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 className="size-3.5" />
-                      Verified
+                      {copy.linear.verified}
                     </span>
                   ) : null}
                   {testResult?.state === 'error' ? (
@@ -723,15 +708,15 @@ export function IntegrationsPane(): React.JSX.Element {
                     {testing ? (
                       <>
                         <LoaderCircle className="size-3.5 mr-1.5 animate-spin" />
-                        Testing…
+                        {copy.actions.testing}
                       </>
                     ) : (
-                      'Test'
+                      copy.actions.test
                     )}
                   </Button>
                   <button
                     onClick={() => void handleLinearDisconnect(workspace.id)}
-                    aria-label={`Disconnect ${workspace.organizationName}`}
+                    aria-label={copy.linear.disconnectWorkspace(workspace.organizationName)}
                     className="rounded-md p-1 text-muted-foreground/50 transition-colors hover:text-destructive"
                   >
                     <Unlink className="size-3.5" />
@@ -740,7 +725,7 @@ export function IntegrationsPane(): React.JSX.Element {
               )
             })}
             <p className="text-[11px] text-muted-foreground/70">
-              Each workspace uses its own locally stored API key.
+              {copy.linear.workspaceKeyHint}
             </p>
           </div>
         )}
@@ -769,10 +754,13 @@ export function IntegrationsPane(): React.JSX.Element {
           }}
         >
           <DialogHeader className="gap-3">
-            <DialogTitle className="leading-tight">Connect Linear workspace</DialogTitle>
+            <DialogTitle className="leading-tight">{copy.linear.dialogTitle}</DialogTitle>
             <DialogDescription>
-              Paste a <strong className="font-semibold text-foreground">Personal API key</strong> to
-              add a workspace to Orca.
+              {copy.linear.dialogDescriptionBeforeKey}{' '}
+              <strong className="font-semibold text-foreground">
+                {copy.linear.personalApiKey}
+              </strong>{' '}
+              {copy.linear.dialogDescriptionAfterKey}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3">
@@ -794,21 +782,22 @@ export function IntegrationsPane(): React.JSX.Element {
               <p className="text-xs text-destructive">{linearConnectError}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              Create one in{' '}
+              {copy.linear.createOneIn}{' '}
               <button
                 className="text-primary underline-offset-2 hover:underline"
                 onClick={() =>
                   window.api.shell.openUrl('https://linear.app/settings/account/security')
                 }
               >
-                Linear Settings → Security
+                {copy.linear.settingsSecurity}
               </button>{' '}
-              → <strong className="font-semibold text-foreground">New API key</strong> (not{' '}
-              <span className="text-foreground">New passkey</span>).
+              → <strong className="font-semibold text-foreground">{copy.linear.newApiKey}</strong>{' '}
+              ({copy.linear.not} <span className="text-foreground">{copy.linear.newPasskey}</span>
+              ).
             </p>
             <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
               <Lock className="size-3 shrink-0" />
-              Your key is encrypted via the OS keychain and stored locally.
+              {copy.linear.keychainHint}
             </p>
           </div>
           <DialogFooter>
@@ -817,7 +806,7 @@ export function IntegrationsPane(): React.JSX.Element {
               onClick={() => setLinearDialogOpen(false)}
               disabled={linearConnectState === 'connecting'}
             >
-              Cancel
+              {copy.actions.cancel}
             </Button>
             <Button
               onClick={() => void handleLinearConnect()}
@@ -826,10 +815,10 @@ export function IntegrationsPane(): React.JSX.Element {
               {linearConnectState === 'connecting' ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Verifying…
+                  {copy.actions.verifying}
                 </>
               ) : (
-                'Connect'
+                copy.actions.connect
               )}
             </Button>
           </DialogFooter>

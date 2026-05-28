@@ -1,0 +1,19 @@
+{
+  "feature": "feishu_bot_chat_orchestration",
+  "type": "implementation",
+  "status": "planned",
+  "entry": "interactive",
+  "requirements": [
+    "飞书机器人聊天能触发 Orca 本地编排任务",
+    "飞书聊天能看到任务进度、等待确认和最终结果",
+    "用户能通过飞书聊天执行状态查询、停止任务和 gate 确认",
+    "使用用户个人 App ID 和 App Secret 建立飞书长连接事件通道",
+    "不泄露本机路径、token、App Secret、keychain 引用等敏感信息"
+  ],
+  "validation": [
+    "corepack pnpm run typecheck:node",
+    "corepack pnpm run typecheck:web",
+    "corepack pnpm vitest run src/main/runtime/integrations/feishu",
+    "corepack pnpm vitest run src/main/runtime/rpc/methods/orchestration.test.ts"
+  ]
+}

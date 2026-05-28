@@ -1,15 +1,7 @@
 import type { ReactNode } from 'react'
 import TabBar from '../tab-bar/TabBar'
 import TerminalPane from '../terminal-pane/TerminalPane'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
+import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog'
 import type { OpenFile } from '@/store/slices/editor'
 import type { TerminalTab, Worktree } from '../../../../shared/types'
 
@@ -156,29 +148,14 @@ export function TerminalShell({
 
       {activeWorktreeId && activeTabType === 'editor' && worktreeFiles.length > 0 && editorPanel}
 
-      <Dialog open={saveDialogFileId !== null} onOpenChange={onSaveDialogOpenChange}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-sm">Unsaved Changes</DialogTitle>
-            <DialogDescription className="text-xs">
-              {saveDialogFile
-                ? `"${saveDialogFile.relativePath.split('/').pop()}" has unsaved changes. Do you want to save before closing?`
-                : 'This file has unsaved changes.'}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={onSaveDialogCancel}>
-              Cancel
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={onSaveDialogDiscard}>
-              Don&apos;t Save
-            </Button>
-            <Button type="button" size="sm" onClick={onSaveDialogSave}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <UnsavedChangesDialog
+        open={saveDialogFileId !== null}
+        filename={saveDialogFile?.relativePath.split('/').pop() ?? null}
+        onOpenChange={onSaveDialogOpenChange}
+        onCancel={onSaveDialogCancel}
+        onDiscard={onSaveDialogDiscard}
+        onSave={onSaveDialogSave}
+      />
     </div>
   )
 }

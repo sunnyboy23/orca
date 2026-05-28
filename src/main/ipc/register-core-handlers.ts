@@ -30,6 +30,7 @@ import { registerComputerUsePermissionHandlers } from './computer-use-permission
 import { setTrustedBrowserRendererWebContentsId, setAgentBrowserBridgeRef } from './browser'
 import { registerSessionHandlers } from './session'
 import { registerSettingsHandlers } from './settings'
+import { registerFeishuChannelHandlers } from './feishu-channel'
 import { registerDiagnosticsHandlers } from './diagnostics'
 import { registerSkillsHandlers } from './skills'
 import { registerWorkspaceSpaceHandlers } from './workspace-space'
@@ -128,7 +129,8 @@ export function registerCoreHandlers(
   // not load-bearing; both register independent ipcMain channels.
   registerDiagnosticsHandlers()
   registerComputerUsePermissionHandlers()
-  registerSettingsHandlers(store, agentAwakeService)
+  registerSettingsHandlers(store, agentAwakeService, runtime)
+  registerFeishuChannelHandlers(runtime)
   registerSkillsHandlers(store)
   if (automations) {
     registerAutomationHandlers(store, automations)

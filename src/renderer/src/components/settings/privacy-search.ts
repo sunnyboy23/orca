@@ -3,45 +3,18 @@
 // terminal-search.ts, etc.) and keep Settings.tsx imports uniform.
 
 import type { SettingsSearchEntry } from './settings-search'
+import { privacyEn } from '@/i18n/settings-core-panes-en'
+import type { PrivacyMessages } from '@/i18n/settings-core-panes-types'
 
-export const PRIVACY_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Privacy & Telemetry',
-    description: 'Anonymous product usage data, diagnostics, and telemetry controls.',
-    keywords: [
-      'privacy',
-      'telemetry',
-      'analytics',
-      'usage',
-      'anonymous',
-      'data',
-      'posthog',
-      'opt out',
-      'opt in'
-    ]
-  },
-  {
-    title: 'Share Anonymous Usage Data',
-    description: 'Help improve Orca by sending anonymous feature-usage events.',
-    keywords: ['telemetry', 'usage', 'anonymous', 'opt in', 'opt out', 'share']
-  },
-  {
-    title: 'Diagnostics',
-    description: 'Trace files and OTLP export controls.',
-    keywords: ['diagnostics', 'trace', 'logs', 'otlp', 'opentelemetry', 'support']
-  },
-  {
-    title: 'Telemetry environment variables',
-    description: 'Environment variables that disable telemetry transmission.',
-    keywords: [
-      'do not track',
-      'do_not_track',
-      'orca_telemetry_disabled',
-      'ci',
-      'continuous integration',
-      'env',
-      'environment variable',
-      'disable'
-    ]
-  }
-]
+export function getPrivacyPaneSearchEntries(
+  messages: PrivacyMessages = privacyEn
+): SettingsSearchEntry[] {
+  return [
+    messages.diagnostics.search.pane,
+    messages.telemetry,
+    messages.diagnostics.search.bundle,
+    messages.diagnostics.search.environment
+  ]
+}
+
+export const PRIVACY_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = getPrivacyPaneSearchEntries()

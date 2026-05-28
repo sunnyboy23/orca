@@ -16,7 +16,10 @@ import {
 } from '../ui/select'
 import { BellRing, Bot, FileAudio, Siren, Upload, Volume2 } from 'lucide-react'
 import { getNotificationSoundOptions } from '@/components/notification-sound-options'
-export { NOTIFICATIONS_PANE_SEARCH_ENTRIES } from './notifications-search'
+import { useI18n } from '@/i18n'
+import { notificationsEn } from '@/i18n/settings-panes-en'
+import type { NotificationsMessages } from '@/i18n/settings-panes-types'
+export { getNotificationsPaneSearchEntries } from './notifications-search'
 
 type NotificationsPaneProps = {
   settings: GlobalSettings
@@ -41,19 +44,20 @@ type SystemNotificationSettingsCopy = {
 }
 
 function getSystemNotificationSettingsCopy(
-  platform: NodeJS.Platform
+  platform: NodeJS.Platform,
+  copy: NotificationsMessages
 ): SystemNotificationSettingsCopy | null {
   if (platform === 'darwin') {
     return {
-      failureTitle: 'macOS did not show the notification',
-      failureDescription: 'Enable Allow notifications for Orca in System Settings.'
+      failureTitle: copy.system.macFailureTitle,
+      failureDescription: copy.system.macFailureDescription
     }
   }
 
   if (platform === 'win32') {
     return {
-      failureTitle: 'Windows did not show the notification',
-      failureDescription: 'Enable notifications for Orca in Windows Settings.'
+      failureTitle: copy.system.windowsFailureTitle,
+      failureDescription: copy.system.windowsFailureDescription
     }
   }
 
@@ -62,11 +66,12 @@ function getSystemNotificationSettingsCopy(
 
 export async function sendNotificationSettingsTestNotification(
   notificationSettings: GlobalSettings['notifications'],
-  volumeDraft: number
+  volumeDraft: number,
+  copy: NotificationsMessages = notificationsEn
 ): Promise<void> {
   const permissionStatus = await window.api.notifications.getPermissionStatus()
   if (!permissionStatus.supported) {
-    toast.error('Notifications are not supported on this system')
+    toast.error(copy.system.unsupported)
     return
   }
 
@@ -86,17 +91,17 @@ export async function sendNotificationSettingsTestNotification(
           })
         : null
     if (notificationSettings.customSoundId !== 'system' && soundResult && !soundResult.played) {
-      toast.error('Custom notification sound could not be played')
+      toast.error(copy.system.customSoundFailed)
       return
     }
-    const settingsCopy = getSystemNotificationSettingsCopy(permissionStatus.platform)
+    const settingsCopy = getSystemNotificationSettingsCopy(permissionStatus.platform, copy)
     if (permissionStatus.platform === 'darwin' && settingsCopy) {
       // Why: Electron's native 'show' event can fire even when macOS silently
       // drops the banner because the per-app Allow notifications switch is off.
-      toast.message('Test notification requested', {
-        description: 'If no macOS banner appeared, enable Allow notifications for Orca.',
+      toast.message(copy.system.macRequestedTitle, {
+        description: copy.system.macRequestedDescription,
         action: {
-          label: 'Open Settings',
+          label: copy.system.openSettings,
           onClick: () => {
             void window.api.notifications.openSystemSettings()
           }
@@ -104,25 +109,25 @@ export async function sendNotificationSettingsTestNotification(
       })
       return
     }
-    toast.success('Test notification sent')
+    toast.success(copy.system.sent)
     return
   }
 
   if (result.reason === 'not-displayed') {
-    const settingsCopy = getSystemNotificationSettingsCopy(permissionStatus.platform)
+    const settingsCopy = getSystemNotificationSettingsCopy(permissionStatus.platform, copy)
     if (settingsCopy) {
       toast.error(settingsCopy.failureTitle, {
         description: settingsCopy.failureDescription,
         action: {
-          label: 'Open Settings',
+          label: copy.system.openSettings,
           onClick: () => {
             void window.api.notifications.openSystemSettings()
           }
         }
       })
     } else {
-      toast.error('System did not show the notification', {
-        description: 'Check your desktop notification settings for Orca.'
+      toast.error(copy.system.genericFailureTitle, {
+        description: copy.system.genericFailureDescription
       })
     }
     return
@@ -130,8 +135,8 @@ export async function sendNotificationSettingsTestNotification(
 
   toast.error(
     result.reason === 'disabled'
-      ? 'Notifications are disabled'
-      : 'Test notification was not delivered'
+      ? copy.system.disabled
+      : copy.system.notDelivered
   )
 }
 
@@ -139,6 +144,8 @@ export function NotificationsPane({
   settings,
   updateSettings
 }: NotificationsPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.notifications
   const notificationSettings = settings.notifications
   const notificationSettingsRef = useRef(notificationSettings)
   const [isPickingSound, setIsPickingSound] = useState(false)
@@ -174,7 +181,7 @@ export function NotificationsPane({
   }
 
   const handleSendTestNotification = async (): Promise<void> => {
-    await sendNotificationSettingsTestNotification(notificationSettings, volumeDraft)
+    await sendNotificationSettingsTestNotification(notificationSettings, volumeDraft, copy)
   }
 
   const previewSound = async (
@@ -188,7 +195,7 @@ export function NotificationsPane({
       volume: volumeDraft
     })
     if (!result.played) {
-      toast.error('Notification sound could not be played')
+      toast.error(copy.system.soundFailed)
     }
   }
 
@@ -220,8 +227,8 @@ export function NotificationsPane({
   return (
     <div className="space-y-1">
       <SettingToggle
-        label="Enable Notifications"
-        description="Native system notifications for background events."
+        label={copy.fields.enable.title}
+        description={copy.fields.enable.description ?? ''}
         checked={notificationSettings.enabled}
         onToggle={() => void updateNotificationSettings({ enabled: !notificationSettings.enabled })}
       />
@@ -230,8 +237,8 @@ export function NotificationsPane({
 
       <SettingToggle
         icon={<Bot className="size-4" />}
-        label="Agent Task Complete"
-        description="A coding agent finishes and becomes idle."
+        label={copy.fields.agentTaskComplete.title}
+        description={copy.fields.agentTaskComplete.description ?? ''}
         checked={notificationSettings.agentTaskComplete}
         disabled={!notificationSettings.enabled}
         onToggle={() =>
@@ -243,8 +250,8 @@ export function NotificationsPane({
 
       <SettingToggle
         icon={<Siren className="size-4" />}
-        label="Terminal Bell"
-        description="A background terminal emits a bell character."
+        label={copy.fields.terminalBell.title}
+        description={copy.fields.terminalBell.description ?? ''}
         checked={notificationSettings.terminalBell}
         disabled={!notificationSettings.enabled}
         onToggle={() =>
@@ -260,11 +267,9 @@ export function NotificationsPane({
         <div className="space-y-0.5">
           <div className="flex items-center gap-2">
             <FileAudio className="size-4" />
-            <Label>Notification Sound</Label>
+            <Label>{copy.fields.sound.title}</Label>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Choose the alert Orca plays when a desktop notification is delivered.
-          </p>
+          <p className="text-xs text-muted-foreground">{copy.fields.sound.description}</p>
         </div>
         <Select
           value={selectedSoundId}
@@ -272,7 +277,7 @@ export function NotificationsPane({
           onValueChange={(value) => void handleSoundSelect(value as NotificationSoundSelectValue)}
         >
           <SelectTrigger className="w-full max-w-[360px]" size="sm">
-            <SelectValue placeholder="Choose notification sound" />
+            <SelectValue placeholder={copy.chooseSoundPlaceholder} />
           </SelectTrigger>
           <SelectContent align="start" className="w-[--radix-select-trigger-width]">
             {soundOptions.map((option) => {
@@ -288,7 +293,9 @@ export function NotificationsPane({
             <SelectItem value={CHOOSE_CUSTOM_SOUND_VALUE}>
               <Upload className="size-4" />
               <span>
-                {notificationSettings.customSoundPath ? 'Change Custom File' : 'Choose Custom File'}
+                {notificationSettings.customSoundPath
+                  ? copy.changeCustomFile
+                  : copy.chooseCustomFile}
               </span>
             </SelectItem>
           </SelectContent>
@@ -298,7 +305,7 @@ export function NotificationsPane({
             className="truncate font-mono text-[11px] text-muted-foreground"
             title={notificationSettings.customSoundPath}
           >
-            Custom: {notificationSettings.customSoundPath}
+            {copy.customPath(notificationSettings.customSoundPath)}
           </p>
         ) : null}
         {selectedSoundId !== 'system' ? (
@@ -313,7 +320,7 @@ export function NotificationsPane({
               onValueChange={([value]) => setVolumeDraft(value)}
               onValueCommit={([value]) => handleVolumeCommit(value)}
               className="flex-1"
-              aria-label="Notification sound volume"
+              aria-label={copy.fields.volume.title}
             />
             <span className="w-10 text-right font-mono text-xs tabular-nums text-muted-foreground">
               {volumeDraft}%
@@ -325,8 +332,8 @@ export function NotificationsPane({
       <Separator />
 
       <SettingToggle
-        label="Suppress While Focused"
-        description="Skip notifications when the triggering worktree is already visible."
+        label={copy.fields.suppressWhileFocused.title}
+        description={copy.fields.suppressWhileFocused.description ?? ''}
         checked={notificationSettings.suppressWhenFocused}
         disabled={!notificationSettings.enabled}
         onToggle={() =>
@@ -345,7 +352,7 @@ export function NotificationsPane({
           className="gap-2"
         >
           <BellRing className="size-3.5" />
-          Send Test Notification
+          {copy.sendTestButton}
         </Button>
       </div>
     </div>

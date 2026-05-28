@@ -17,18 +17,18 @@ import type {
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { isSshTargetConnecting, type SshTargetBusyAction } from './ssh-target-action-state'
+import { sshEn } from '@/i18n/settings-ssh-en'
+import type { SshSettingsMessages } from '@/i18n/settings-ssh-types'
 
 // ── Shared status helpers ────────────────────────────────────────────
 
-export const STATUS_LABELS: Record<SshConnectionStatus, string> = {
-  disconnected: 'Disconnected',
-  connecting: 'Connecting\u2026',
-  'auth-failed': 'Auth failed',
-  'deploying-relay': 'Deploying relay\u2026',
-  connected: 'Connected',
-  reconnecting: 'Reconnecting\u2026',
-  'reconnection-failed': 'Reconnection failed',
-  error: 'Error'
+export const STATUS_LABELS: Record<SshConnectionStatus, string> = sshEn.status
+
+export function getSshStatusLabel(
+  status: SshConnectionStatus,
+  messages: SshSettingsMessages = sshEn
+): string {
+  return messages.status[status]
 }
 
 export function statusColor(status: SshConnectionStatus): string {
@@ -55,6 +55,7 @@ type SshTargetCardProps = {
   state: SshConnectionState | undefined
   testing: boolean
   busyAction?: SshTargetBusyAction
+  copy?: SshSettingsMessages
   onConnect: (targetId: string) => void | Promise<void>
   onDisconnect: (targetId: string) => void | Promise<void>
   onTerminateSessions: (targetId: string) => void | Promise<void>
@@ -69,6 +70,7 @@ export function SshTargetCard({
   state,
   testing,
   busyAction,
+  copy = sshEn,
   onConnect,
   onDisconnect,
   onTerminateSessions,
@@ -127,7 +129,9 @@ export function SshTargetCard({
           onClick={handleTerminateSessions}
           className="size-7 text-muted-foreground hover:text-red-400"
           disabled={hasActionInFlight}
-          aria-label={terminateInFlight ? 'Ending remote terminals' : 'End remote terminals'}
+          aria-label={
+            terminateInFlight ? copy.card.endingRemoteTerminals : copy.card.endRemoteTerminals
+          }
         >
           {terminateInFlight ? (
             <Loader2 className="size-3 animate-spin" />
@@ -137,7 +141,7 @@ export function SshTargetCard({
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top" sideOffset={4}>
-        End remote terminals
+        {copy.card.endRemoteTerminals}
       </TooltipContent>
     </Tooltip>
   )
@@ -151,7 +155,7 @@ export function SshTargetCard({
           onClick={handleResetRelay}
           className="size-7 text-muted-foreground hover:text-red-400"
           disabled={hasActionInFlight}
-          aria-label={resetInFlight ? 'Resetting remote relay' : 'Reset remote relay'}
+          aria-label={resetInFlight ? copy.card.resettingRemoteRelay : copy.card.resetRemoteRelay}
         >
           {resetInFlight ? (
             <Loader2 className="size-3 animate-spin" />
@@ -161,7 +165,7 @@ export function SshTargetCard({
         </Button>
       </TooltipTrigger>
       <TooltipContent side="top" sideOffset={4}>
-        Reset remote relay
+        {copy.card.resetRemoteRelay}
       </TooltipContent>
     </Tooltip>
   )
@@ -178,13 +182,13 @@ export function SshTargetCard({
             onClick={() => onEdit(target)}
             className="size-7"
             disabled={hasActionInFlight}
-            aria-label="Edit target"
+            aria-label={copy.card.editTarget}
           >
             <Pencil className="size-3" />
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={4}>
-          Edit target
+          {copy.card.editTarget}
         </TooltipContent>
       </Tooltip>
       <Tooltip>
@@ -195,7 +199,7 @@ export function SshTargetCard({
             onClick={() => onRemove(target.id)}
             className="size-7 text-muted-foreground hover:text-red-400"
             disabled={hasActionInFlight}
-            aria-label={removeInFlight ? 'Removing target' : 'Remove target'}
+            aria-label={removeInFlight ? copy.card.removingTarget : copy.card.removeTarget}
           >
             {removeInFlight ? (
               <Loader2 className="size-3 animate-spin" />
@@ -205,7 +209,7 @@ export function SshTargetCard({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="top" sideOffset={4}>
-          Remove target
+          {copy.card.removeTarget}
         </TooltipContent>
       </Tooltip>
     </div>
@@ -219,7 +223,9 @@ export function SshTargetCard({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{target.label}</span>
           <span className={`size-2 shrink-0 rounded-full ${statusColor(status)}`} />
-          <span className="text-[11px] text-muted-foreground">{STATUS_LABELS[status]}</span>
+          <span className="text-[11px] text-muted-foreground">
+            {getSshStatusLabel(status, copy)}
+          </span>
         </div>
         <p className="truncate text-xs text-muted-foreground">
           {target.username}@{target.host}:{target.port}
@@ -242,7 +248,7 @@ export function SshTargetCard({
               disabled={hasActionInFlight}
             >
               <ServerOff className="size-3" />
-              Disconnect
+              {copy.card.disconnect}
             </Button>
           </>
         ) : isSshTargetConnecting(status) ? (
@@ -250,7 +256,7 @@ export function SshTargetCard({
             {renderSecondaryIconActions(false)}
             <Button variant="ghost" size="xs" disabled className="gap-1.5">
               <Loader2 className="size-3 animate-spin" />
-              Connecting
+              {copy.card.connecting}
             </Button>
           </>
         ) : (
@@ -268,7 +274,7 @@ export function SshTargetCard({
               ) : (
                 <MonitorSmartphone className="size-3" />
               )}
-              Test
+              {copy.card.test}
             </Button>
             <Button
               variant="ghost"
@@ -282,7 +288,7 @@ export function SshTargetCard({
               ) : (
                 <Server className="size-3" />
               )}
-              Connect
+              {copy.card.connect}
             </Button>
           </>
         )}

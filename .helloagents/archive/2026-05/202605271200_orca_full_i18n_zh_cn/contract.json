@@ -1,0 +1,17 @@
+{
+  "feature": "orca_full_i18n_zh_cn",
+  "type": "implementation",
+  "status": "in_progress",
+  "entry": "goal",
+  "requirements": [
+    "支持 system/en/zh-CN 语言偏好",
+    "建立正式 renderer i18n 基础设施",
+    "中文翻译自然贴合语义",
+    "所有功能和断言测试不能因中文支持回归"
+  ],
+  "validation": [
+    "corepack pnpm run typecheck:web",
+    "corepack pnpm exec vitest run --config config/vitest.config.ts src/renderer/src/i18n/i18n.test.ts",
+    "corepack pnpm run lint"
+  ]
+}

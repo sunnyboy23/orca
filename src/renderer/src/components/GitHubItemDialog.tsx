@@ -68,6 +68,7 @@ import { detectLanguage } from '@/lib/language-detect'
 import { cn } from '@/lib/utils'
 import { DiffSectionItem } from '@/components/editor/DiffSectionItem'
 import type { DecoratedDiffComment } from '@/components/diff-comments/useDiffCommentDecorator'
+import { useI18n } from '@/i18n'
 import {
   CombinedDiffFileTree,
   createCombinedDiffSectionIndexMap,
@@ -3300,6 +3301,7 @@ function ChecksTab({
   variant?: 'compact' | 'page'
   onChecksUpdated: (checks: PRCheckDetail[]) => void
 }): React.JSX.Element {
+  const { messages } = useI18n()
   const [localChecks, setLocalChecks] = useState<PRCheckDetail[] | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [rerunning, setRerunning] = useState(false)
@@ -3436,7 +3438,7 @@ function ChecksTab({
 
       const connectionId = getConnectionId(attachedWorkspace.id)
       if (connectionId === undefined) {
-        toast.error('Unable to resolve the workspace connection.')
+        toast.error(messages.sourceControl.workspaceConnectionUnavailable)
         return
       }
 
@@ -3447,7 +3449,7 @@ function ChecksTab({
           : await activeStore.ensureDetectedAgents()
       const agent = pickDefaultAgent(activeStore.settings?.defaultTuiAgent, detectedAgents)
       if (!agent) {
-        toast.error('No AI agents detected. Configure a default agent in Settings.')
+        toast.error(messages.sourceControl.noAgentsDetected)
         return
       }
 
@@ -3459,15 +3461,15 @@ function ChecksTab({
         launchSource: 'task_page'
       })
       if (!result) {
-        toast.error('Could not build the agent launch command.')
+        toast.error(messages.sourceControl.agentLaunchCommandFailed)
         return
       }
       focusTerminalTabSurface(result.tabId)
-      toast.success('Started an AI agent for the broken checks.')
+      toast.success(messages.sourceControl.commitFailureAgentStarted)
     } finally {
       setFixingChecks(false)
     }
-  }, [failedChecks.length, fixingChecks, item, list, repoId])
+  }, [failedChecks.length, fixingChecks, item, list, messages, repoId])
 
   const handleToggleCheckDetails = useCallback(
     (check: PRCheckDetail): void => {

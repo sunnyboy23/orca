@@ -1,0 +1,10 @@
+{
+  "status": "in_progress",
+  "completed": 10,
+  "failed": 0,
+  "pending": 8,
+  "total": 18,
+  "percent": 56,
+  "current": "已完成飞书通道首版数据链路与客户端页面，待补完整 run/gate 操作和文档",
+  "updated_at": "2026-05-28 12:35:00"
+}

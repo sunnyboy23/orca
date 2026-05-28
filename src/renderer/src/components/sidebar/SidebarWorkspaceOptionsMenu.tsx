@@ -21,45 +21,31 @@ import type { WorktreeCardProperty } from '../../../../shared/types'
 import { DEFAULT_SHOW_SLEEPING_WORKSPACES } from '../../../../shared/constants'
 import SidebarRepositoryFilterSection from './SidebarRepositoryFilterSection'
 import SidebarWorkspaceFilterSection from './SidebarWorkspaceFilterSection'
+import { useI18n } from '@/i18n'
 
 type SidebarWorkspaceOptionsMenuProps = {
   preserveWorkspaceBoardOpen?: boolean
   onMenuOpenChange?: (open: boolean) => void
 }
 
-const GROUP_BY_OPTIONS = [
-  { id: 'none', label: 'None' },
-  { id: 'workspace-status', label: 'Status' },
-  { id: 'pr-status', label: 'PR' },
-  { id: 'repo', label: 'Project' }
-] as const
-
-const PROPERTY_OPTIONS: { id: WorktreeCardProperty; label: string }[] = [
-  { id: 'issue', label: 'GitHub ticket' },
-  { id: 'linear-issue', label: 'Linear issue' },
-  { id: 'pr', label: 'PR/MR link' },
-  { id: 'comment', label: 'Notes' },
-  { id: 'ports', label: 'Ports' },
+const PROPERTY_OPTION_IDS: WorktreeCardProperty[] = [
+  'issue',
+  'linear-issue',
+  'pr',
+  'comment',
+  'ports',
   // Why: toggles the inline "Agent activity" list rendered below each
   // workspace card body (see WorktreeCard -> WorktreeCardAgents). Off hides
   // the list; there is no alternate surface.
-  { id: 'inline-agents', label: 'Agent activity' }
+  'inline-agents'
 ]
 
 const SORT_OPTIONS = [
-  { id: 'name', label: 'Name', description: null },
-  {
-    id: 'smart',
-    label: 'Agent Activity',
-    description: 'Agents that need attention, then most recent activity.'
-  },
-  { id: 'recent', label: 'Recent', description: null },
-  { id: 'repo', label: 'Project', description: null },
-  {
-    id: 'manual',
-    label: 'Manual',
-    description: 'Drag workspaces to arrange them within each group.'
-  }
+  { id: 'name', descriptionKey: null },
+  { id: 'smart', descriptionKey: 'smartDescription' },
+  { id: 'recent', descriptionKey: null },
+  { id: 'repo', descriptionKey: null },
+  { id: 'manual', descriptionKey: 'manualDescription' }
 ] as const
 
 const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsMenu({
@@ -76,8 +62,33 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
   const setSortBy = useAppStore((s) => s.setSortBy)
   const groupBy = useAppStore((s) => s.groupBy)
   const setGroupBy = useAppStore((s) => s.setGroupBy)
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
 
   const [open, setOpen] = useState(false)
+  const groupByOptions = useMemo(
+    () => [
+      { id: 'none', label: copy.groupOptions.none },
+      { id: 'workspace-status', label: copy.groupOptions.status },
+      { id: 'pr-status', label: copy.groupOptions.pr },
+      { id: 'repo', label: copy.groupOptions.project }
+    ],
+    [copy]
+  )
+  const propertyLabels = useMemo<Record<WorktreeCardProperty, string>>(
+    () => ({
+      issue: copy.properties.issue,
+      'linear-issue': copy.properties.linearIssue,
+      pr: copy.properties.pr,
+      ci: copy.properties.ci,
+      status: copy.properties.status,
+      unread: copy.properties.unread,
+      comment: copy.properties.comment,
+      ports: copy.properties.ports,
+      'inline-agents': copy.properties.inlineAgents
+    }),
+    [copy]
+  )
 
   const handleOpenChange = useCallback(
     (next: boolean) => {
@@ -109,10 +120,11 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
   const hasAnyFilter = hasSleepingFilter || hideDefaultBranchWorkspace || hasRepoFilter
   const activeFilterCount =
     (hasSleepingFilter ? 1 : 0) + (hideDefaultBranchWorkspace ? 1 : 0) + selectedCount
-  const activeFilterLabel = `${activeFilterCount} ${activeFilterCount === 1 ? 'filter' : 'filters'}`
-  const sortLabel = SORT_OPTIONS.find((opt) => opt.id === sortBy)?.label ?? 'Sort'
-  const visiblePropertyCount = PROPERTY_OPTIONS.filter((opt) =>
-    worktreeCardProperties.includes(opt.id)
+  const activeFilterLabel = copy.activeFilters(activeFilterCount)
+  const sortOption = SORT_OPTIONS.find((opt) => opt.id === sortBy)
+  const sortLabel = sortOption ? copy.sortOptions[sortOption.id] : copy.sortFallback
+  const visiblePropertyCount = PROPERTY_OPTION_IDS.filter((id) =>
+    worktreeCardProperties.includes(id)
   ).length
 
   return (
@@ -127,8 +139,8 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
               className="relative text-muted-foreground"
               aria-label={
                 hasAnyFilter
-                  ? `Workspace options (${activeFilterLabel} active)`
-                  : 'Workspace options'
+                  ? copy.workspaceOptionsWithFilters(activeFilterLabel)
+                  : copy.workspaceOptions
               }
               data-workspace-board-preserve-open={preserveWorkspaceBoardOpen ? '' : undefined}
             >
@@ -147,7 +159,7 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={6}>
-          {hasAnyFilter ? `Workspace options (${activeFilterLabel})` : 'Workspace options'}
+          {hasAnyFilter ? copy.workspaceOptionsWithFilters(activeFilterLabel) : copy.workspaceOptions}
         </TooltipContent>
       </Tooltip>
       <DropdownMenuContent
@@ -157,7 +169,7 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
         className="w-72 pb-2"
         data-workspace-board-preserve-open={preserveWorkspaceBoardOpen ? '' : undefined}
       >
-        <DropdownMenuLabel>Group by</DropdownMenuLabel>
+        <DropdownMenuLabel>{copy.groupBy}</DropdownMenuLabel>
         <div className="px-2 pt-0.5 pb-1">
           <ToggleGroup
             type="single"
@@ -171,7 +183,7 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
             size="sm"
             className="h-6 w-full justify-stretch"
           >
-            {GROUP_BY_OPTIONS.map((opt) => (
+            {groupByOptions.map((opt) => (
               <ToggleGroupItem
                 key={opt.id}
                 value={opt.id}
@@ -187,7 +199,7 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <span className="flex flex-1 items-center justify-between">
-              <span>Sort by</span>
+              <span>{copy.sortBy}</span>
               <span className="text-[11px] font-medium text-muted-foreground">{sortLabel}</span>
             </span>
           </DropdownMenuSubTrigger>
@@ -208,17 +220,17 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
                     // toggle card properties without reopening the same panel.
                     onSelect={(e) => e.preventDefault()}
                   >
-                    {opt.label}
+                      {copy.sortOptions[opt.id]}
                   </DropdownMenuRadioItem>
                 )
-                if (!opt.description) {
+                if (!opt.descriptionKey) {
                   return radioItem
                 }
                 return (
                   <Tooltip key={opt.id}>
                     <TooltipTrigger asChild>{radioItem}</TooltipTrigger>
                     <TooltipContent side="right" sideOffset={6}>
-                      {opt.description}
+                      {copy.sortOptions[opt.descriptionKey]}
                     </TooltipContent>
                   </Tooltip>
                 )
@@ -234,7 +246,7 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <span className="flex flex-1 items-center justify-between">
-              <span>Show properties</span>
+              <span>{copy.showProperties}</span>
               {visiblePropertyCount > 0 && (
                 <span className="text-[11px] font-medium text-muted-foreground">
                   {visiblePropertyCount}
@@ -246,14 +258,14 @@ const SidebarWorkspaceOptionsMenu = React.memo(function SidebarWorkspaceOptionsM
             className="w-48"
             data-workspace-board-preserve-open={preserveWorkspaceBoardOpen ? '' : undefined}
           >
-            {PROPERTY_OPTIONS.map((opt) => (
+            {PROPERTY_OPTION_IDS.map((id) => (
               <DropdownMenuCheckboxItem
-                key={opt.id}
-                checked={worktreeCardProperties.includes(opt.id)}
-                onCheckedChange={() => toggleWorktreeCardProperty(opt.id)}
+                key={id}
+                checked={worktreeCardProperties.includes(id)}
+                onCheckedChange={() => toggleWorktreeCardProperty(id)}
                 onSelect={(e) => e.preventDefault()}
               >
-                {opt.label}
+                {propertyLabels[id]}
               </DropdownMenuCheckboxItem>
             ))}
           </DropdownMenuSubContent>

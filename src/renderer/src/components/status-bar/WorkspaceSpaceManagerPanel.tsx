@@ -41,6 +41,7 @@ import { getWorktreeMapFromState } from '../../store/selectors'
 import { getHostedReviewCacheKey } from '../../store/slices/hosted-review'
 import { refreshGitStatusForWorktree } from '../right-sidebar/git-status-refresh'
 import { runWorktreeBatchDelete } from '../sidebar/delete-worktree-flow'
+import { useI18n } from '@/i18n'
 import { branchDisplayName } from '../sidebar/WorktreeCardHelpers'
 import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
@@ -1051,6 +1052,8 @@ function WorkspaceRow({
 }
 
 export function WorkspaceSpaceManagerPanel(): React.JSX.Element {
+  const { messages } = useI18n()
+  const workspaceMenuCopy = messages.workspace.menu
   const analysis = useAppStore((state) => state.workspaceSpaceAnalysis)
   const progress = useAppStore((state) => state.workspaceSpaceScanProgress)
   const scanError = useAppStore((state) => state.workspaceSpaceScanError)
@@ -1572,7 +1575,7 @@ export function WorkspaceSpaceManagerPanel(): React.JSX.Element {
               className="min-w-[9.5rem] gap-1.5 !px-3.5"
             >
               <Trash2 className="size-3.5" />
-              Delete selected
+              {workspaceMenuCopy.deleteSelected}
             </Button>
           </div>
         </div>
@@ -1585,7 +1588,7 @@ export function WorkspaceSpaceManagerPanel(): React.JSX.Element {
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Filter workspaces"
+              placeholder={workspaceMenuCopy.filterWorkspaces}
               className="pl-9"
             />
           </div>

@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { RepoBadgeMark } from '../repo/RepoBadgeLabel'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
+import { useI18n } from '@/i18n'
 
 type NavSection = {
   id: string
@@ -55,6 +56,8 @@ export function SettingsSidebar({
   onSearchChange,
   onSelectSection
 }: SettingsSidebarProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settings.sidebar
   const searchShortcutHint = useShortcutLabel('settings.search')
   const navItemClassName = (isActive: boolean): string =>
     cn(
@@ -74,7 +77,7 @@ export function SettingsSidebar({
           className="w-full justify-start gap-2 text-[13px] text-muted-foreground"
         >
           <ArrowLeft className="size-4" />
-          Back to app
+          {copy.backToApp}
         </Button>
       </div>
 
@@ -85,7 +88,7 @@ export function SettingsSidebar({
             ref={searchInputRef}
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
-            placeholder="Search settings"
+            placeholder={copy.searchPlaceholder}
             className="pl-9 pr-14 text-[13px]"
           />
           {searchQuery === '' ? (
@@ -139,7 +142,7 @@ export function SettingsSidebar({
 
           <div className="space-y-2">
             <p className="px-3 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-              Projects
+              {copy.projects}
             </p>
 
             {repoSections.length > 0 ? (
@@ -182,7 +185,7 @@ export function SettingsSidebar({
               </div>
             ) : (
               <p className="px-3 text-xs text-muted-foreground">
-                {hasRepos ? 'No matching project settings.' : 'No projects added yet.'}
+                {hasRepos ? copy.noMatchingProjects : copy.noProjects}
               </p>
             )}
           </div>

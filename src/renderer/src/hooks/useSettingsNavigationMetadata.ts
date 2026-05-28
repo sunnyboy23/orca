@@ -34,35 +34,57 @@ import { getRepoKindLabel } from '../../../shared/repo-kind'
 import { useAppStore } from '@/store'
 import { isMacUserAgent, isWindowsUserAgent } from '@/components/terminal-pane/pane-helpers'
 import type { SettingsNavSection } from '@/lib/settings-navigation-types'
-import { GENERAL_PANE_SEARCH_ENTRIES } from '@/components/settings/general-search'
-import { AGENTS_PANE_SEARCH_ENTRIES } from '@/components/settings/agents-search'
-import { ACCOUNTS_PANE_SEARCH_ENTRIES } from '@/components/settings/accounts-search'
-import { INTEGRATIONS_PANE_SEARCH_ENTRIES } from '@/components/settings/integrations-search'
-import { GIT_PANE_SEARCH_ENTRIES } from '@/components/settings/git-search'
-import { COMMIT_MESSAGE_AI_PANE_SEARCH_ENTRIES } from '@/components/settings/commit-message-ai-search'
-import { TASKS_PANE_SEARCH_ENTRIES } from '@/components/settings/tasks-search'
-import { FLOATING_WORKSPACE_SEARCH_ENTRIES } from '@/components/settings/floating-workspace-search'
-import { APPEARANCE_PANE_SEARCH_ENTRIES } from '@/components/settings/appearance-search'
-import { INPUT_PANE_SEARCH_ENTRIES } from '@/components/settings/input-search'
+import { getGeneralPaneSearchEntries } from '@/components/settings/general-search'
+import { getAgentsPaneSearchEntries } from '@/components/settings/agents-search'
+import { getAccountsPaneSearchEntries } from '@/components/settings/accounts-search'
+import { getIntegrationsPaneSearchEntries } from '@/components/settings/integrations-search'
+import { getGitPaneSearchEntries } from '@/components/settings/git-search'
+import { getCommitMessageAiPaneSearchEntries } from '@/components/settings/commit-message-ai-search'
+import { getTasksPaneSearchEntries } from '@/components/settings/tasks-search'
+import { getFloatingWorkspaceSearchEntries } from '@/components/settings/floating-workspace-search'
+import { getAppearancePaneSearchEntries } from '@/components/settings/appearance-search'
+import { getInputPaneSearchEntries } from '@/components/settings/input-search'
 import { getTerminalPaneSearchEntries } from '@/components/settings/terminal-search'
-import { QUICK_COMMANDS_PANE_SEARCH_ENTRIES } from '@/components/settings/quick-commands-search'
+import { getQuickCommandsPaneSearchEntries } from '@/components/settings/quick-commands-search'
 import { BROWSER_PANE_SEARCH_ENTRIES } from '@/components/settings/browser-pane-search'
-import { NOTIFICATIONS_PANE_SEARCH_ENTRIES } from '@/components/settings/notifications-search'
+import { getNotificationsPaneSearchEntries } from '@/components/settings/notifications-search'
 import { ORCHESTRATION_PANE_SEARCH_ENTRIES } from '@/components/settings/orchestration-search'
 import {
-  RUNTIME_ENVIRONMENTS_SEARCH_ENTRY,
-  WEB_RUNTIME_ENVIRONMENTS_SEARCH_ENTRY
+  getRuntimeEnvironmentsSearchEntry,
+  getWebRuntimeEnvironmentsSearchEntry
 } from '@/components/settings/runtime-environments-search'
-import { SSH_PANE_SEARCH_ENTRIES } from '@/components/settings/ssh-search'
+import { getSshPaneSearchEntries } from '@/components/settings/ssh-search'
 import { MOBILE_SETTINGS_PANE_SEARCH_ENTRIES } from '@/components/settings/mobile-settings-search'
 import { COMPUTER_USE_PANE_SEARCH_ENTRIES } from '@/components/settings/computer-use-search'
 import { VOICE_PANE_SEARCH_ENTRIES } from '@/components/settings/voice-pane-search'
 import { DEVELOPER_PERMISSIONS_PANE_SEARCH_ENTRIES } from '@/components/settings/developer-permissions-search'
-import { PRIVACY_PANE_SEARCH_ENTRIES } from '@/components/settings/privacy-search'
-import { SHORTCUTS_PANE_SEARCH_ENTRIES } from '@/components/settings/shortcuts-search'
+import { getPrivacyPaneSearchEntries } from '@/components/settings/privacy-search'
+import { getShortcutsPaneSearchEntries } from '@/components/settings/shortcuts-search'
 import { STATS_PANE_SEARCH_ENTRIES } from '@/components/stats/stats-search'
-import { EXPERIMENTAL_PANE_SEARCH_ENTRIES } from '@/components/settings/experimental-search'
+import { getExperimentalPaneSearchEntries } from '@/components/settings/experimental-search'
 import { getRepositoryPaneSearchEntries } from '@/components/settings/repository-search'
+import { useI18n } from '@/i18n'
+import type { AccountsMessages } from '@/i18n/settings-accounts-types'
+import type { AgentsMessages } from '@/i18n/settings-agents-types'
+import type { FloatingWorkspaceMessages } from '@/i18n/settings-floating-workspace-types'
+import { enSettingsMessages, type SettingsMessages } from '@/i18n/settings'
+import type {
+  ExperimentalMessages,
+  InputMessages,
+  PrivacyMessages,
+  TasksMessages
+} from '@/i18n/settings-core-panes-types'
+import type { IntegrationsMessages } from '@/i18n/settings-integrations-types'
+import type {
+  CommitMessageAiMessages,
+  GitMessages,
+  NotificationsMessages,
+  QuickCommandsMessages,
+  RuntimeMessages
+} from '@/i18n/settings-panes-types'
+import type { ShortcutsMessages } from '@/i18n/settings-shortcuts-types'
+import type { SettingsTerminalMessages } from '@/i18n/settings-terminal-types'
+import type { SshSettingsMessages } from '@/i18n/settings-ssh-types'
 
 export function isWebClientLocation(): boolean {
   return (
@@ -75,188 +97,219 @@ export function buildSettingsNavigationMetadata({
   isMac,
   isWindows,
   isWebClient,
-  repos
+  repos,
+  settingsMessages = enSettingsMessages,
+  settingsPaneMessages
 }: {
   isMac: boolean
   isWindows: boolean
   isWebClient: boolean
   repos: readonly Repo[]
+  settingsMessages?: SettingsMessages
+  settingsPaneMessages?: Partial<{
+    accounts: AccountsMessages
+    agents: AgentsMessages
+    experimental: ExperimentalMessages
+    commitMessageAi: CommitMessageAiMessages
+    floatingWorkspace: FloatingWorkspaceMessages
+    git: GitMessages
+    input: InputMessages
+    integrations: IntegrationsMessages
+    notifications: NotificationsMessages
+    privacy: PrivacyMessages
+    quickCommands: QuickCommandsMessages
+    runtime: RuntimeMessages
+    shortcuts: ShortcutsMessages
+    ssh: SshSettingsMessages
+    tasks: TasksMessages
+    terminal: SettingsTerminalMessages
+  }>
 }): SettingsNavSection[] {
+  const sections = settingsMessages.sections
   const showDesktopOnlySettings = !isWebClient
-  const terminalPaneSearchEntries = getTerminalPaneSearchEntries({
-    isWindows,
-    isMac
-  })
+  const terminalPaneSearchEntries = getTerminalPaneSearchEntries(
+    {
+      isWindows,
+      isMac
+    },
+    settingsPaneMessages?.terminal
+  )
+  const runtimeMessages = settingsPaneMessages?.runtime
   const runtimeEnvironmentsSearchEntry = isWebClient
-    ? WEB_RUNTIME_ENVIRONMENTS_SEARCH_ENTRY
-    : RUNTIME_ENVIRONMENTS_SEARCH_ENTRY
+    ? getWebRuntimeEnvironmentsSearchEntry(runtimeMessages)
+    : getRuntimeEnvironmentsSearchEntry(runtimeMessages)
+  const gitSearchEntries = [
+    ...getGitPaneSearchEntries(settingsPaneMessages?.git),
+    ...getCommitMessageAiPaneSearchEntries(settingsPaneMessages?.commitMessageAi)
+  ]
 
   return [
     {
       id: 'general',
-      title: 'General',
-      description: 'Workspace defaults, app setup, and maintenance.',
+      title: sections.general.title,
+      description: sections.general.description,
       icon: SlidersHorizontal,
-      searchEntries: GENERAL_PANE_SEARCH_ENTRIES,
+      searchEntries: getGeneralPaneSearchEntries(settingsMessages),
       group: 'setup'
     },
     {
       id: 'agents',
-      title: 'Agents',
-      description: 'Manage AI agents, set a default, and customize commands.',
+      title: sections.agents.title,
+      description: sections.agents.description,
       icon: Bot,
-      searchEntries: AGENTS_PANE_SEARCH_ENTRIES,
+      searchEntries: getAgentsPaneSearchEntries(settingsPaneMessages?.agents),
       group: 'setup'
     },
     {
       id: 'accounts',
-      title: 'AI Provider Accounts',
-      description: 'Optional account switching for Claude, Codex, Gemini, and OpenCode Go.',
+      title: sections.accounts.title,
+      description: sections.accounts.description,
       icon: UserCog,
-      searchEntries: ACCOUNTS_PANE_SEARCH_ENTRIES,
+      searchEntries: getAccountsPaneSearchEntries(settingsPaneMessages?.accounts),
       group: 'setup',
-      badge: 'Optional'
+      badge: sections.accounts.badge
     },
     {
       id: 'integrations',
-      title: 'Integrations',
-      description: 'Connect GitHub, GitLab, Linear, and source-hosting services.',
+      title: sections.integrations.title,
+      description: sections.integrations.description,
       icon: Blocks,
-      searchEntries: INTEGRATIONS_PANE_SEARCH_ENTRIES,
+      searchEntries: getIntegrationsPaneSearchEntries(settingsPaneMessages?.integrations),
       group: 'setup'
     },
     {
       id: 'git',
-      title: 'Git & Source Control',
-      description: 'Branch naming, base refs, attribution, and AI commit messages.',
+      title: sections.git.title,
+      description: sections.git.description,
       icon: GitBranch,
       // Why: the AI commit messages pane is rendered inside Git, so shared
       // metadata must search both surfaces wherever Git appears.
-      searchEntries: [...GIT_PANE_SEARCH_ENTRIES, ...COMMIT_MESSAGE_AI_PANE_SEARCH_ENTRIES],
+      searchEntries: gitSearchEntries,
       group: 'workflows'
     },
     {
       id: 'tasks',
-      title: 'Task Sources',
-      description: 'Choose which task providers appear in the Tasks page and sidebar.',
+      title: sections.tasks.title,
+      description: sections.tasks.description,
       icon: ListChecks,
-      searchEntries: TASKS_PANE_SEARCH_ENTRIES,
+      searchEntries: getTasksPaneSearchEntries(settingsPaneMessages?.tasks),
       group: 'workflows'
     },
     {
       id: 'floating-workspace',
-      title: 'Floating Workspace',
-      description: 'Global terminal, browser, and markdown tabs.',
+      title: sections['floating-workspace'].title,
+      description: sections['floating-workspace'].description,
       icon: PanelsTopLeft,
-      searchEntries: FLOATING_WORKSPACE_SEARCH_ENTRIES,
+      searchEntries: getFloatingWorkspaceSearchEntries(settingsPaneMessages?.floatingWorkspace),
       group: 'workflows'
     },
     {
       id: 'appearance',
-      title: 'Appearance',
-      description: 'Theme, zoom, app font, sidebars, and status bar.',
+      title: sections.appearance.title,
+      description: sections.appearance.description,
       icon: Palette,
-      searchEntries: APPEARANCE_PANE_SEARCH_ENTRIES,
+      searchEntries: getAppearancePaneSearchEntries(settingsMessages),
       group: 'interface'
     },
     {
       id: 'input',
-      title: 'Input & Editing',
-      description: 'Selection and editing behavior.',
+      title: sections.input.title,
+      description: sections.input.description,
       icon: TextCursorInput,
-      searchEntries: INPUT_PANE_SEARCH_ENTRIES,
+      searchEntries: getInputPaneSearchEntries(settingsPaneMessages?.input),
       group: 'interface'
     },
     {
       id: 'terminal',
-      title: 'Terminal',
-      description: 'Shells, terminal appearance, and pane behavior.',
+      title: sections.terminal.title,
+      description: sections.terminal.description,
       icon: SquareTerminal,
       searchEntries: terminalPaneSearchEntries,
       group: 'workflows'
     },
     {
       id: 'quick-commands',
-      title: 'Quick Commands',
-      description: 'Saved terminal commands, scoped globally or per project.',
+      title: sections['quick-commands'].title,
+      description: sections['quick-commands'].description,
       icon: Play,
-      searchEntries: QUICK_COMMANDS_PANE_SEARCH_ENTRIES,
+      searchEntries: getQuickCommandsPaneSearchEntries(settingsPaneMessages?.quickCommands),
       group: 'workflows'
     },
     ...(showDesktopOnlySettings
       ? [
           {
             id: 'browser',
-            title: 'Browser',
-            description: 'Home page, link routing, and session cookies.',
+            title: sections.browser.title,
+            description: sections.browser.description,
             icon: Globe,
             searchEntries: BROWSER_PANE_SEARCH_ENTRIES,
             group: 'workflows'
           },
           {
             id: 'notifications',
-            title: 'Notifications',
-            description: 'Native desktop notifications for agent and terminal events.',
+            title: sections.notifications.title,
+            description: sections.notifications.description,
             icon: Bell,
-            searchEntries: NOTIFICATIONS_PANE_SEARCH_ENTRIES,
+            searchEntries: getNotificationsPaneSearchEntries(settingsPaneMessages?.notifications),
             group: 'interface'
           }
         ]
       : []),
     {
       id: 'orchestration',
-      title: 'Orchestration',
-      description: 'Coordinate multiple coding agents through Orca.',
+      title: sections.orchestration.title,
+      description: sections.orchestration.description,
       icon: Network,
       searchEntries: ORCHESTRATION_PANE_SEARCH_ENTRIES,
       group: 'capabilities'
     },
     {
       id: 'servers',
-      title: 'Remote Orca Servers',
+      title: sections.servers.title,
       description: isWebClient
-        ? 'Connect this browser to a saved Orca server.'
-        : 'Switch between local desktop mode and paired remote Orca runtimes.',
+        ? (sections.servers.webDescription ?? sections.servers.description)
+        : sections.servers.description,
       icon: Server,
       searchEntries: [runtimeEnvironmentsSearchEntry],
       group: 'remote',
-      badge: 'Beta'
+      badge: sections.servers.badge
     },
     ...(showDesktopOnlySettings
       ? [
           {
             id: 'ssh',
-            title: 'SSH Hosts',
-            description: 'Remote SSH hosts for files, terminals, and git.',
+            title: sections.ssh.title,
+            description: sections.ssh.description,
             icon: Cable,
-            searchEntries: SSH_PANE_SEARCH_ENTRIES,
+            searchEntries: getSshPaneSearchEntries(settingsPaneMessages?.ssh),
             group: 'remote'
           },
           {
             id: 'mobile',
-            title: 'Mobile',
-            description: 'Control terminals and agents from your phone.',
+            title: sections.mobile.title,
+            description: sections.mobile.description,
             icon: Smartphone,
             searchEntries: MOBILE_SETTINGS_PANE_SEARCH_ENTRIES,
-            group: 'remote'
+            group: 'remote',
+            badge: sections.mobile.badge
           },
           {
             id: 'computer-use',
-            title: 'Computer Use',
-            description: 'Enable agents to control any app on your computer.',
+            title: sections['computer-use'].title,
+            description: sections['computer-use'].description,
             icon: MousePointerClick,
             searchEntries: COMPUTER_USE_PANE_SEARCH_ENTRIES,
             group: 'capabilities',
-            badge: 'Beta'
+            badge: sections['computer-use'].badge
           },
           {
             id: 'voice',
-            title: 'Voice',
-            description: 'Local speech-to-text dictation with on-device models.',
+            title: sections.voice.title,
+            description: sections.voice.description,
             icon: Mic,
             searchEntries: VOICE_PANE_SEARCH_ENTRIES,
             group: 'capabilities',
-            badge: 'Beta'
+            badge: sections.voice.badge
           }
         ]
       : []),
@@ -264,8 +317,8 @@ export function buildSettingsNavigationMetadata({
       ? [
           {
             id: 'developer-permissions',
-            title: 'macOS Permissions',
-            description: 'macOS privacy access for terminal-launched developer tools.',
+            title: sections['developer-permissions'].title,
+            description: sections['developer-permissions'].description,
             icon: ShieldCheck,
             searchEntries: DEVELOPER_PERMISSIONS_PANE_SEARCH_ENTRIES,
             group: 'safety'
@@ -274,34 +327,34 @@ export function buildSettingsNavigationMetadata({
       : []),
     {
       id: 'privacy',
-      title: 'Privacy & Telemetry',
-      description: 'Anonymous usage data and telemetry controls.',
+      title: sections.privacy.title,
+      description: sections.privacy.description,
       icon: Lock,
-      searchEntries: PRIVACY_PANE_SEARCH_ENTRIES,
+      searchEntries: getPrivacyPaneSearchEntries(settingsPaneMessages?.privacy),
       group: 'safety'
     },
     {
       id: 'shortcuts',
-      title: 'Shortcuts',
-      description: 'Keyboard shortcuts for common actions.',
+      title: sections.shortcuts.title,
+      description: sections.shortcuts.description,
       icon: Keyboard,
-      searchEntries: SHORTCUTS_PANE_SEARCH_ENTRIES,
+      searchEntries: getShortcutsPaneSearchEntries(settingsPaneMessages?.shortcuts),
       group: 'interface'
     },
     {
       id: 'stats',
-      title: 'Stats & Usage',
-      description: 'Orca stats plus Claude, Codex, and OpenCode usage analytics.',
+      title: sections.stats.title,
+      description: sections.stats.description,
       icon: BarChart3,
       searchEntries: STATS_PANE_SEARCH_ENTRIES,
       group: 'interface'
     },
     {
       id: 'experimental',
-      title: 'Experimental',
-      description: 'New features that are still taking shape. Give them a try.',
+      title: sections.experimental.title,
+      description: sections.experimental.description,
       icon: FlaskConical,
-      searchEntries: EXPERIMENTAL_PANE_SEARCH_ENTRIES,
+      searchEntries: getExperimentalPaneSearchEntries(settingsPaneMessages?.experimental),
       group: 'experimental'
     },
     ...repos.map((repo) => ({
@@ -316,6 +369,7 @@ export function buildSettingsNavigationMetadata({
 }
 
 export function useSettingsNavigationMetadata(): SettingsNavSection[] {
+  const { messages } = useI18n()
   const repos = useAppStore((state) => state.repos)
   const isMac = isMacUserAgent()
   const isWindows = isWindowsUserAgent()
@@ -325,7 +379,15 @@ export function useSettingsNavigationMetadata(): SettingsNavSection[] {
   // and search entries cannot drift. Keep this hook free of Settings pane UI
   // imports; see docs/reference/cmd-j-settings-actions-plan.md.
   return useMemo(
-    () => buildSettingsNavigationMetadata({ isMac, isWindows, isWebClient, repos }),
-    [isMac, isWindows, isWebClient, repos]
+    () =>
+      buildSettingsNavigationMetadata({
+        isMac,
+        isWindows,
+        isWebClient,
+        repos,
+        settingsMessages: messages.settings,
+        settingsPaneMessages: messages.settingsPanes
+      }),
+    [isMac, isWindows, isWebClient, repos, messages.settings, messages.settingsPanes]
   )
 }

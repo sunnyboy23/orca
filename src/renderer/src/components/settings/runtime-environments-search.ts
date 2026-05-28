@@ -1,25 +1,18 @@
+import { runtimeEn } from '@/i18n/settings-panes-en'
+import type { RuntimeMessages } from '@/i18n/settings-panes-types'
 import type { SettingsSearchEntry } from './settings-search'
 
-export const RUNTIME_ENVIRONMENTS_SEARCH_ENTRY: SettingsSearchEntry = {
-  title: 'Active Server',
-  description: 'Choose local desktop, add a saved remote Orca server, or generate a pairing URL.',
-  keywords: [
-    'runtime',
-    'environment',
-    'server',
-    'client',
-    'remote',
-    'pairing',
-    'pairing url',
-    'web client',
-    'cloud',
-    'vm',
-    'dev box'
-  ]
+export function getRuntimeEnvironmentsSearchEntry(
+  messages: RuntimeMessages = runtimeEn
+): SettingsSearchEntry {
+  return messages.search
 }
 
-export const WEB_RUNTIME_ENVIRONMENTS_SEARCH_ENTRY: SettingsSearchEntry = {
-  title: 'Active Server',
-  description: 'Connect this browser to a saved Orca server.',
-  keywords: ['runtime', 'environment', 'server', 'client', 'remote', 'pairing code', 'cloud', 'vm']
+export function getWebRuntimeEnvironmentsSearchEntry(
+  messages: RuntimeMessages = runtimeEn
+): SettingsSearchEntry {
+  return messages.webSearch
 }
+
+export const RUNTIME_ENVIRONMENTS_SEARCH_ENTRY = getRuntimeEnvironmentsSearchEntry()
+export const WEB_RUNTIME_ENVIRONMENTS_SEARCH_ENTRY = getWebRuntimeEnvironmentsSearchEntry()

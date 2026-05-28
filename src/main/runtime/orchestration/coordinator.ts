@@ -1,7 +1,15 @@
 /* eslint-disable max-lines -- Why: the coordinator keeps message processing, task dispatch, gate handling, escalation, and convergence checking in one class so the polling loop can make atomic decisions across all these concerns without split-brain behavior. */
 import type { OrchestrationDb } from './db'
-import type { MessageRow, TaskRow, CoordinatorStatus } from './types'
-import { buildDispatchPreamble } from './preamble'
+import type { MessageRow, TaskRow, CoordinatorStatus, ArtifactManifestRow } from './types'
+import { buildDispatchPreamble, type UpstreamArtifactSummary } from './preamble'
+import {
+  validateAndIndexWorkerDoneArtifact,
+  type WorkerDonePayload
+} from './coordinator-artifacts'
+import type {
+  DispatchTargetResolution,
+  DispatchTargetResolver
+} from '../team-config/dispatch-resolver'
 
 export type CoordinatorRuntime = {
   sendTerminal(handle: string, action: { text?: string; enter?: boolean }): Promise<unknown>
@@ -60,12 +68,23 @@ export function parseAllowStaleBaseFromSpec(spec: string): {
   return { allowStale: true, strippedSpec }
 }
 
+function parseJsonArray<T>(value: string): T[] {
+  try {
+    const parsed = JSON.parse(value) as unknown
+    return Array.isArray(parsed) ? (parsed as T[]) : []
+  } catch {
+    return []
+  }
+}
+
 export type CoordinatorOptions = {
   spec: string
   coordinatorHandle: string
   pollIntervalMs?: number
   maxConcurrent?: number
   worktree?: string
+  workspaceRoot?: string
+  dispatchTargetResolver?: DispatchTargetResolver
   onLog?: (msg: string) => void
 }
 
@@ -92,9 +111,13 @@ export class Coordinator {
   private runtime: CoordinatorRuntime
   private state: CoordinatorState
   private stopped = false
-  private opts: Required<Omit<CoordinatorOptions, 'onLog' | 'worktree'>> & {
+  private opts: Required<
+    Omit<CoordinatorOptions, 'onLog' | 'worktree' | 'workspaceRoot' | 'dispatchTargetResolver'>
+  > & {
     onLog: (msg: string) => void
     worktree?: string
+    workspaceRoot?: string
+    dispatchTargetResolver?: DispatchTargetResolver
   }
 
   constructor(db: OrchestrationDb, runtime: CoordinatorRuntime, options: CoordinatorOptions) {
@@ -106,6 +129,8 @@ export class Coordinator {
       pollIntervalMs: options.pollIntervalMs ?? DEFAULT_POLL_MS,
       maxConcurrent: options.maxConcurrent ?? MAX_CONCURRENT_DEFAULT,
       worktree: options.worktree,
+      workspaceRoot: options.workspaceRoot,
+      dispatchTargetResolver: options.dispatchTargetResolver,
       onLog: options.onLog ?? (() => {})
     }
     this.state = {
@@ -169,11 +194,13 @@ export class Coordinator {
       // Why: if stopped early, treat it as failed since tasks are incomplete.
       // Also failed if any task explicitly failed.
       const tasks = this.db.listTasks()
-      const allDone = tasks.every((t) => t.status === 'completed' || t.status === 'failed')
+      const allDone = tasks.every((task) => this.isTerminalTask(task))
       const failedTasks = [
         ...new Set([
           ...this.state.failedTasks,
-          ...tasks.filter((task) => task.status === 'failed').map((task) => task.id)
+          ...tasks
+            .filter((task) => task.status === 'failed' || this.isTerminalBlockedTask(task))
+            .map((task) => task.id)
         ])
       ]
       const finalStatus =
@@ -216,7 +243,7 @@ export class Coordinator {
   }
 
   private async tick(): Promise<boolean> {
-    this.processMessages()
+    await this.processMessages()
     this.processEscalations()
     this.processDecisionGates()
     this.warnStaleDispatches()
@@ -240,7 +267,7 @@ export class Coordinator {
     }
   }
 
-  private processMessages(): void {
+  private async processMessages(): Promise<void> {
     const messages = this.db.getUnreadMessages(this.opts.coordinatorHandle)
     if (messages.length === 0) {
       return
@@ -249,7 +276,7 @@ export class Coordinator {
     for (const msg of messages) {
       switch (msg.type) {
         case 'worker_done':
-          this.handleWorkerDone(msg)
+          await this.handleWorkerDone(msg)
           break
         case 'escalation':
           this.handleEscalation(msg)
@@ -300,10 +327,10 @@ export class Coordinator {
     this.db.recordHeartbeat(dispatchId, msg.created_at)
   }
 
-  private handleWorkerDone(msg: MessageRow): void {
+  private async handleWorkerDone(msg: MessageRow): Promise<void> {
     this.opts.onLog(`Worker done: ${msg.from_handle} — ${msg.subject}`)
 
-    let payload: { taskId?: string; filesModified?: string[] } = {}
+    let payload: WorkerDonePayload = {}
     if (msg.payload) {
       try {
         payload = JSON.parse(msg.payload)
@@ -324,13 +351,39 @@ export class Coordinator {
       return
     }
 
+    const artifact = await validateAndIndexWorkerDoneArtifact({
+      payload,
+      expectedTaskId: taskId,
+      workspaceRoot: this.opts.workspaceRoot,
+      indexer: this.db
+    })
+    if (!artifact.ok) {
+      const result = JSON.stringify({
+        completedBy: msg.from_handle,
+        blockedAt: new Date().toISOString(),
+        reason: artifact.reason
+      })
+      this.db.updateTaskStatus(taskId, 'blocked', result)
+      const dispatch = this.db.getDispatchContext(taskId)
+      if (dispatch) {
+        this.db.completeDispatch(dispatch.id)
+      }
+      this.opts.onLog(`Task ${taskId} blocked: ${artifact.reason}`)
+      return
+    }
+
+    const status = artifact.status === 'completed' ? 'completed' : 'failed'
     const result = JSON.stringify({
       completedBy: msg.from_handle,
-      filesModified: payload.filesModified ?? [],
+      filesModified: artifact.filesModified,
       completedAt: new Date().toISOString()
     })
-    this.db.updateTaskStatus(taskId, 'completed', result)
-    this.state.completedTasks.push(taskId)
+    this.db.updateTaskStatus(taskId, status, result)
+    if (status === 'completed') {
+      this.state.completedTasks.push(taskId)
+    } else {
+      this.state.failedTasks.push(taskId)
+    }
 
     // Why: complete the dispatch context so the terminal is freed for
     // subsequent task assignments.
@@ -339,7 +392,7 @@ export class Coordinator {
       this.db.completeDispatch(dispatch.id)
     }
 
-    this.opts.onLog(`Task ${taskId} completed`)
+    this.opts.onLog(`Task ${taskId} ${status}`)
   }
 
   private handleEscalation(msg: MessageRow): void {
@@ -445,39 +498,61 @@ export class Coordinator {
       return
     }
 
-    const terminals = await this.getAvailableTerminals()
-    if (terminals.length === 0 && slotsAvailable > 0) {
-      // Why: no idle terminals exist — create one for the next task.
-      // Only create one per tick to avoid spawning many terminals at once.
-      try {
-        const created = await this.runtime.createTerminal(this.opts.worktree, {
-          title: `Worker: ${readyTasks[0].spec.slice(0, 40)}`
-        })
-        terminals.push(created.handle)
-        this.opts.onLog(`Created worker terminal ${created.handle}`)
-      } catch (err) {
-        this.opts.onLog(`Failed to create terminal: ${err}`)
-        return
-      }
-    }
-
     for (const task of readyTasks) {
-      if (slotsAvailable <= 0 || terminals.length === 0) {
+      if (slotsAvailable <= 0) {
         break
       }
 
-      const targetHandle = terminals.shift()!
+      const target = await this.resolveTaskDispatchTarget(task)
+      if (!target.ok) {
+        this.blockTaskForDispatchTarget(task, target)
+        continue
+      }
+
+      const terminals = await this.getAvailableTerminals(target.worktreeSelector)
+      if (terminals.length === 0) {
+        const created = await this.createWorkerTerminal(task, target)
+        if (!created) {
+          return
+        }
+        terminals.push(created)
+      }
+
+      const targetHandle = terminals.shift()
+      if (!targetHandle) {
+        continue
+      }
       slotsAvailable--
 
       try {
-        await this.dispatchTask(task, targetHandle)
+        await this.dispatchTask(task, targetHandle, target)
       } catch (err) {
         this.opts.onLog(`Failed to dispatch task ${task.id}: ${err}`)
       }
     }
   }
 
-  private async dispatchTask(task: TaskRow, targetHandle: string): Promise<void> {
+  private async createWorkerTerminal(
+    task: TaskRow,
+    target: DispatchTargetResolution & { ok: true }
+  ): Promise<string | null> {
+    try {
+      const created = await this.runtime.createTerminal(target.worktreeSelector, {
+        title: `Worker: ${task.spec.slice(0, 40)}`
+      })
+      this.opts.onLog(`Created worker terminal ${created.handle}`)
+      return created.handle
+    } catch (err) {
+      this.opts.onLog(`Failed to create terminal: ${err}`)
+      return null
+    }
+  }
+
+  private async dispatchTask(
+    task: TaskRow,
+    targetHandle: string,
+    target: DispatchTargetResolution & { ok: true }
+  ): Promise<void> {
     // Why (§3.1): pre-flight drift check BEFORE `createDispatchContext` so a
     // refusal does NOT increment failure_count. createDispatchContext carries
     // `MAX(failure_count)` forward across contexts (db.ts:301-306), so burning
@@ -493,15 +568,16 @@ export class Coordinator {
       recentSubjects: string[]
     } | null = null
 
-    if (!this.opts.worktree) {
+    const worktreeSelector = target.worktreeSelector ?? task.worktree_selector ?? this.opts.worktree
+    if (!worktreeSelector) {
       // Why (§7.4): CoordinatorOptions.worktree is optional. When undefined,
       // probeWorktreeDrift cannot resolve a selector; log once so operators
       // can see the guard did not run for this task and proceed. v2 may
       // always resolve a worktree via the coordinator-terminal handle.
       this.opts.onLog(`stale-base guard inert for ${task.id}: coordinator has no worktree selector`)
     } else {
-      baseDrift = await this.runtime.probeWorktreeDrift(this.opts.worktree).catch((err) => {
-        this.opts.onLog(`probeWorktreeDrift failed for ${this.opts.worktree}: ${err}`)
+      baseDrift = await this.runtime.probeWorktreeDrift(worktreeSelector).catch((err) => {
+        this.opts.onLog(`probeWorktreeDrift failed for ${worktreeSelector}: ${err}`)
         return null
       })
 
@@ -530,12 +606,17 @@ export class Coordinator {
     const preamble = buildDispatchPreamble({
       taskId: task.id,
       dispatchId: dispatch.id,
+      runId: this.state.runId,
       // Why (§3.4, stale-base PR): use `strippedSpec` not `task.spec` so the
       // `allow-stale-base: true` line isn't rendered into the worker's
       // --- TASK --- block (worker would otherwise treat the infra flag as
       // part of its instructions).
       taskSpec: strippedSpec,
       coordinatorHandle: this.opts.coordinatorHandle,
+      repoName: target.repoName ?? task.repo_name ?? undefined,
+      worktreeSelector,
+      artifactDir: task.artifact_dir ?? undefined,
+      upstreamArtifacts: this.getUpstreamArtifacts(task),
       devMode: process.env.ORCA_USER_DATA_PATH?.includes('orca-dev'),
       // Why (§3.2): drift section fires only when behind > 0. The preamble
       // builder gates on this itself; passing the object unconditionally lets
@@ -573,9 +654,36 @@ export class Coordinator {
     this.state.phase = 'monitoring'
   }
 
-  private async getAvailableTerminals(): Promise<string[]> {
+  private getUpstreamArtifacts(task: TaskRow): UpstreamArtifactSummary[] {
+    let dependencyIds: string[] = []
     try {
-      const result = await this.runtime.listTerminals(this.opts.worktree)
+      dependencyIds = JSON.parse(task.deps) as string[]
+    } catch {
+      this.opts.onLog(`Task ${task.id} has invalid deps JSON; no upstream artifacts injected`)
+      return []
+    }
+
+    return dependencyIds.flatMap((dependencyId) =>
+      this.db.listArtifactManifests({ taskId: dependencyId }).map((manifest) =>
+        this.toUpstreamArtifactSummary(manifest)
+      )
+    )
+  }
+
+  private toUpstreamArtifactSummary(manifest: ArtifactManifestRow): UpstreamArtifactSummary {
+    return {
+      taskId: manifest.task_id,
+      manifestPath: manifest.manifest_path,
+      filesChanged: parseJsonArray<string>(manifest.files_changed),
+      contracts: parseJsonArray<string>(manifest.contracts),
+      verification: parseJsonArray<{ command: string; status: string }>(manifest.verification),
+      downstreamNotes: manifest.downstream_notes ?? ''
+    }
+  }
+
+  private async getAvailableTerminals(worktreeSelector?: string): Promise<string[]> {
+    try {
+      const result = await this.runtime.listTerminals(worktreeSelector ?? this.opts.worktree)
       const dispatched = this.db.listTasks({ status: 'dispatched' })
       const busyHandles = new Set<string>()
 
@@ -605,13 +713,50 @@ export class Coordinator {
     }
   }
 
+  private async resolveTaskDispatchTarget(
+    task: TaskRow
+  ): Promise<DispatchTargetResolution & ({ ok: true } | { ok: false })> {
+    if (!task.repo_name || task.worktree_selector) {
+      return {
+        ok: true,
+        repoName: task.repo_name ?? '<current>',
+        repoId: '',
+        repoPath: '',
+        worktreeSelector: task.worktree_selector ?? this.opts.worktree,
+        connectionId: null
+      }
+    }
+
+    if (!this.opts.dispatchTargetResolver) {
+      return {
+        ok: false,
+        repoName: task.repo_name,
+        reason: 'resolver_unavailable',
+        message: `Task ${task.id} requires repo_name ${task.repo_name}, but no dispatch target resolver is configured`
+      }
+    }
+
+    return this.opts.dispatchTargetResolver.resolve(task.repo_name)
+  }
+
+  private blockTaskForDispatchTarget(task: TaskRow, target: DispatchTargetResolution & { ok: false }): void {
+    const result = JSON.stringify({
+      blockedAt: new Date().toISOString(),
+      reason: target.reason,
+      message: target.message,
+      candidates: target.candidates ?? []
+    })
+    this.db.updateTaskStatus(task.id, 'blocked', result)
+    this.opts.onLog(`Task ${task.id} blocked before dispatch: ${target.message}`)
+  }
+
   private checkConvergence(): boolean {
     const tasks = this.db.listTasks()
     if (tasks.length === 0) {
       return true
     }
 
-    const allDone = tasks.every((t) => t.status === 'completed' || t.status === 'failed')
+    const allDone = tasks.every((task) => this.isTerminalTask(task))
     if (allDone) {
       this.state.phase = 'done'
       return true
@@ -630,6 +775,14 @@ export class Coordinator {
     }
 
     return false
+  }
+
+  private isTerminalTask(task: TaskRow): boolean {
+    return task.status === 'completed' || task.status === 'failed' || this.isTerminalBlockedTask(task)
+  }
+
+  private isTerminalBlockedTask(task: TaskRow): boolean {
+    return task.status === 'blocked' && this.db.listGates({ taskId: task.id, status: 'pending' }).length === 0
   }
 
   private sleep(ms: number): Promise<void> {

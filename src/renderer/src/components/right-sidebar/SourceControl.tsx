@@ -158,6 +158,7 @@ import {
   resolveCommitMessageAgentChoice
 } from '../../../../shared/commit-message-agent-spec'
 import { hasExpandedCommitFailureDetails, summarizeCommitFailure } from './commit-failure-summary'
+import { useI18n } from '@/i18n'
 
 export type SourceControlScope = 'all' | 'uncommitted'
 type RemoteActionError = { kind: RemoteOpKind; message: string }
@@ -886,6 +887,7 @@ export function HostedReviewHeaderLink({
 }
 
 function SourceControlInner(): React.JSX.Element {
+  const { messages } = useI18n()
   const sourceControlRef = useRef<HTMLDivElement>(null)
   // Why: React setState is async, so a rapid double-click on the Commit
   // button can both pass the isCommitting state guard before the disabled
@@ -1068,7 +1070,7 @@ function SourceControlInner(): React.JSX.Element {
       if (ok) {
         setPendingDiffCommentsClear(null)
       } else {
-        toast.error('Failed to clear notes.')
+        toast.error(messages.sourceControl.failedToClearNotes)
       }
     } finally {
       setIsClearingDiffComments(false)
@@ -1078,6 +1080,7 @@ function SourceControlInner(): React.JSX.Element {
     clearDiffComments,
     clearDiffCommentsForFile,
     isClearingDiffComments,
+    messages.sourceControl.failedToClearNotes,
     pendingDiffCommentsClear,
     pendingDiffCommentsClearCount
   ])
@@ -1532,7 +1535,7 @@ function SourceControlInner(): React.JSX.Element {
       return
     }
     if (unresolvedConflicts.length === 0) {
-      toast.message('No unresolved conflicts to send.')
+      toast.message(messages.sourceControl.noUnresolvedConflicts)
       return
     }
 
@@ -1540,7 +1543,7 @@ function SourceControlInner(): React.JSX.Element {
     try {
       const connectionId = getConnectionId(activeWorktreeId)
       if (connectionId === undefined) {
-        toast.error('Unable to resolve the workspace connection.')
+        toast.error(messages.sourceControl.workspaceConnectionUnavailable)
         return
       }
 
@@ -1551,7 +1554,7 @@ function SourceControlInner(): React.JSX.Element {
           : await store.ensureDetectedAgents()
       const agent = pickDefaultSourceControlAgent(store.settings?.defaultTuiAgent, detectedAgents)
       if (!agent) {
-        toast.error('No AI agents detected. Configure a default agent in Settings.')
+        toast.error(messages.sourceControl.noAgentsDetected)
         return
       }
 
@@ -1569,12 +1572,12 @@ function SourceControlInner(): React.JSX.Element {
         launchSource: 'conflict_resolution'
       })
       if (!result) {
-        toast.error('Could not build the agent launch command.')
+        toast.error(messages.sourceControl.agentLaunchCommandFailed)
         return
       }
 
       focusTerminalTabSurface(result.tabId)
-      toast.success('Started an AI agent for the conflicts.')
+      toast.success(messages.sourceControl.conflictsAgentStarted)
     } finally {
       setIsLaunchingConflictAgent(false)
     }
@@ -1583,6 +1586,11 @@ function SourceControlInner(): React.JSX.Element {
     activeWorktreeId,
     conflictOperation,
     isLaunchingConflictAgent,
+    messages.sourceControl.agentLaunchCommandFailed,
+    messages.sourceControl.conflictsAgentStarted,
+    messages.sourceControl.noAgentsDetected,
+    messages.sourceControl.noUnresolvedConflicts,
+    messages.sourceControl.workspaceConnectionUnavailable,
     unresolvedConflicts,
     worktreePath
   ])
@@ -1609,7 +1617,7 @@ function SourceControlInner(): React.JSX.Element {
     try {
       const connectionId = getConnectionId(activeWorktreeId)
       if (connectionId === undefined) {
-        toast.error('Unable to resolve the workspace connection.')
+        toast.error(messages.sourceControl.workspaceConnectionUnavailable)
         return false
       }
 
@@ -1620,12 +1628,12 @@ function SourceControlInner(): React.JSX.Element {
           : await store.ensureDetectedAgents()
       const agent = pickDefaultSourceControlAgent(store.settings?.defaultTuiAgent, detectedAgents)
       if (!agent) {
-        toast.error('No AI agents detected. Configure a default agent in Settings.')
+        toast.error(messages.sourceControl.noAgentsDetected)
         return false
       }
 
       if (!commitFailureRecoveryPrompt) {
-        toast.error('Could not build the agent prompt.')
+        toast.error(messages.sourceControl.agentPromptFailed)
         return false
       }
       const result = launchAgentInNewTab({
@@ -1637,12 +1645,12 @@ function SourceControlInner(): React.JSX.Element {
         launchSource: 'source_control_recovery'
       })
       if (!result) {
-        toast.error('Could not build the agent launch command.')
+        toast.error(messages.sourceControl.agentLaunchCommandFailed)
         return false
       }
 
       focusTerminalTabSurface(result.tabId)
-      toast.success('Started an AI agent for the commit failure.')
+      toast.success(messages.sourceControl.commitFailureAgentStarted)
       return true
     } finally {
       setIsLaunchingCommitFailureAgent(false)
@@ -1652,7 +1660,12 @@ function SourceControlInner(): React.JSX.Element {
     activeWorktreeId,
     commitError,
     commitFailureRecoveryPrompt,
-    isLaunchingCommitFailureAgent
+    isLaunchingCommitFailureAgent,
+    messages.sourceControl.agentLaunchCommandFailed,
+    messages.sourceControl.agentPromptFailed,
+    messages.sourceControl.commitFailureAgentStarted,
+    messages.sourceControl.noAgentsDetected,
+    messages.sourceControl.workspaceConnectionUnavailable
   ])
 
   // Why: orphaned draft/error/in-flight entries accumulate when worktrees are
@@ -3793,7 +3806,11 @@ function SourceControlInner(): React.JSX.Element {
                 className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
                 onClick={() => setDiffCommentsExpanded((prev) => !prev)}
                 aria-expanded={diffCommentsExpanded}
-                title={diffCommentsExpanded ? 'Collapse notes' : 'Expand notes'}
+                title={
+                  diffCommentsExpanded
+                    ? messages.sourceControl.collapseNotes
+                    : messages.sourceControl.expandNotes
+                }
               >
                 <ChevronDown
                   className={cn(
@@ -3802,7 +3819,7 @@ function SourceControlInner(): React.JSX.Element {
                   )}
                 />
                 <MessageSquare className="size-3.5 shrink-0" />
-                <span>Notes</span>
+                <span>{messages.sourceControl.notes}</span>
                 {diffCommentCount > 0 && (
                   <span className="text-[11px] leading-none text-muted-foreground tabular-nums">
                     {diffCommentCount}
@@ -3823,7 +3840,7 @@ function SourceControlInner(): React.JSX.Element {
                         type="button"
                         className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                         onClick={() => void handleCopyDiffComments()}
-                        aria-label="Copy all notes to clipboard"
+                        aria-label={messages.sourceControl.copyAllNotes}
                       >
                         {diffCommentsCopied ? (
                           <Check className="size-3.5" />
@@ -3833,7 +3850,7 @@ function SourceControlInner(): React.JSX.Element {
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={6}>
-                      Copy all notes
+                      {messages.sourceControl.copyAllNotes}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -3846,14 +3863,14 @@ function SourceControlInner(): React.JSX.Element {
                         <button
                           type="button"
                           className="inline-flex size-6 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                          aria-label="More note actions"
+                          aria-label={messages.sourceControl.moreNoteActions}
                         >
                           <MoreHorizontal className="size-3.5" />
                         </button>
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent side="bottom" sideOffset={6}>
-                      More note actions
+                      {messages.sourceControl.moreNoteActions}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -3869,7 +3886,7 @@ function SourceControlInner(): React.JSX.Element {
                     }}
                   >
                     <Trash2 className="size-3.5" />
-                    Clear all notes...
+                    {messages.sourceControl.clearAllNotes}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -3899,7 +3916,7 @@ function SourceControlInner(): React.JSX.Element {
             type="text"
             value={filterQuery}
             onChange={(e) => setFilterQuery(e.target.value)}
-            placeholder="Filter files…"
+            placeholder={messages.sourceControl.filterFiles}
             className="flex-1 min-w-0 bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 outline-none"
           />
           {filterQuery && (
@@ -4123,7 +4140,9 @@ function SourceControlInner(): React.JSX.Element {
                                 // A generic "Discard all" label hides that severity —
                                 // label explicitly for the destructive variant.
                                 title={
-                                  area === 'untracked' ? 'Delete all untracked' : 'Discard all'
+                                  area === 'untracked'
+                                    ? messages.sourceControl.deleteAllUntracked
+                                    : messages.sourceControl.discardAll
                                 }
                                 onClick={(event) => {
                                   event.stopPropagation()
@@ -4135,7 +4154,7 @@ function SourceControlInner(): React.JSX.Element {
                             {canStageAll && (
                               <ActionButton
                                 icon={Plus}
-                                title="Stage all"
+                                title={messages.sourceControl.stageAll}
                                 onClick={(event) => {
                                   event.stopPropagation()
                                   if (area === 'unstaged' || area === 'untracked') {
@@ -4148,7 +4167,7 @@ function SourceControlInner(): React.JSX.Element {
                             {canUnstageAll && (
                               <ActionButton
                                 icon={Minus}
-                                title="Unstage all"
+                                title={messages.sourceControl.unstageAll}
                                 onClick={(event) => {
                                   event.stopPropagation()
                                   void handleUnstageAll()

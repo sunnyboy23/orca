@@ -14,6 +14,7 @@ import {
   effectiveExternalWorktreeVisibility,
   isLegacyRepoForExternalWorktreeVisibility
 } from '../../../../shared/worktree-ownership'
+import { useI18n } from '@/i18n'
 
 export default function WorktreeVisibilityDialog(): React.JSX.Element | null {
   const activeModal = useAppStore((s) => s.activeModal)
@@ -23,6 +24,8 @@ export default function WorktreeVisibilityDialog(): React.JSX.Element | null {
   const updateRepo = useAppStore((s) => s.updateRepo)
   const fetchWorktrees = useAppStore((s) => s.fetchWorktrees)
   const detectedWorktreesByRepo = useAppStore((s) => s.detectedWorktreesByRepo)
+  const { messages } = useI18n()
+  const copy = messages.workspace.visibility
 
   const repoId = typeof modalData.repoId === 'string' ? modalData.repoId : ''
   const repo = repos.find((candidate) => candidate.id === repoId) ?? null
@@ -41,8 +44,8 @@ export default function WorktreeVisibilityDialog(): React.JSX.Element | null {
           (worktree) => !worktree.selectedCheckout && worktree.ownership !== 'orca-managed'
         ).length
       : 0
-  const hiddenWorktreeLabel = `${hiddenCount} ${hiddenCount === 1 ? 'worktree' : 'worktrees'}`
-  const shownWorktreeLabel = `${otherCount} ${otherCount === 1 ? 'worktree' : 'worktrees'}`
+  const hiddenWorktreeLabel = copy.availableToImport(hiddenCount)
+  const shownWorktreeLabel = copy.currentlyShown(otherCount)
 
   const handleToggle = useCallback(async () => {
     if (!repoId) {
@@ -61,7 +64,7 @@ export default function WorktreeVisibilityDialog(): React.JSX.Element | null {
     <Dialog open onOpenChange={(open) => !open && closeModal()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Non-Orca worktrees</DialogTitle>
+          <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription>{repo.displayName}</DialogDescription>
         </DialogHeader>
 
@@ -71,7 +74,7 @@ export default function WorktreeVisibilityDialog(): React.JSX.Element | null {
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-sm font-medium">
-              {showOther ? 'Shown in sidebar' : 'Hidden from sidebar'}
+              {showOther ? copy.shownInSidebar : copy.hiddenFromSidebar}
             </div>
             <div className="text-xs text-muted-foreground">
               {showOther
@@ -84,7 +87,7 @@ export default function WorktreeVisibilityDialog(): React.JSX.Element | null {
             variant={showOther ? 'secondary' : 'outline'}
             onClick={handleToggle}
           >
-            {showOther ? 'Hide' : 'Import'}
+            {showOther ? copy.hide : copy.import}
           </Button>
         </div>
       </DialogContent>

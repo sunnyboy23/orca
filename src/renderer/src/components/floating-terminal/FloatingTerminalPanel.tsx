@@ -10,14 +10,6 @@ import TabBar from '@/components/tab-bar/TabBar'
 import { resolveGroupTabFromVisibleId } from '@/components/tab-group/tab-group-visible-id'
 import TerminalPane from '@/components/terminal-pane/TerminalPane'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '@/components/ui/dialog'
 import { useTerminalSaveDialog } from '@/components/terminal/useTerminalSaveDialog'
 import { appendUniqueOpenFileIds } from '@/components/terminal/unsaved-close-queue'
 import { getConnectionId } from '@/lib/connection-context'
@@ -55,6 +47,8 @@ import type {
   TerminalTab
 } from '../../../../shared/types'
 import { FloatingTerminalOrchestrationDialog } from './FloatingTerminalOrchestrationDialog'
+import { EditorLoadingFallback } from '@/components/editor/EditorLoadingFallback'
+import { UnsavedChangesDialog } from '@/components/editor/UnsavedChangesDialog'
 import { FloatingTerminalResizeHandles } from './FloatingTerminalResizeHandles'
 import { FloatingTerminalWindowControls } from './FloatingTerminalWindowControls'
 export { FloatingTerminalToggleButton } from './FloatingTerminalToggleButton'
@@ -941,11 +935,7 @@ export function FloatingTerminalPanel({
           {activeEditorFile ? (
             <div className="absolute inset-0 flex min-h-0 min-w-0">
               <Suspense
-                fallback={
-                  <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-                    Loading editor...
-                  </div>
-                }
+                fallback={<EditorLoadingFallback />}
               >
                 <EditorPanel
                   activeFileId={activeEditorFile.id}
@@ -1008,46 +998,18 @@ export function FloatingTerminalPanel({
         onOpenChange={setOrchestrationDialogOpen}
         onSetupStateChange={() => void refreshOrchestrationSetupVisibility()}
       />
-      <Dialog
+      <UnsavedChangesDialog
         open={saveDialogFileId !== null}
+        filename={saveDialogFile?.relativePath.split('/').pop() ?? null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
             handleFloatingSaveDialogCancel()
           }
         }}
-      >
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-sm">Unsaved Changes</DialogTitle>
-            <DialogDescription className="text-xs">
-              {saveDialogFile
-                ? `"${saveDialogFile.relativePath.split('/').pop()}" has unsaved changes. Do you want to save before closing?`
-                : 'This file has unsaved changes.'}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleFloatingSaveDialogCancel}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleFloatingSaveDialogDiscard}
-            >
-              Don&apos;t Save
-            </Button>
-            <Button type="button" size="sm" onClick={handleFloatingSaveDialogSave}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onCancel={handleFloatingSaveDialogCancel}
+        onDiscard={handleFloatingSaveDialogDiscard}
+        onSave={handleFloatingSaveDialogSave}
+      />
     </div>
   )
 }

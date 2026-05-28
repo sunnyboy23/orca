@@ -2,10 +2,11 @@ import type { GlobalSettings } from '../../../../shared/types'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
 import { useAppStore } from '../../store'
-import { GIT_PANE_SEARCH_ENTRIES } from './git-search'
+import { getGitPaneSearchEntries, GIT_PANE_SEARCH_ENTRIES } from './git-search'
 import { SearchableSetting } from './SearchableSetting'
 import { matchesSettingsSearch } from './settings-search'
 import { GitHubRateLimitPanel } from '../github/github-rate-limit-display'
+import { useI18n } from '@/i18n'
 
 export { GIT_PANE_SEARCH_ENTRIES }
 
@@ -20,19 +21,18 @@ export function GitPane({
   updateSettings,
   displayedGitUsername
 }: GitPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.git
   const searchQuery = useAppStore((s) => s.settingsSearchQuery)
+  const searchEntries = getGitPaneSearchEntries(copy)
 
   const visibleSections = [
-    matchesSettingsSearch(searchQuery, {
-      title: 'Branch Prefix',
-      description: 'Prefix added to branch names when creating worktrees.',
-      keywords: ['branch naming', 'git username', 'custom']
-    }) ? (
+    matchesSettingsSearch(searchQuery, searchEntries[0]) ? (
       <SearchableSetting
         key="branch-prefix"
-        title="Branch Prefix"
-        description="Prefix added to branch names when creating worktrees."
-        keywords={['branch naming', 'git username', 'custom']}
+        title={copy.branchPrefix.title}
+        description={copy.branchPrefix.description}
+        keywords={copy.branchPrefix.keywords}
         className="space-y-3"
       >
         <div className="flex w-fit gap-1 rounded-md border border-border/50 p-1">
@@ -46,7 +46,11 @@ export function GitPane({
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {option === 'git-username' ? 'Git Username' : option === 'custom' ? 'Custom' : 'None'}
+              {option === 'git-username'
+                ? copy.branchPrefix.options.gitUsername
+                : option === 'custom'
+                  ? copy.branchPrefix.options.custom
+                  : copy.branchPrefix.options.none}
             </button>
           ))}
         </div>
@@ -60,8 +64,8 @@ export function GitPane({
             onChange={(e) => updateSettings({ branchPrefixCustom: e.target.value })}
             placeholder={
               settings.branchPrefix === 'git-username'
-                ? 'No git username configured'
-                : 'e.g. feature'
+                ? copy.branchPrefix.noGitUsername
+                : copy.branchPrefix.customPlaceholder
             }
             className="max-w-xs"
             readOnly={settings.branchPrefix === 'git-username'}
@@ -69,25 +73,17 @@ export function GitPane({
         )}
       </SearchableSetting>
     ) : null,
-    matchesSettingsSearch(searchQuery, {
-      title: 'Refresh Local Base Ref',
-      description: 'Optionally fast-forward local main or master when creating worktrees.',
-      keywords: ['main', 'master', 'origin/main', 'git diff', 'base ref', 'worktree']
-    }) ? (
+    matchesSettingsSearch(searchQuery, searchEntries[1]) ? (
       <SearchableSetting
         key="refresh-base-ref"
-        title="Refresh Local Base Ref"
-        description="Optionally fast-forward local main or master when creating worktrees."
-        keywords={['main', 'master', 'origin/main', 'git diff', 'base ref', 'worktree']}
+        title={copy.refreshLocalBaseRef.title}
+        description={copy.refreshLocalBaseRef.description}
+        keywords={copy.refreshLocalBaseRef.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Refresh Local Base Ref</Label>
-          <p className="text-xs text-muted-foreground">
-            When enabled, Orca updates your local <code>main</code> or <code>master</code> before
-            creating a worktree. This helps AI tools and diffs compare your branch against the
-            latest base branch. Orca only does this when it is safe.
-          </p>
+          <Label>{copy.refreshLocalBaseRef.title}</Label>
+          <p className="text-xs text-muted-foreground">{copy.refreshLocalBaseRef.rowDescription}</p>
         </div>
         <button
           role="switch"
@@ -111,38 +107,28 @@ export function GitPane({
         </button>
       </SearchableSetting>
     ) : null,
-    matchesSettingsSearch(searchQuery, {
-      title: 'GitHub API Budget',
-      description: 'Current GitHub CLI REST, Search, and GraphQL rate limits.',
-      keywords: ['github', 'gh', 'graphql', 'rate limit', 'api budget']
-    }) ? (
+    matchesSettingsSearch(searchQuery, searchEntries[2]) ? (
       <SearchableSetting
         key="github-api-budget"
-        title="GitHub API Budget"
-        description="Current GitHub CLI REST, Search, and GraphQL rate limits."
-        keywords={['github', 'gh', 'graphql', 'rate limit', 'api budget']}
+        title={copy.githubApiBudget.title}
+        description={copy.githubApiBudget.description}
+        keywords={copy.githubApiBudget.keywords}
         className="space-y-3"
       >
         <GitHubRateLimitPanel />
       </SearchableSetting>
     ) : null,
-    matchesSettingsSearch(searchQuery, {
-      title: 'Orca Attribution',
-      description: 'Add Orca attribution to commits, PRs, and issues.',
-      keywords: ['github', 'gh', 'pr', 'issue', 'co-author', 'coauthored', 'attribution', 'orca']
-    }) ? (
+    matchesSettingsSearch(searchQuery, searchEntries[3]) ? (
       <SearchableSetting
         key="github-attribution"
-        title="Orca Attribution"
-        description="Add Orca attribution to commits, PRs, and issues."
-        keywords={['github', 'gh', 'pr', 'issue', 'co-author', 'coauthored', 'attribution', 'orca']}
+        title={copy.attribution.title}
+        description={copy.attribution.description}
+        keywords={copy.attribution.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Orca Attribution</Label>
-          <p className="text-xs text-muted-foreground">
-            Add Orca attribution to commits, PRs, and issues.
-          </p>
+          <Label>{copy.attribution.title}</Label>
+          <p className="text-xs text-muted-foreground">{copy.attribution.description}</p>
         </div>
         <button
           role="switch"

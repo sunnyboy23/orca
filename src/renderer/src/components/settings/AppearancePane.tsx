@@ -17,17 +17,17 @@ import {
 import { DEFAULT_APP_FONT_FAMILY } from '../../../../shared/constants'
 import { useAvailableStatusBarToggles } from '../status-bar/use-available-status-bar-toggles'
 import {
-  APPEARANCE_PANE_SEARCH_ENTRIES,
-  LAYOUT_ENTRIES,
-  SIDEBAR_ENTRIES,
-  STATUS_BAR_ENTRIES,
-  STATUS_BAR_TOGGLES,
-  THEME_ENTRIES,
-  TITLEBAR_ENTRIES,
-  TYPOGRAPHY_ENTRIES,
-  ZOOM_ENTRIES
+  getAppearancePaneSearchEntries,
+  getLayoutEntries,
+  getSidebarEntries,
+  getStatusBarEntries,
+  getStatusBarToggles,
+  getThemeEntries,
+  getTitlebarEntries,
+  getTypographyEntries,
+  getZoomEntries
 } from './appearance-search'
-export { APPEARANCE_PANE_SEARCH_ENTRIES }
+import { useI18n } from '@/i18n'
 
 type AppearancePaneProps = {
   settings: GlobalSettings
@@ -36,9 +36,15 @@ type AppearancePaneProps = {
   fontSuggestions: string[]
 }
 
-function ShortcutHintList({ combos }: { combos: string[][] }): React.JSX.Element {
+function ShortcutHintList({
+  combos,
+  unassignedLabel
+}: {
+  combos: string[][]
+  unassignedLabel: string
+}): React.JSX.Element {
   if (combos.length === 0) {
-    return <span className="text-xs text-muted-foreground">Unassigned</span>
+    return <span className="text-xs text-muted-foreground">{unassignedLabel}</span>
   }
 
   return (
@@ -61,39 +67,50 @@ export function AppearancePane({
   applyTheme,
   fontSuggestions
 }: AppearancePaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settings.appearance
+  const themeEntries = getThemeEntries(messages.settings)
+  const zoomEntries = getZoomEntries(messages.settings)
+  const typographyEntries = getTypographyEntries(messages.settings)
+  const layoutEntries = getLayoutEntries(messages.settings)
+  const titlebarEntries = getTitlebarEntries(messages.settings)
+  const statusBarEntries = getStatusBarEntries(messages.settings)
+  const sidebarEntries = getSidebarEntries(messages.settings)
   const searchQuery = useAppStore((state) => state.settingsSearchQuery)
   const zoomInKeyCombos = useShortcutKeyCombos('zoom.in')
   const zoomOutKeyCombos = useShortcutKeyCombos('zoom.out')
   const statusBarItems = useAppStore((state) => state.statusBarItems)
   const toggleStatusBarItem = useAppStore((state) => state.toggleStatusBarItem)
-  const visibleStatusBarToggles = useAvailableStatusBarToggles(STATUS_BAR_TOGGLES)
+  const visibleStatusBarToggles = useAvailableStatusBarToggles(
+    getStatusBarToggles(messages.settings)
+  )
 
   const visibleSections = [
-    matchesSettingsSearch(searchQuery, THEME_ENTRIES) ||
-    matchesSettingsSearch(searchQuery, ZOOM_ENTRIES) ||
-    matchesSettingsSearch(searchQuery, TYPOGRAPHY_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, themeEntries) ||
+    matchesSettingsSearch(searchQuery, zoomEntries) ||
+    matchesSettingsSearch(searchQuery, typographyEntries) ? (
       <section key="interface" className="divide-y divide-border/40">
-        {matchesSettingsSearch(searchQuery, THEME_ENTRIES) ? (
+        {matchesSettingsSearch(searchQuery, themeEntries) ? (
           <SearchableSetting
-            title="Theme"
-            description="Choose how Orca looks in the app window."
-            keywords={['dark', 'light', 'system']}
+            title={copy.fields.theme.title}
+            description={copy.fields.theme.description}
+            keywords={copy.fields.theme.keywords}
           >
             <SettingsRow
-              label="Theme"
-              description="Choose how Orca looks in the app window."
+              label={copy.fields.theme.title}
+              description={copy.fields.theme.description}
               control={
                 <SettingsSegmentedControl
-                  ariaLabel="Theme"
+                  ariaLabel={copy.fields.theme.title}
                   value={settings.theme}
                   onChange={(option) => {
                     updateSettings({ theme: option })
                     applyTheme(option)
                   }}
                   options={[
-                    { value: 'system', label: 'System' },
-                    { value: 'dark', label: 'Dark' },
-                    { value: 'light', label: 'Light' }
+                    { value: 'system', label: copy.themeOptions.system },
+                    { value: 'dark', label: copy.themeOptions.dark },
+                    { value: 'light', label: copy.themeOptions.light }
                   ]}
                 />
               }
@@ -101,19 +118,19 @@ export function AppearancePane({
           </SearchableSetting>
         ) : null}
 
-        {matchesSettingsSearch(searchQuery, ZOOM_ENTRIES) ? (
+        {matchesSettingsSearch(searchQuery, zoomEntries) ? (
           <SearchableSetting
-            title="UI Zoom"
-            description="Scale the entire application interface."
-            keywords={['zoom', 'scale', 'shortcut']}
+            title={copy.fields.uiZoom.title}
+            description={copy.fields.uiZoom.description}
+            keywords={copy.fields.uiZoom.keywords}
           >
             <SettingsRow
-              label="UI Zoom"
+              label={copy.fields.uiZoom.title}
               description={
                 <>
-                  Scale the entire application interface. Use{' '}
-                  <ShortcutHintList combos={zoomInKeyCombos} /> /{' '}
-                  <ShortcutHintList combos={zoomOutKeyCombos} /> when not in a terminal pane.
+                  {copy.fields.uiZoomDescription}{' '}
+                  <ShortcutHintList combos={zoomInKeyCombos} unassignedLabel={copy.unassigned} /> /{' '}
+                  <ShortcutHintList combos={zoomOutKeyCombos} unassignedLabel={copy.unassigned} />
                 </>
               }
               control={<UIZoomControl />}
@@ -121,16 +138,16 @@ export function AppearancePane({
           </SearchableSetting>
         ) : null}
 
-        {matchesSettingsSearch(searchQuery, TYPOGRAPHY_ENTRIES) ? (
+        {matchesSettingsSearch(searchQuery, typographyEntries) ? (
           <SearchableSetting
-            title="IDE Font"
-            description="Choose the font used by the Orca interface."
-            keywords={['font', 'typeface', 'typography', 'ide', 'orca', 'interface', 'app', 'ui']}
+            title={copy.fields.ideFont.title}
+            description={copy.fields.ideFont.description}
+            keywords={copy.fields.ideFont.keywords}
           >
             <SettingsRow
               alignTop
-              label="IDE Font"
-              description="Choose the font used by the Orca interface."
+              label={copy.fields.ideFont.title}
+              description={copy.fields.ideFont.description}
               control={
                 <FontAutocomplete
                   value={settings.appFontFamily}
@@ -146,22 +163,22 @@ export function AppearancePane({
         ) : null}
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, LAYOUT_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, layoutEntries) ? (
       <section key="layout" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Layout"
-          description="Default layout when creating new worktrees."
+          title={copy.sections.layout.title}
+          description={copy.sections.layout.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Open Right Sidebar by Default"
-            description="Automatically expand the file explorer panel when creating a new worktree."
-            keywords={['layout', 'file explorer', 'sidebar']}
+            title={copy.fields.openRightSidebar.title}
+            description={copy.fields.openRightSidebar.description}
+            keywords={copy.fields.openRightSidebar.keywords}
           >
             <SettingsSwitchRow
-              label="Open Right Sidebar by Default"
-              description="Automatically expand the file explorer panel when creating a new worktree."
+              label={copy.fields.openRightSidebar.title}
+              description={copy.fields.openRightSidebar.description}
               checked={settings.rightSidebarOpenByDefault}
               onChange={() =>
                 updateSettings({ rightSidebarOpenByDefault: !settings.rightSidebarOpenByDefault })
@@ -170,13 +187,13 @@ export function AppearancePane({
           </SearchableSetting>
 
           <SearchableSetting
-            title="Show Git-Ignored Files"
-            description="Show files matched by .gitignore in the file explorer."
-            keywords={['git', 'gitignore', 'ignored', 'file explorer', 'sidebar', 'hide']}
+            title={copy.fields.showGitIgnoredFiles.title}
+            description={copy.fields.showGitIgnoredFiles.description}
+            keywords={copy.fields.showGitIgnoredFiles.keywords}
           >
             <SettingsSwitchRow
-              label="Show Git-Ignored Files"
-              description="Turn off to hide files matched by .gitignore from the file explorer."
+              label={copy.fields.showGitIgnoredFiles.title}
+              description={copy.fields.showGitIgnoredFilesToggle}
               checked={settings.showGitIgnoredFiles ?? true}
               onChange={() =>
                 updateSettings({ showGitIgnoredFiles: !(settings.showGitIgnoredFiles ?? true) })
@@ -186,22 +203,22 @@ export function AppearancePane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, TITLEBAR_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, titlebarEntries) ? (
       <section key="titlebar" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Titlebar"
-          description="Control what appears in the application titlebar."
+          title={copy.sections.titlebar.title}
+          description={copy.sections.titlebar.description}
         />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Titlebar App Name"
-            description="Show Orca in the titlebar."
-            keywords={['titlebar', 'orca', 'app', 'name', 'brand']}
+            title={copy.fields.titlebarAppName.title}
+            description={copy.fields.titlebarAppName.description}
+            keywords={copy.fields.titlebarAppName.keywords}
           >
             <SettingsSwitchRow
-              label="Titlebar App Name"
-              description="Show Orca in the titlebar."
+              label={copy.fields.titlebarAppName.title}
+              description={copy.fields.titlebarAppName.description}
               checked={settings.showTitlebarAppName}
               onChange={() =>
                 updateSettings({ showTitlebarAppName: !settings.showTitlebarAppName })
@@ -211,11 +228,11 @@ export function AppearancePane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, STATUS_BAR_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, statusBarEntries) ? (
       <section key="status-bar" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Status Bar"
-          description="Choose which indicators appear at the bottom of the window. You can also right-click the status bar for the same toggles."
+          title={copy.sections.statusBar.title}
+          description={copy.sections.statusBar.description}
         />
 
         <div className="divide-y divide-border/40">
@@ -241,32 +258,32 @@ export function AppearancePane({
         </div>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, SIDEBAR_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, sidebarEntries) ? (
       <section key="sidebar" className="space-y-3">
-        <SettingsSubsectionHeader title="Sidebar" />
+        <SettingsSubsectionHeader title={copy.sections.sidebar} />
 
         <div className="divide-y divide-border/40">
           <SearchableSetting
-            title="Show Tasks Button"
-            description="Show the Tasks button at the top of the left sidebar."
-            keywords={['tasks', 'sidebar', 'button', 'hide', 'show', 'github', 'linear']}
+            title={copy.fields.showTasksButton.title}
+            description={copy.fields.showTasksButton.description}
+            keywords={copy.fields.showTasksButton.keywords}
           >
             <SettingsSwitchRow
-              label="Show Tasks Button"
-              description="Show the Tasks button at the top of the left sidebar."
+              label={copy.fields.showTasksButton.title}
+              description={copy.fields.showTasksButton.description}
               checked={settings.showTasksButton}
               onChange={() => updateSettings({ showTasksButton: !settings.showTasksButton })}
             />
           </SearchableSetting>
 
           <SearchableSetting
-            title="Show Orca Mobile Button"
-            description="Show the Orca Mobile button at the top of the left sidebar."
-            keywords={['mobile', 'phone', 'sidebar', 'button', 'hide', 'show', 'toolbox']}
+            title={copy.fields.showMobileButton.title}
+            description={copy.fields.showMobileButton.description}
+            keywords={copy.fields.showMobileButton.keywords}
           >
             <SettingsSwitchRow
-              label="Show Orca Mobile Button"
-              description="Show the Orca Mobile shortcut in the sidebar. It remains available from Toolbox."
+              label={copy.fields.showMobileButton.title}
+              description={copy.fields.showMobileButtonToggle}
               checked={settings.showMobileButton !== false}
               onChange={() =>
                 updateSettings({ showMobileButton: !(settings.showMobileButton !== false) })
@@ -289,3 +306,5 @@ export function AppearancePane({
     </div>
   )
 }
+
+export { getAppearancePaneSearchEntries }

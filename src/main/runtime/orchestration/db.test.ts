@@ -216,6 +216,22 @@ describe('OrchestrationDb', () => {
       expect(d.getTask(t3.id)?.status).toBe('ready')
     })
 
+    it('blocks downstream pending and ready tasks when an upstream task fails', () => {
+      const d = createDb()
+      const upstream = d.createTask({ spec: 'upstream' })
+      const child = d.createTask({ spec: 'child', deps: [upstream.id] })
+      const grandchild = d.createTask({ spec: 'grandchild', deps: [child.id] })
+
+      d.updateTaskStatus(upstream.id, 'failed', 'boom')
+
+      expect(d.getTask(child.id)?.status).toBe('blocked')
+      expect(d.getTask(grandchild.id)?.status).toBe('blocked')
+      expect(JSON.parse(d.getTask(child.id)?.result ?? '{}')).toMatchObject({
+        blockedBy: upstream.id,
+        upstreamStatus: 'failed'
+      })
+    })
+
     it('sets completed_at on completion', () => {
       const d = createDb()
       const task = d.createTask({ spec: 'do it' })
@@ -398,6 +414,83 @@ describe('OrchestrationDb', () => {
     })
   })
 
+  describe('HelloAGENTS ownership fields', () => {
+    it('stores run, repo, worktree, and artifact ownership on tasks', () => {
+      const d = createDb()
+      const run = d.createCoordinatorRun({
+        spec: 'build feature',
+        coordinatorHandle: 'coord',
+        mode: 'r2',
+        source: 'desktop',
+        projectId: 'project_1',
+        rootRepoName: 'orca',
+        planPath: '.helloagents/plans/feature'
+      })
+      const task = d.createTask({
+        spec: 'implement parser',
+        runId: run.id,
+        repoName: 'orca',
+        worktreeSelector: 'id:wt1',
+        artifactDir: 'artifacts/task_parser'
+      })
+
+      expect(task.run_id).toBe(run.id)
+      expect(task.repo_name).toBe('orca')
+      expect(task.worktree_selector).toBe('id:wt1')
+      expect(task.artifact_dir).toBe('artifacts/task_parser')
+    })
+
+    it('stores coordinator run metadata', () => {
+      const d = createDb()
+      const run = d.createCoordinatorRun({
+        spec: 'route request',
+        coordinatorHandle: 'coord',
+        mode: 'r1',
+        source: 'feishu',
+        projectId: 'project_1',
+        rootRepoName: 'orca',
+        planPath: '.helloagents/plans/feature'
+      })
+
+      expect(run.mode).toBe('r1')
+      expect(run.source).toBe('feishu')
+      expect(run.project_id).toBe('project_1')
+      expect(run.root_repo_name).toBe('orca')
+      expect(run.plan_path).toBe('.helloagents/plans/feature')
+      expect(run.updated_at).toBeTruthy()
+    })
+
+    it('upserts and lists artifact manifests', () => {
+      const d = createDb()
+      const run = d.createCoordinatorRun({ spec: 'build', coordinatorHandle: 'coord' })
+      const task = d.createTask({ spec: 'work', runId: run.id })
+
+      const manifest = d.upsertArtifactManifest({
+        runId: run.id,
+        taskId: task.id,
+        manifestPath: 'artifacts/task/manifest.json',
+        status: 'completed',
+        filesChanged: ['src/a.ts'],
+        contracts: ['artifacts/task/api.md'],
+        verification: [{ command: 'pnpm test', status: 'passed' }],
+        downstreamNotes: 'Use POST /api'
+      })
+      const updated = d.upsertArtifactManifest({
+        runId: run.id,
+        taskId: task.id,
+        manifestPath: 'artifacts/task/manifest.json',
+        status: 'failed',
+        filesChanged: ['src/a.ts', 'src/b.ts']
+      })
+
+      expect(updated.id).toBe(manifest.id)
+      expect(updated.status).toBe('failed')
+      expect(JSON.parse(updated.files_changed)).toEqual(['src/a.ts', 'src/b.ts'])
+      expect(d.listArtifactManifests({ runId: run.id })).toHaveLength(1)
+      expect(d.listArtifactManifests({ taskId: task.id })).toHaveLength(1)
+    })
+  })
+
   describe('decision gates', () => {
     it('creates a gate and blocks the task', () => {
       const d = createDb()
@@ -458,6 +551,16 @@ describe('OrchestrationDb', () => {
     it('returns undefined for nonexistent gate', () => {
       const d = createDb()
       expect(d.resolveGate('gate_fake', 'yes')).toBeUndefined()
+    })
+
+    it('does not resolve an already closed gate twice', () => {
+      const d = createDb()
+      const task = d.createTask({ spec: 'work' })
+      const gate = d.createGate({ taskId: task.id, question: 'ok?' })
+
+      expect(d.resolveGate(gate.id, 'yes')?.status).toBe('resolved')
+      expect(d.resolveGate(gate.id, 'no')).toBeUndefined()
+      expect(d.getGate(gate.id)?.resolution).toBe('yes')
     })
   })
 
@@ -785,6 +888,17 @@ describe('OrchestrationDb', () => {
 
       // v1 data preserved
       expect(d.getMessageById('msg_v1')?.subject).toBe('pre-migration')
+      expect(d.getTask(task.id)?.run_id).toBeNull()
+      expect(
+        sqlite
+          .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'artifact_manifests'")
+          .get()
+      ).toBeTruthy()
+      expect(
+        sqlite
+          .prepare("SELECT mode, source, updated_at FROM coordinator_runs LIMIT 1")
+          .get()
+      ).toBeUndefined()
     })
 
     it('is idempotent: opening an already-migrated DB is a no-op', () => {
@@ -812,6 +926,7 @@ describe('OrchestrationDb', () => {
       ).not.toThrow()
       const inbox = second.getInbox(10)
       expect(inbox.length).toBeGreaterThanOrEqual(2)
+      expect(second.listArtifactManifests()).toEqual([])
     })
   })
 })

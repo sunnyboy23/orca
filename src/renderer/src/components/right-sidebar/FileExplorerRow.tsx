@@ -35,6 +35,7 @@ import { detectLanguage } from '@/lib/language-detect'
 import { getFileTypeIcon } from '@/lib/file-type-icons'
 import { openFileInBrowserTab } from '@/lib/file-preview'
 import { WORKSPACE_FILE_PATH_MIME } from '@/lib/workspace-file-drag'
+import { useI18n } from '@/i18n'
 import type { GitFileStatus } from '../../../../shared/types'
 import { STATUS_LABELS } from './status-display'
 import type { TreeNode } from './file-explorer-types'
@@ -276,6 +277,8 @@ export function FileExplorerRow({
   onNativeDragTargetChange,
   onNativeDragExpandDir
 }: FileExplorerRowProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
   const openMarkdownPreview = useAppStore((s) => s.openMarkdownPreview)
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const copyPathShortcutLabel = useShortcutLabel('fileExplorer.copyPath')
@@ -430,7 +433,7 @@ export function FileExplorerRow({
         {!node.isDirectory && activeWorktreeId && (
           <ContextMenuItem onSelect={handleOpenInOrcaBrowser}>
             <Globe />
-            Open in Orca Browser
+            {copy.openInOrcaBrowser}
           </ContextMenuItem>
         )}
         {!node.isDirectory && activeWorktreeId && detectLanguage(node.path) === 'markdown' && (

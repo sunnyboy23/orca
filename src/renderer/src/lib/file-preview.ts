@@ -1,12 +1,16 @@
 import { toast } from 'sonner'
 import { absolutePathToFileUri } from '@/components/editor/markdown-internal-links'
+import { getMessages, resolveLocale } from '@/i18n'
 import { getConnectionId } from '@/lib/connection-context'
 import { useAppStore } from '@/store'
 import { findSiblingGroupId } from '@/store/slices/tabs'
 
 export type PreviewableLanguage = 'html'
-export const REMOTE_FILE_BROWSER_UNSUPPORTED_MESSAGE =
-  'Open in Orca Browser is only available for local files.'
+export const REMOTE_FILE_BROWSER_UNSUPPORTED_MESSAGE = getRemoteFileBrowserUnsupportedMessage()
+
+function getRemoteFileBrowserUnsupportedMessage(): string {
+  return getMessages(resolveLocale(useAppStore.getState().settings)).workspace.menu.localFilesOnly
+}
 
 export type WorkspaceFileBrowserOpenTarget =
   | {
@@ -30,7 +34,7 @@ export function getWorkspaceFileBrowserOpenTarget(params: {
     return {
       status: 'unsupported',
       reason: 'remote-worktree',
-      message: REMOTE_FILE_BROWSER_UNSUPPORTED_MESSAGE
+      message: getRemoteFileBrowserUnsupportedMessage()
     }
   }
 

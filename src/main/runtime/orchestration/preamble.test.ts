@@ -4,10 +4,13 @@ import { buildDispatchPreamble } from './preamble'
 
 function baseParams(overrides: Partial<Parameters<typeof buildDispatchPreamble>[0]> = {}) {
   return {
+    runId: 'run_xyz789',
     taskId: 'task_abc123',
     dispatchId: 'ctx_def456',
     taskSpec: 'Implement the login form',
     coordinatorHandle: 'term_coord',
+    repoName: 'orca',
+    worktreeSelector: 'id:wt_login',
     ...overrides
   }
 }
@@ -18,12 +21,15 @@ describe('buildDispatchPreamble', () => {
 
     expect(result).toContain('task_abc123')
     expect(result).toContain('ctx_def456')
+    expect(result).toContain('run_xyz789')
+    expect(result).toContain('orca')
+    expect(result).toContain('id:wt_login')
     expect(result).toContain('term_coord')
     expect(result).toContain('Implement the login form')
     expect(result).not.toContain('{{')
   })
 
-  it('includes worker_done command with --body 3-sentence summary prompt and reportPath', () => {
+  it('includes worker_done command with --body 3-sentence summary prompt and manifestPath', () => {
     const result = buildDispatchPreamble(baseParams())
 
     expect(result).toContain('worker_done')
@@ -31,7 +37,26 @@ describe('buildDispatchPreamble', () => {
     expect(result).toContain('orchestration check')
     expect(result).toContain('--body')
     expect(result).toMatch(/3-sentence summary/)
-    expect(result).toContain('reportPath')
+    expect(result).toContain('manifestPath')
+    expect(result).toContain('artifacts/task_abc123/manifest.json')
+  })
+
+  it('includes artifact manifest instructions and execution boundaries', () => {
+    const result = buildDispatchPreamble(
+      baseParams({
+        allowedPaths: ['src/main/runtime/**', 'tests/**'],
+        forbiddenPaths: ['mobile/**', '.env']
+      })
+    )
+
+    expect(result).toContain('=== EXECUTION BOUNDARY ===')
+    expect(result).toContain('Required artifact manifest')
+    expect(result).toContain('"taskId": "task_abc123"')
+    expect(result).toContain('- src/main/runtime/**')
+    expect(result).toContain('- tests/**')
+    expect(result).toContain('- mobile/**')
+    expect(result).toContain('- .env')
+    expect(result).toContain('Do not follow absolute paths')
   })
 
   it('CLI examples parse as valid shell (bash -n on the extracted block)', () => {
@@ -127,6 +152,7 @@ describe('buildDispatchPreamble', () => {
 
   it('appends a BASE DRIFT section when baseDrift.behind > 0', () => {
     const result = buildDispatchPreamble({
+      runId: 'run_x',
       taskId: 'task_x',
       dispatchId: 'ctx_x',
       taskSpec: 'do stuff',
@@ -149,6 +175,7 @@ describe('buildDispatchPreamble', () => {
 
   it('omits the drift section when baseDrift.behind is 0', () => {
     const result = buildDispatchPreamble({
+      runId: 'run_x',
       taskId: 'task_x',
       dispatchId: 'ctx_x',
       taskSpec: 'do stuff',
@@ -166,6 +193,7 @@ describe('buildDispatchPreamble', () => {
 
   it('omits the drift section when baseDrift is undefined', () => {
     const result = buildDispatchPreamble({
+      runId: 'run_x',
       taskId: 'task_x',
       dispatchId: 'ctx_x',
       taskSpec: 'do stuff',
@@ -176,8 +204,33 @@ describe('buildDispatchPreamble', () => {
     expect(result).not.toContain('commits behind')
   })
 
+  it('injects upstream artifact summaries before the task block', () => {
+    const result = buildDispatchPreamble(
+      baseParams({
+        upstreamArtifacts: [
+          {
+            taskId: 'task_api',
+            manifestPath: 'artifacts/task_api/manifest.json',
+            filesChanged: ['src/api.ts'],
+            contracts: ['artifacts/task_api/contract.md'],
+            verification: [{ command: 'pnpm test', status: 'passed' }],
+            downstreamNotes: 'Use POST /v1/items.'
+          }
+        ]
+      })
+    )
+
+    expect(result).toContain('=== UPSTREAM ARTIFACTS ===')
+    expect(result).toContain('Dependency task: task_api')
+    expect(result).toContain('Manifest: artifacts/task_api/manifest.json')
+    expect(result).toContain('  - src/api.ts')
+    expect(result).toContain('Use POST /v1/items.')
+    expect(result.indexOf('=== UPSTREAM ARTIFACTS ===')).toBeLessThan(result.indexOf('=== TASK ==='))
+  })
+
   it('lists drift subjects in the order provided, each prefixed with two spaces and dash', () => {
     const result = buildDispatchPreamble({
+      runId: 'run_x',
       taskId: 'task_x',
       dispatchId: 'ctx_x',
       taskSpec: 'do stuff',
@@ -201,10 +254,15 @@ describe('buildDispatchPreamble', () => {
     // Why: single strict snapshot catches any accidental regression in
     // formatting or rule presence in one line.
     const result = buildDispatchPreamble({
+      runId: 'run_SNAP',
       taskId: 'task_SNAP',
       dispatchId: 'ctx_SNAP',
       taskSpec: 'TASK_BODY',
-      coordinatorHandle: 'term_COORD'
+      coordinatorHandle: 'term_COORD',
+      repoName: 'repo_SNAP',
+      worktreeSelector: 'id:wt_SNAP',
+      allowedPaths: ['src/**'],
+      forbiddenPaths: ['mobile/**']
     })
     expect(result).toMatchSnapshot()
   })

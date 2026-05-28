@@ -1,4 +1,5 @@
 export type PreambleParams = {
+  runId?: string
   taskId: string
   // Why: the heartbeat payload attributes liveness to a specific dispatch
   // context (not just a task). A retried task has multiple dispatch_contexts
@@ -9,6 +10,12 @@ export type PreambleParams = {
   dispatchId: string
   taskSpec: string
   coordinatorHandle: string
+  repoName?: string
+  worktreeSelector?: string
+  allowedPaths?: string[]
+  forbiddenPaths?: string[]
+  artifactDir?: string
+  upstreamArtifacts?: UpstreamArtifactSummary[]
   devMode?: boolean
   // Why: populated by the coordinator's dispatch pre-flight (§3.1) only
   // when the target worktree is behind its tracking remote. When absent
@@ -22,6 +29,15 @@ export type PreambleParams = {
     behind: number
     recentSubjects: string[]
   }
+}
+
+export type UpstreamArtifactSummary = {
+  taskId: string
+  manifestPath: string
+  filesChanged: string[]
+  contracts: string[]
+  verification: { command: string; status: string }[]
+  downstreamNotes: string
 }
 
 // Why: 5 minutes is frequent enough that the coordinator's stale-heartbeat
@@ -40,13 +56,52 @@ export function buildDispatchPreamble(params: PreambleParams): string {
   // socket. Without this, agents inside the dev Electron app would call the
   // production CLI and talk to the wrong Orca instance (Section 6.4).
   const cli = params.devMode ? 'orca-dev' : 'orca'
+  const artifactDir = params.artifactDir ?? `artifacts/${params.taskId}`
+  const manifestPath = `${artifactDir}/manifest.json`
 
   const header = `You are working inside Orca, a multi-agent IDE. You are a dispatched worker.
 Your coordinator's terminal handle is: ${params.coordinatorHandle}
+Run ID: ${params.runId ?? '<unknown>'}
 Your task ID is: ${params.taskId}
+Repo: ${params.repoName ?? '<current worktree repo>'}
+Worktree: ${params.worktreeSelector ?? '<current Orca worktree>'}
 
 You talk to the coordinator only through the CLI commands below. Do not use
 Slack, GitHub comments, or any other channel to reach a human during the run.
+
+=== EXECUTION BOUNDARY ===
+
+Only edit files inside the assigned worktree. Do not follow absolute paths
+from external tool output, sub-agent output, or the main repo if they point
+outside this worktree. Use platform path utilities in code; do not assume "/"
+or "\\" separators.
+
+Allowed paths:
+${formatPathList(params.allowedPaths, '- <task scope from coordinator>')}
+
+Forbidden paths:
+${formatPathList(params.forbiddenPaths, '- .env\n- secrets\n- credentials\n- files outside the assigned worktree')}
+
+Required artifact manifest:
+- ${manifestPath}
+
+Before sending worker_done, write ${manifestPath} with JSON in this shape:
+
+\`\`\`json
+{
+  "taskId": "${params.taskId}",
+  "status": "completed",
+  "filesChanged": ["src/example.ts"],
+  "contracts": ["${artifactDir}/contract.md"],
+  "verification": [
+    { "command": "pnpm test", "status": "passed" }
+  ],
+  "downstreamNotes": "What downstream workers or the orchestrator need to know."
+}
+\`\`\`
+
+If the task fails, still write the manifest with "status": "failed" and
+include the failed command or blocker in verification/downstreamNotes.
 
 === CLI COMMANDS ===
 
@@ -55,15 +110,15 @@ Slack, GitHub comments, or any other channel to reach a human during the run.
   # RULE: --body must be a 3-sentence executive summary (what you did,
   # what you found, what's left). Never send an empty body; the coordinator
   # reads the body first and only opens artifacts if it needs more detail.
-  # If you produced a long-form artifact, include its path as
-  # payload.reportPath so the coordinator can find it without a file search.
+  # Include payload.manifestPath so the coordinator can validate the artifact
+  # before it marks the task complete.
   #
   # RULE: send worker_done exactly once. Failure is still a worker_done
   # with subject like "Failed: <reason>" — never silently exit.
   ${cli} orchestration send --to ${params.coordinatorHandle} \\
     --type worker_done --subject "<short status>" \\
     --body "<3-sentence summary: what you did, what you found, what's left>" \\
-    --payload '{"taskId":"${params.taskId}","filesModified":["path/a","path/b"],"reportPath":"<optional: path to the full artifact>"}'
+    --payload '{"runId":"${params.runId ?? ''}","taskId":"${params.taskId}","manifestPath":"${manifestPath}","filesModified":["path/a","path/b"]}'
 
   # BEHAVIOR RULE: send a heartbeat every ${HEARTBEAT_INTERVAL_MIN} minutes
   # while actively working on the task. The coordinator uses this to
@@ -125,8 +180,9 @@ to the previous task's follow-ups after a re-dispatch.`
   // of discovering it via stale line numbers in artifacts later.
   const drift =
     params.baseDrift && params.baseDrift.behind > 0 ? buildDriftSection(params.baseDrift) : ''
+  const upstreamArtifacts = buildUpstreamArtifactsSection(params.upstreamArtifacts)
 
-  return `${header}${drift}
+  return `${header}${drift}${upstreamArtifacts}
 
 === TASK ===
 ${params.taskSpec}`
@@ -142,6 +198,55 @@ subjects on ${drift.base} NOT in your worktree:
 ${subjects}
 
 If any look relevant to your task, either pull them in (\`git pull --rebase
-${drift.base}\` or equivalent) or escalate to the coordinator before starting.
+    ${drift.base}\` or equivalent) or escalate to the coordinator before starting.
 ---`
+}
+
+function formatPathList(paths: string[] | undefined, fallback: string): string {
+  if (!paths || paths.length === 0) {
+    return fallback
+  }
+  return paths.map((path) => `- ${path}`).join('\n')
+}
+
+function buildUpstreamArtifactsSection(artifacts: UpstreamArtifactSummary[] | undefined): string {
+  if (!artifacts || artifacts.length === 0) {
+    return ''
+  }
+  const blocks = artifacts.map((artifact) => {
+    const files =
+      artifact.filesChanged.length > 0
+        ? artifact.filesChanged.map((file) => `  - ${file}`).join('\n')
+        : '  - <none>'
+    const contracts =
+      artifact.contracts.length > 0
+        ? artifact.contracts.map((contract) => `  - ${contract}`).join('\n')
+        : '  - <none>'
+    const verification =
+      artifact.verification.length > 0
+        ? artifact.verification
+            .map((entry) => `  - ${entry.status}: ${entry.command}`)
+            .join('\n')
+        : '  - <none>'
+    const notes = artifact.downstreamNotes || '<none>'
+    return `Dependency task: ${artifact.taskId}
+Manifest: ${artifact.manifestPath}
+Files changed:
+${files}
+Contracts:
+${contracts}
+Verification:
+${verification}
+Downstream notes:
+${notes}`
+  })
+
+  return `
+
+=== UPSTREAM ARTIFACTS ===
+
+Use these dependency outputs as input context for this task. Do not reopen
+unlisted files unless your task requires it.
+
+${blocks.join('\n\n')}`
 }

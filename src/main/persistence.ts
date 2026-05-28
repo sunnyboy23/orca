@@ -132,6 +132,17 @@ function decryptOptionalSecret(value: string | null | undefined): string | null 
   return value ? decrypt(value) : null
 }
 
+function encryptFeishuIntegrationSettings(
+  settings: GlobalSettings['feishuIntegration']
+): GlobalSettings['feishuIntegration'] {
+  return settings
+    ? {
+        ...settings,
+        appSecret: encrypt(settings.appSecret)
+      }
+    : settings
+}
+
 // Why: the data-file path must not be a module-level constant. Module-level
 // code runs at import time — before configureDevUserDataPath() redirects the
 // userData path in index.ts — so a constant would capture the default (non-dev)
@@ -1381,6 +1392,11 @@ export class Store {
         if (parsed.settings?.opencodeSessionCookie) {
           parsed.settings.opencodeSessionCookie = decrypt(parsed.settings.opencodeSessionCookie)
         }
+        if (parsed.settings?.feishuIntegration?.appSecret) {
+          parsed.settings.feishuIntegration.appSecret = decrypt(
+            parsed.settings.feishuIntegration.appSecret
+          )
+        }
         if (parsed.ui?.browserKagiSessionLink) {
           parsed.ui.browserKagiSessionLink = decryptOptionalSecret(parsed.ui.browserKagiSessionLink)
         }
@@ -1877,7 +1893,8 @@ export class Store {
       ...this.state,
       settings: {
         ...this.state.settings,
-        opencodeSessionCookie: encrypt(this.state.settings.opencodeSessionCookie)
+        opencodeSessionCookie: encrypt(this.state.settings.opencodeSessionCookie),
+        feishuIntegration: encryptFeishuIntegrationSettings(this.state.settings.feishuIntegration)
       },
       ui: {
         ...this.state.ui,
@@ -1931,7 +1948,8 @@ export class Store {
       ...this.state,
       settings: {
         ...this.state.settings,
-        opencodeSessionCookie: encrypt(this.state.settings.opencodeSessionCookie)
+        opencodeSessionCookie: encrypt(this.state.settings.opencodeSessionCookie),
+        feishuIntegration: encryptFeishuIntegrationSettings(this.state.settings.feishuIntegration)
       },
       ui: {
         ...this.state.ui,

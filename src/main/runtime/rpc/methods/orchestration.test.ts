@@ -38,7 +38,7 @@ describe('orchestration RPC methods', () => {
 
   it('registers all expected methods', () => {
     const registry = buildRegistry(ORCHESTRATION_METHODS)
-    expect(registry.size).toBe(16)
+    expect(registry.size).toBe(18)
     expect(registry.has('orchestration.send')).toBe(true)
     expect(registry.has('orchestration.check')).toBe(true)
     expect(registry.has('orchestration.reply')).toBe(true)
@@ -54,6 +54,8 @@ describe('orchestration RPC methods', () => {
     expect(registry.has('orchestration.gateCreate')).toBe(true)
     expect(registry.has('orchestration.gateResolve')).toBe(true)
     expect(registry.has('orchestration.gateList')).toBe(true)
+    expect(registry.has('orchestration.runList')).toBe(true)
+    expect(registry.has('orchestration.runDetail')).toBe(true)
     expect(registry.has('orchestration.reset')).toBe(true)
   })
 
@@ -487,6 +489,31 @@ describe('orchestration RPC methods', () => {
       expect(db.getTask(result.task.id)?.created_by_terminal_handle).toBe('term_creator')
     })
 
+    it('records run and artifact metadata when creating a task', async () => {
+      setup()
+      const run = db.createCoordinatorRun({
+        spec: 'R1 flow',
+        coordinatorHandle: 'coord',
+        mode: 'r1',
+        source: 'desktop'
+      })
+
+      const result = (await call('orchestration.taskCreate', {
+        spec: 'single worker',
+        runId: run.id,
+        repoName: 'orca',
+        worktree: 'path:/workspace/orca',
+        artifactDir: 'artifacts/r1'
+      })) as { task: { id: string } }
+
+      expect(db.getTask(result.task.id)).toMatchObject({
+        run_id: run.id,
+        repo_name: 'orca',
+        worktree_selector: 'path:/workspace/orca',
+        artifact_dir: 'artifacts/r1'
+      })
+    })
+
     it('rejects invalid deps JSON', async () => {
       setup()
       await expect(
@@ -850,6 +877,18 @@ describe('orchestration RPC methods', () => {
         call('orchestration.gateResolve', { id: 'gate_fake', resolution: 'yes' })
       ).rejects.toThrow('Gate not found')
     })
+
+    it('throws when resolving an already closed gate', async () => {
+      setup()
+      const task = db.createTask({ spec: 'needs approval' })
+      const gate = db.createGate({ taskId: task.id, question: 'Proceed?' })
+      db.resolveGate(gate.id, 'yes')
+
+      await expect(
+        call('orchestration.gateResolve', { id: gate.id, resolution: 'no' })
+      ).rejects.toThrow('Gate not found')
+      expect(db.getGate(gate.id)?.resolution).toBe('yes')
+    })
   })
 
   describe('orchestration.gateList', () => {
@@ -1018,6 +1057,101 @@ describe('orchestration RPC methods', () => {
       const outbound = db.getInbox(10).find((m) => m.type === 'decision_gate')
       const payload = JSON.parse(outbound!.payload ?? '{}')
       expect(payload.options).toEqual(['a', 'b', 'c'])
+    })
+  })
+
+  describe('orchestration run read model', () => {
+    it('starts a run with metadata and adopts unscoped ready tasks', async () => {
+      setup()
+      vi.spyOn(runtime, 'listTerminals').mockResolvedValue({
+        terminals: []
+      } as never)
+      vi.spyOn(runtime, 'createTerminal').mockRejectedValue(new Error('stop before dispatch'))
+
+      const task = db.createTask({ spec: 'pre-created worker task' })
+      const result = (await call('orchestration.run', {
+        spec: 'R1 run',
+        from: 'coord',
+        pollIntervalMs: 10,
+        mode: 'r1',
+        source: 'desktop',
+        rootRepoName: 'orca',
+        workspaceRoot: '/workspace/orca'
+      })) as { runId: string; status: string }
+
+      expect(result.status).toBe('running')
+      expect(db.getCoordinatorRun(result.runId)).toMatchObject({
+        mode: 'r1',
+        source: 'desktop',
+        root_repo_name: 'orca'
+      })
+      expect(db.getTask(task.id)?.run_id).toBe(result.runId)
+    })
+
+    it('lists coordinator runs newest first', async () => {
+      setup()
+      const first = db.createCoordinatorRun({
+        spec: 'first',
+        coordinatorHandle: 'coord_1',
+        mode: 'r1',
+        source: 'desktop'
+      })
+      const second = db.createCoordinatorRun({
+        spec: 'second',
+        coordinatorHandle: 'coord_2',
+        mode: 'r2',
+        source: 'feishu'
+      })
+
+      const result = (await call('orchestration.runList', { limit: 10 })) as {
+        runs: { id: string }[]
+        count: number
+      }
+
+      expect(result.count).toBe(2)
+      expect(result.runs.map((run) => run.id)).toEqual([second.id, first.id])
+    })
+
+    it('returns run detail scoped to the selected run', async () => {
+      setup()
+      const targetRun = db.createCoordinatorRun({ spec: 'target', coordinatorHandle: 'coord' })
+      const otherRun = db.createCoordinatorRun({ spec: 'other', coordinatorHandle: 'coord' })
+      const targetTask = db.createTask({
+        spec: 'target task',
+        runId: targetRun.id,
+        artifactDir: 'artifacts/target'
+      })
+      db.createTask({ spec: 'other task', runId: otherRun.id })
+      db.createGate({ taskId: targetTask.id, question: 'continue?' })
+      db.upsertArtifactManifest({
+        runId: targetRun.id,
+        taskId: targetTask.id,
+        manifestPath: 'artifacts/target/manifest.json',
+        status: 'completed',
+        filesChanged: ['src/app.ts']
+      })
+
+      const result = (await call('orchestration.runDetail', { runId: targetRun.id })) as {
+        run: { id: string }
+        tasks: { id: string; spec: string }[]
+        gates: { task_id: string }[]
+        artifacts: { task_id: string }[]
+      }
+
+      expect(result.run.id).toBe(targetRun.id)
+      expect(result.tasks).toHaveLength(1)
+      expect(result.tasks[0].spec).toBe('target task')
+      expect(result.gates).toHaveLength(1)
+      expect(result.gates[0].task_id).toBe(targetTask.id)
+      expect(result.artifacts).toHaveLength(1)
+      expect(result.artifacts[0].task_id).toBe(targetTask.id)
+    })
+
+    it('rejects missing run detail target', async () => {
+      setup()
+      await expect(call('orchestration.runDetail', { runId: 'run_missing' })).rejects.toThrow(
+        'Coordinator run not found'
+      )
     })
   })
 

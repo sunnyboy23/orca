@@ -19,11 +19,11 @@ import { useAppStore } from '../../store'
 import { ClaudeIcon, GeminiIcon, OpenAIIcon, OpenCodeGoIcon } from '../status-bar/icons'
 import { toast } from 'sonner'
 import {
-  ACCOUNTS_CLAUDE_SEARCH_ENTRIES,
-  ACCOUNTS_CODEX_SEARCH_ENTRIES,
-  ACCOUNTS_GEMINI_SEARCH_ENTRIES,
-  ACCOUNTS_OPENCODE_SEARCH_ENTRIES,
-  ACCOUNTS_PANE_SEARCH_ENTRIES
+  ACCOUNTS_PANE_SEARCH_ENTRIES,
+  getAccountsClaudeSearchEntries,
+  getAccountsCodexSearchEntries,
+  getAccountsGeminiSearchEntries,
+  getAccountsOpenCodeSearchEntries
 } from './accounts-search'
 import { SearchableSetting } from './SearchableSetting'
 import { matchesSettingsSearch } from './settings-search'
@@ -37,6 +37,7 @@ import {
   DialogHeader,
   DialogTitle
 } from '../ui/dialog'
+import { useI18n } from '@/i18n'
 
 export { ACCOUNTS_PANE_SEARCH_ENTRIES }
 
@@ -47,25 +48,30 @@ type AccountsPaneProps = {
 
 function getCodexAccountLabel(
   state: CodexRateLimitAccountsState,
-  accountId: string | null | undefined
+  accountId: string | null | undefined,
+  fallback: string
 ): string {
   if (accountId == null) {
-    return 'System default'
+    return fallback
   }
-  return state.accounts.find((account) => account.id === accountId)?.email ?? 'Codex account'
+  return state.accounts.find((account) => account.id === accountId)?.email ?? fallback
 }
 
 function getClaudeAccountLabel(
   state: ClaudeRateLimitAccountsState,
-  accountId: string | null | undefined
+  accountId: string | null | undefined,
+  fallback: string
 ): string {
   if (accountId == null) {
-    return 'System default'
+    return fallback
   }
-  return state.accounts.find((account) => account.id === accountId)?.email ?? 'Claude account'
+  return state.accounts.find((account) => account.id === accountId)?.email ?? fallback
 }
 
-function getCodexAccountErrorDescription(error: unknown): string {
+function getCodexAccountErrorDescription(
+  error: unknown,
+  copy: ReturnType<typeof useI18n>['messages']['settingsPanes']['accounts']
+): string {
   const message = String((error as Error)?.message ?? error)
     .replace(/^Error occurred in handler for 'codexAccounts:[^']+':\s*/i, '')
     .replace(/^Error invoking remote method 'codexAccounts:[^']+':\s*/i, '')
@@ -79,37 +85,42 @@ function getCodexAccountErrorDescription(error: unknown): string {
   // failures here so users see actionable sign-in guidance instead of IPC
   // internals or raw upstream wording.
   if (normalizedMessage.includes('timed out waiting for codex login to finish')) {
-    return 'Codex sign-in took too long to finish. Please try again.'
+    return copy.errors.codexSignInTimeout
   }
   if (normalizedMessage.includes('codex sign-in took too long to finish')) {
-    return 'Codex sign-in took too long to finish. Please try again.'
+    return copy.errors.codexSignInTimeout
   }
   if (
     normalizedMessage.includes('auth error 502') ||
     normalizedMessage.includes('gateway') ||
     normalizedMessage.includes('bad gateway')
   ) {
-    return 'Codex sign-in is temporarily unavailable. Please try again in a minute.'
+    return copy.errors.codexUnavailable
   }
   if (normalizedMessage.startsWith('codex login failed:')) {
     const loginMessage = message.slice('Codex login failed:'.length).trim()
-    return loginMessage || 'Codex sign-in failed. Please try again.'
+    return loginMessage || copy.errors.codexSignInFailed
   }
 
-  return message || 'Codex sign-in failed. Please try again.'
+  return message || copy.errors.codexSignInFailed
 }
 
-function getClaudeAccountErrorDescription(error: unknown): string {
+function getClaudeAccountErrorDescription(
+  error: unknown,
+  fallback: string
+): string {
   return (
     String((error as Error)?.message ?? error)
       .replace(/^Error occurred in handler for 'claudeAccounts:[^']+':\s*/i, '')
       .replace(/^Error invoking remote method 'claudeAccounts:[^']+':\s*/i, '')
       .replace(/^Error:\s*/i, '')
-      .trim() || 'Claude sign-in failed. Please try again.'
+      .trim() || fallback
   )
 }
 
 export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.accounts
   const searchQuery = useAppStore((s) => s.settingsSearchQuery)
   const fetchSettings = useAppStore((s) => s.fetchSettings)
   const localPreflightContext = useAppStore(getLocalPreflightContext)
@@ -131,6 +142,10 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
   >('idle')
   const [removeAccountId, setRemoveAccountId] = useState<string | null>(null)
   const [removeClaudeAccountId, setRemoveClaudeAccountId] = useState<string | null>(null)
+  const claudeSearchEntries = getAccountsClaudeSearchEntries(copy)
+  const codexSearchEntries = getAccountsCodexSearchEntries(copy)
+  const geminiSearchEntries = getAccountsGeminiSearchEntries(copy)
+  const openCodeSearchEntries = getAccountsOpenCodeSearchEntries(copy)
 
   useEffect(() => {
     let stale = false
@@ -143,7 +158,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
         }
       } catch (error) {
         if (!stale) {
-          toast.error('Could not load Codex accounts.', {
+          toast.error(copy.toasts.codexLoadFailed, {
             description: String((error as Error)?.message ?? error)
           })
         }
@@ -158,7 +173,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
         }
       } catch (error) {
         if (!stale) {
-          toast.error('Could not load Claude accounts.', {
+          toast.error(copy.toasts.claudeLoadFailed, {
             description: String((error as Error)?.message ?? error)
           })
         }
@@ -171,7 +186,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
     return () => {
       stale = true
     }
-  }, [])
+  }, [copy.toasts.claudeLoadFailed, copy.toasts.codexLoadFailed])
 
   const syncCodexAccounts = async (next: CodexRateLimitAccountsState): Promise<void> => {
     setCodexAccounts(next)
@@ -210,13 +225,21 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
         (action.startsWith('remove:') && previousActiveAccountId !== next.activeAccountId)
       if (shouldPromptRestart) {
         void markLiveCodexSessionsForRestart({
-          previousAccountLabel: getCodexAccountLabel(codexAccounts, previousActiveAccountId),
-          nextAccountLabel: getCodexAccountLabel(next, next.activeAccountId)
+          previousAccountLabel: getCodexAccountLabel(
+            codexAccounts,
+            previousActiveAccountId,
+            copy.common.systemDefault
+          ),
+          nextAccountLabel: getCodexAccountLabel(
+            next,
+            next.activeAccountId,
+            copy.common.codexAccount
+          )
         })
       }
     } catch (error) {
-      toast.error('Codex account update failed.', {
-        description: getCodexAccountErrorDescription(error)
+      toast.error(copy.toasts.codexUpdateFailed, {
+        description: getCodexAccountErrorDescription(error, copy)
       })
     } finally {
       setCodexAction('idle')
@@ -233,13 +256,16 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
       const next = await operation()
       await syncClaudeAccounts(next)
       if (previousActiveAccountId !== next.activeAccountId || action === 'adding') {
-        toast.info('Claude account updated.', {
-          description: `${getClaudeAccountLabel(claudeAccounts, previousActiveAccountId)} → ${getClaudeAccountLabel(next, next.activeAccountId)}. Restart live Claude terminals before continuing old sessions.`
+        toast.info(copy.toasts.claudeUpdated, {
+          description: copy.toasts.claudeRestartDescription(
+            getClaudeAccountLabel(claudeAccounts, previousActiveAccountId, copy.common.systemDefault),
+            getClaudeAccountLabel(next, next.activeAccountId, copy.common.claudeAccount)
+          )
         })
       }
     } catch (error) {
-      toast.error('Claude account update failed.', {
-        description: getClaudeAccountErrorDescription(error)
+      toast.error(copy.toasts.claudeUpdateFailed, {
+        description: getClaudeAccountErrorDescription(error, copy.errors.claudeSignInFailed)
       })
     } finally {
       setClaudeAction('idle')
@@ -247,7 +273,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
   }
 
   const visibleSections = [
-    matchesSettingsSearch(searchQuery, ACCOUNTS_CLAUDE_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, claudeSearchEntries) ? (
       <section key="claude-accounts" id="accounts-claude" className="space-y-4 scroll-mt-6">
         <div className="space-y-1">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -255,23 +281,20 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
             Claude
           </h3>
           <p className="text-xs text-muted-foreground">
-            Optional. Orca can use your normal Claude login; add accounts only if you want quick
-            switching without moving chat sessions.
+            {copy.claude.sectionDescription}
           </p>
         </div>
 
         <SearchableSetting
-          title="Claude Accounts"
-          description="Optional account switcher for the shared Claude auth files."
-          keywords={['claude', 'account', 'rate limit', 'status bar', 'quota']}
+          title={copy.search.claude.title}
+          description={copy.claude.settingDescription}
+          keywords={copy.search.claude.keywords}
           className="space-y-3 py-2"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-0.5">
-              <Label>Accounts</Label>
-              <p className="text-xs text-muted-foreground">
-                Orca swaps Claude auth only; config and chat history stay in the shared Claude root.
-              </p>
+              <Label>{copy.common.accounts}</Label>
+              <p className="text-xs text-muted-foreground">{copy.claude.rowDescription}</p>
             </div>
             <Button
               variant="outline"
@@ -287,7 +310,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
               ) : (
                 <Plus className="size-3" />
               )}
-              Add Account
+              {copy.common.addAccount}
             </Button>
           </div>
 
@@ -308,25 +331,24 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
             >
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate text-sm font-medium">System default</span>
+                  <span className="truncate text-sm font-medium">{copy.common.systemDefault}</span>
                   {claudeAccounts.activeAccountId === null ? (
                     <Badge
                       variant="outline"
                       className="h-4 shrink-0 rounded px-1.5 text-[10px] font-medium leading-none text-foreground/80"
                     >
-                      Active
+                      {copy.common.active}
                     </Badge>
                   ) : null}
                 </div>
                 <span className="truncate text-[11px] text-muted-foreground">
-                  Use your current system Claude login.
+                  {copy.claude.systemDefaultDescription}
                 </span>
               </div>
             </button>
             {claudeAccounts.accounts.length === 0 ? (
               <div className="rounded-md border border-dashed border-border/70 px-3 py-4 text-xs text-muted-foreground">
-                No managed Claude accounts yet. Orca will use your system default Claude login until
-                you add one here.
+                {copy.claude.empty}
               </div>
             ) : (
               claudeAccounts.accounts.map((account) => {
@@ -361,7 +383,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                               variant="outline"
                               className="h-4 shrink-0 rounded px-1.5 text-[10px] font-medium leading-none text-foreground/80"
                             >
-                              Active
+                              {copy.common.active}
                             </Badge>
                           ) : null}
                         </div>
@@ -389,7 +411,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                           ) : (
                             <RefreshCw className="size-3" />
                           )}
-                          Re-authenticate
+                          {copy.common.reauthenticate}
                         </Button>
                         <Button
                           variant="ghost"
@@ -402,7 +424,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                           className="h-6 px-2 text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="size-3" />
-                          Remove
+                          {copy.common.remove}
                         </Button>
                       </div>
                     </div>
@@ -414,7 +436,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
         </SearchableSetting>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, ACCOUNTS_CODEX_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, codexSearchEntries) ? (
       <section key="codex-accounts" id="accounts-codex" className="space-y-4 scroll-mt-6">
         <div className="space-y-1">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -422,30 +444,27 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
             Codex
           </h3>
           <p className="text-xs text-muted-foreground">
-            Optional. Orca can use your normal Codex login; add accounts only if you want quick
-            switching in Orca.
+            {copy.codex.sectionDescription}
           </p>
           {activeWslDistro ? (
             <p className="text-xs text-muted-foreground">
-              WSL terminals use the Codex login inside {activeWslDistro}. Managed Codex account
-              switching applies to host terminals.
+              {copy.codex.wslDescription(activeWslDistro)}
             </p>
           ) : null}
           <p className="text-xs text-muted-foreground">
-            Each account keeps its own local sign-in context in Orca. Account auth stays on this
-            device.
+            {copy.codex.localAuthDescription}
           </p>
         </div>
 
         <SearchableSetting
-          title="Codex Accounts"
-          description="Manage which Codex account Orca uses for live rate limit fetching."
+          title={copy.search.codex.title}
+          description={copy.codex.settingDescription}
           // Why: this single SearchableSetting backs the whole Codex section,
           // including the "Active Codex Account" sub-control (account picker
           // below). Roll every Codex search entry's title/description/keywords
           // into one haystack so a search for "Active Codex Account" doesn't
           // render the section header with no body underneath it.
-          keywords={ACCOUNTS_CODEX_SEARCH_ENTRIES.flatMap((entry) => [
+          keywords={codexSearchEntries.flatMap((entry) => [
             entry.title,
             entry.description ?? '',
             ...(entry.keywords ?? [])
@@ -458,11 +477,9 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
           for the actual Codex account controls. */}
           <div className="flex items-center justify-between gap-3">
             <div className="space-y-0.5">
-              <Label>Accounts</Label>
+              <Label>{copy.common.accounts}</Label>
               <p className="text-xs text-muted-foreground">
-                {activeWslDistro
-                  ? `Use codex login in ${activeWslDistro} to change the WSL Codex account.`
-                  : 'Add a Codex account to use it in Orca.'}
+                {copy.codex.rowDescription(activeWslDistro)}
               </p>
             </div>
             <Button
@@ -479,15 +496,13 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
               ) : (
                 <Plus className="size-3" />
               )}
-              Add Account
+              {copy.common.addAccount}
             </Button>
           </div>
 
           {codexAccounts.accounts.length === 0 ? (
             <div className="rounded-md border border-dashed border-border/70 px-3 py-4 text-xs text-muted-foreground">
-              {activeWslDistro
-                ? `No managed host Codex accounts yet. WSL terminals will use the Codex login in ${activeWslDistro}.`
-                : 'No managed Codex accounts yet. Orca will use your system default Codex login until you add one here.'}
+              {copy.codex.empty(activeWslDistro)}
             </div>
           ) : (
             <div className="space-y-2">
@@ -507,18 +522,18 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
               >
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <div className="flex min-w-0 items-center gap-2">
-                    <span className="truncate text-sm font-medium">System default</span>
+                    <span className="truncate text-sm font-medium">{copy.common.systemDefault}</span>
                     {codexAccounts.activeAccountId === null ? (
                       <Badge
                         variant="outline"
                         className="h-4 shrink-0 rounded px-1.5 text-[10px] font-medium leading-none text-foreground/80"
                       >
-                        Active
+                        {copy.common.active}
                       </Badge>
                     ) : null}
                   </div>
                   <span className="truncate text-[11px] text-muted-foreground">
-                    Use your current system Codex login.
+                    {copy.codex.systemDefaultDescription}
                   </span>
                 </div>
               </button>
@@ -555,7 +570,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                               variant="outline"
                               className="h-4 shrink-0 rounded px-1.5 text-[10px] font-medium leading-none text-foreground/80"
                             >
-                              Active
+                              {copy.common.active}
                             </Badge>
                           ) : null}
                         </div>
@@ -593,7 +608,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                           ) : (
                             <RefreshCw className="size-3" />
                           )}
-                          Re-authenticate
+                          {copy.common.reauthenticate}
                         </Button>
                         <Button
                           variant="ghost"
@@ -610,7 +625,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                           ) : (
                             <Trash2 className="size-3" />
                           )}
-                          Remove
+                          {copy.common.remove}
                         </Button>
                       </div>
                     </div>
@@ -622,37 +637,25 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
         </SearchableSetting>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, ACCOUNTS_GEMINI_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, geminiSearchEntries) ? (
       <section key="gemini" id="accounts-gemini" className="space-y-4 scroll-mt-6">
         <div className="space-y-1">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <GeminiIcon size={16} />
             Gemini
           </h3>
-          <p className="text-xs text-muted-foreground">Configure Gemini provider settings.</p>
+          <p className="text-xs text-muted-foreground">{copy.gemini.sectionDescription}</p>
         </div>
 
         <SearchableSetting
-          title="Use Gemini CLI credentials"
-          description="Extracts OAuth credentials from your local Gemini CLI installation to authenticate with Google. This uses credentials issued to the Gemini CLI app, not Orca. May break if Google updates the CLI. Use at your own risk."
-          keywords={[
-            'gemini',
-            'cli',
-            'oauth',
-            'credentials',
-            'experimental',
-            'rate limit',
-            'status bar'
-          ]}
+          title={copy.gemini.title}
+          description={copy.gemini.description}
+          keywords={copy.search.gemini.keywords}
           className="flex items-center justify-between gap-4 py-2"
         >
           <div className="space-y-0.5">
-            <Label>Use Gemini CLI credentials (experimental)</Label>
-            <p className="text-xs text-muted-foreground">
-              Extracts OAuth credentials from your local Gemini CLI installation to authenticate
-              with Google. This uses credentials issued to the Gemini CLI app, not Orca. May break
-              if Google updates the CLI. Use at your own risk.
-            </p>
+            <Label>{copy.gemini.titleWithExperiment}</Label>
+            <p className="text-xs text-muted-foreground">{copy.gemini.description}</p>
           </div>
           <button
             role="switch"
@@ -675,29 +678,29 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
         </SearchableSetting>
       </section>
     ) : null,
-    matchesSettingsSearch(searchQuery, ACCOUNTS_OPENCODE_SEARCH_ENTRIES) ? (
+    matchesSettingsSearch(searchQuery, openCodeSearchEntries) ? (
       <section key="opencode-go" id="accounts-opencode-go" className="space-y-4 scroll-mt-6">
         <div className="space-y-1">
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <OpenCodeGoIcon size={16} />
             OpenCode Go
           </h3>
-          <p className="text-xs text-muted-foreground">Configure OpenCode Go provider settings.</p>
+          <p className="text-xs text-muted-foreground">{copy.opencode.sectionDescription}</p>
         </div>
 
         <SearchableSetting
-          title="OpenCode Go Session Cookie"
-          description="Paste your opencode.ai session cookie for rate limit fetching."
-          keywords={['opencode', 'cookie', 'session', 'rate limit', 'status bar']}
+          title={copy.opencode.cookieTitle}
+          description={copy.opencode.cookieDescription}
+          keywords={copy.search.opencodeCookie.keywords}
           className="space-y-2"
         >
-          <Label>OpenCode Go session cookie</Label>
+          <Label>{copy.opencode.cookieLabel}</Label>
           <div className="flex gap-2">
             <Input
               type="password"
               value={settings.opencodeSessionCookie}
               onChange={(e) => updateSettings({ opencodeSessionCookie: e.target.value })}
-              placeholder="Fe26.2**… token or auth=Fe26.2**… header"
+              placeholder={copy.opencode.cookiePlaceholder}
               spellCheck={false}
               className="flex-1 text-xs"
             />
@@ -708,30 +711,28 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                 onClick={() => updateSettings({ opencodeSessionCookie: '' })}
                 className="h-7 shrink-0 text-xs text-muted-foreground hover:text-foreground"
               >
-                Clear
+                {copy.common.clear}
               </Button>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Paste either the raw token value (e.g. <code className="text-xs">Fe26.2**…</code>) or
-            the full cookie header (e.g. <code className="text-xs">auth=Fe26.2**…</code>). Find it
-            in your browser&apos;s DevTools → Network → any opencode.ai request → Cookie header.
+            {copy.opencode.cookieHelp}
           </p>
         </SearchableSetting>
 
         <SearchableSetting
-          title="OpenCode Go Workspace ID"
-          description="Optional workspace ID override if the automatic lookup fails."
-          keywords={['opencode', 'workspace', 'id', 'wrk', 'rate limit', 'status bar']}
+          title={copy.opencode.workspaceTitle}
+          description={copy.opencode.workspaceDescription}
+          keywords={copy.search.opencodeWorkspace.keywords}
           className="space-y-2"
         >
-          <Label>Workspace ID override</Label>
+          <Label>{copy.opencode.workspaceLabel}</Label>
           <div className="flex gap-2">
             <Input
               type="text"
               value={settings.opencodeWorkspaceId}
               onChange={(e) => updateSettings({ opencodeWorkspaceId: e.target.value })}
-              placeholder="wrk_…  (leave blank for automatic lookup)"
+              placeholder={copy.opencode.workspacePlaceholder}
               spellCheck={false}
               className="flex-1 text-xs"
             />
@@ -742,13 +743,12 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                 onClick={() => updateSettings({ opencodeWorkspaceId: '' })}
                 className="h-7 shrink-0 text-xs text-muted-foreground hover:text-foreground"
               >
-                Clear
+                {copy.common.clear}
               </Button>
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            Find this in the URL after logging into opencode.ai (e.g.{' '}
-            <code className="text-xs">opencode.ai/workspace/wrk_…/go</code>).
+            {copy.opencode.workspaceHelp}
           </p>
         </SearchableSetting>
       </section>
@@ -763,15 +763,14 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Remove Codex Account?</DialogTitle>
+            <DialogTitle>{copy.codex.removeDialogTitle}</DialogTitle>
             <DialogDescription>
-              Orca will delete the managed Codex home for this saved account. If it is currently
-              active, Orca falls back to the system default Codex login.
+              {copy.codex.removeDialogDescription}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRemoveAccountId(null)}>
-              Cancel
+              {copy.common.cancel}
             </Button>
             <Button
               variant="destructive"
@@ -786,7 +785,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                 )
               }}
             >
-              Remove Account
+              {copy.common.removeAccount}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -797,15 +796,14 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
       >
         <DialogContent showCloseButton={false}>
           <DialogHeader>
-            <DialogTitle>Remove Claude Account?</DialogTitle>
+            <DialogTitle>{copy.claude.removeDialogTitle}</DialogTitle>
             <DialogDescription>
-              Orca will delete the managed Claude auth for this saved account. If it is currently
-              active, Orca falls back to the system default Claude login.
+              {copy.claude.removeDialogDescription}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRemoveClaudeAccountId(null)}>
-              Cancel
+              {copy.common.cancel}
             </Button>
             <Button
               variant="destructive"
@@ -820,7 +818,7 @@ export function AccountsPane({ settings, updateSettings }: AccountsPaneProps): R
                 )
               }}
             >
-              Remove Account
+              {copy.common.removeAccount}
             </Button>
           </DialogFooter>
         </DialogContent>

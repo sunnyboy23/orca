@@ -22,9 +22,34 @@ export type DaemonActionCallbacks = {
   onKillAllError?: () => void
   onKillAllSettled?: () => void
   onRestartSettled?: () => void
+  copy?: DaemonActionCopy
 }
 
 type PendingConfirm = DaemonActionKind | null
+
+export type DaemonActionCopy = {
+  toasts: {
+    daemonRestarted: string
+    restartFailedCheckLogs: string
+    restartFailed: string
+    killedPartial: (killed: number, total: number, remaining: number) => string
+    killedCount: (count: number) => string
+    noSessionsRunning: string
+    refusedToExit: (count: number) => string
+    killAllFailed: string
+  }
+  dialog: {
+    restartTitle: string
+    restartDescription: string
+    restartConfirm: string
+    restarting: string
+    killAllTitle: string
+    killAllDescription: string
+    killAllConfirm: string
+    killing: string
+    cancel: string
+  }
+}
 
 export type DaemonActionsApi = {
   pending: PendingConfirm
@@ -37,6 +62,7 @@ export type DaemonActionsApi = {
 }
 
 export function useDaemonActions(callbacks?: DaemonActionCallbacks): DaemonActionsApi {
+  const copy = callbacks?.copy ?? defaultDaemonActionCopy
   const [pending, setPending] = useState<PendingConfirm>(null)
   const [busyKind, setBusyKind] = useState<DaemonActionKind | null>(null)
 
@@ -45,12 +71,12 @@ export function useDaemonActions(callbacks?: DaemonActionCallbacks): DaemonActio
     try {
       const { success } = await window.api.pty.management.restart()
       if (success) {
-        toast.success('Daemon restarted.')
+        toast.success(copy.toasts.daemonRestarted)
       } else {
-        toast.error('Restart failed — check logs.')
+        toast.error(copy.toasts.restartFailedCheckLogs)
       }
     } catch (err) {
-      toast.error('Restart failed.', {
+      toast.error(copy.toasts.restartFailed, {
         description: err instanceof Error ? err.message : undefined
       })
     } finally {
@@ -58,7 +84,7 @@ export function useDaemonActions(callbacks?: DaemonActionCallbacks): DaemonActio
       setPending(null)
       callbacks?.onRestartSettled?.()
     }
-  }, [callbacks])
+  }, [callbacks, copy])
 
   const runKillAll = useCallback(async () => {
     setBusyKind('killAll')
@@ -67,18 +93,18 @@ export function useDaemonActions(callbacks?: DaemonActionCallbacks): DaemonActio
       const { killedCount, remainingCount } = await window.api.pty.management.killAll()
       if (remainingCount > 0 && killedCount > 0) {
         toast.warning(
-          `Killed ${killedCount} of ${killedCount + remainingCount} sessions. ${remainingCount} refused to exit.`
+          copy.toasts.killedPartial(killedCount, killedCount + remainingCount, remainingCount)
         )
       } else if (killedCount > 0) {
-        toast.success(`Killed ${killedCount} session${killedCount === 1 ? '' : 's'}.`)
+        toast.success(copy.toasts.killedCount(killedCount))
       } else if (remainingCount === 0) {
-        toast.info('No sessions running.')
+        toast.info(copy.toasts.noSessionsRunning)
       } else {
-        toast.error(`${remainingCount} session${remainingCount === 1 ? '' : 's'} refused to exit.`)
+        toast.error(copy.toasts.refusedToExit(remainingCount))
       }
     } catch (err) {
       callbacks?.onKillAllError?.()
-      toast.error('Couldn’t kill sessions.', {
+      toast.error(copy.toasts.killAllFailed, {
         description: err instanceof Error ? err.message : undefined
       })
     } finally {
@@ -86,7 +112,7 @@ export function useDaemonActions(callbacks?: DaemonActionCallbacks): DaemonActio
       setPending(null)
       callbacks?.onKillAllSettled?.()
     }
-  }, [callbacks])
+  }, [callbacks, copy])
 
   const runConfirmed = useCallback(() => {
     if (pending === 'restart') {
@@ -114,32 +140,47 @@ type CopyShape = {
   busyLabel: string
 }
 
-function getCopy(kind: DaemonActionKind): CopyShape {
+const defaultDaemonActionCopy: DaemonActionCopy = {
+  toasts: {
+    daemonRestarted: 'Daemon restarted.',
+    restartFailedCheckLogs: 'Restart failed — check logs.',
+    restartFailed: 'Restart failed.',
+    killedPartial: (killed, total, remaining) =>
+      `Killed ${killed} of ${total} sessions. ${remaining} refused to exit.`,
+    killedCount: (count) => `Killed ${count} session${count === 1 ? '' : 's'}.`,
+    noSessionsRunning: 'No sessions running.',
+    refusedToExit: (count) => `${count} session${count === 1 ? '' : 's'} refused to exit.`,
+    killAllFailed: 'Couldn’t kill sessions.'
+  },
+  dialog: {
+    restartTitle: 'Restart the terminal daemon?',
+    restartDescription:
+      'Kills every running terminal pane and restarts the daemon process. Panes show “Process exited” and can be reopened immediately. Legacy-protocol sessions from a previous app version are preserved. This can’t be undone.',
+    restartConfirm: 'Restart daemon',
+    restarting: 'Restarting…',
+    killAllTitle: 'Kill all terminal sessions?',
+    killAllDescription:
+      'This force-quits every running terminal pane across all workspaces. Any unsaved work in those sessions is lost. The daemon itself keeps running, and new terminals can be opened immediately. This can’t be undone.',
+    killAllConfirm: 'Kill all sessions',
+    killing: 'Killing…',
+    cancel: 'Cancel'
+  }
+}
+
+function getCopy(kind: DaemonActionKind, copy: DaemonActionCopy): CopyShape {
   if (kind === 'restart') {
     return {
-      title: 'Restart the terminal daemon?',
-      description: (
-        <>
-          Kills every running terminal pane and restarts the daemon process. Panes show
-          &ldquo;Process exited&rdquo; and can be reopened immediately. Legacy-protocol sessions
-          from a previous app version are preserved. This can&apos;t be undone.
-        </>
-      ),
-      confirmLabel: 'Restart daemon',
-      busyLabel: 'Restarting…'
+      title: copy.dialog.restartTitle,
+      description: copy.dialog.restartDescription,
+      confirmLabel: copy.dialog.restartConfirm,
+      busyLabel: copy.dialog.restarting
     }
   }
   return {
-    title: 'Kill all terminal sessions?',
-    description: (
-      <>
-        This force-quits every running terminal pane across all workspaces. Any unsaved work in
-        those sessions is lost. The daemon itself keeps running, and new terminals can be opened
-        immediately. This can&apos;t be undone.
-      </>
-    ),
-    confirmLabel: 'Kill all sessions',
-    busyLabel: 'Killing…'
+    title: copy.dialog.killAllTitle,
+    description: copy.dialog.killAllDescription,
+    confirmLabel: copy.dialog.killAllConfirm,
+    busyLabel: copy.dialog.killing
   }
 }
 
@@ -147,13 +188,16 @@ export function DaemonActionDialog({
   api,
   // Why: when mounted under a Popover, we need the confirm to stay open while
   // the mutation runs. The caller wires `onOpenChange` here to gate dismissal.
-  extraDescription
+  extraDescription,
+  copy
 }: {
   api: DaemonActionsApi
   extraDescription?: React.ReactNode
+  copy?: DaemonActionCopy
 }): React.JSX.Element {
   const { pending, setPending, busyKind, isBusy, runConfirmed } = api
-  const copy = pending ? getCopy(pending) : null
+  const resolvedCopy = copy ?? defaultDaemonActionCopy
+  const dialogCopy = pending ? getCopy(pending, resolvedCopy) : null
   return (
     <Dialog
       open={pending !== null}
@@ -181,22 +225,22 @@ export function DaemonActionDialog({
           }
         }}
       >
-        {copy ? (
+        {dialogCopy ? (
           <>
             <DialogHeader>
-              <DialogTitle className="text-sm">{copy.title}</DialogTitle>
+              <DialogTitle className="text-sm">{dialogCopy.title}</DialogTitle>
               <DialogDescription className="text-xs">
-                {copy.description}
+                {dialogCopy.description}
                 {extraDescription ? <div className="mt-2">{extraDescription}</div> : null}
               </DialogDescription>
             </DialogHeader>
             <DialogFooter>
               <Button variant="outline" onClick={() => setPending(null)} disabled={isBusy}>
-                Cancel
+                {resolvedCopy.dialog.cancel}
               </Button>
               <Button variant="destructive" onClick={runConfirmed} disabled={isBusy}>
                 {isBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                {isBusy && busyKind === pending ? copy.busyLabel : copy.confirmLabel}
+                {isBusy && busyKind === pending ? dialogCopy.busyLabel : dialogCopy.confirmLabel}
               </Button>
             </DialogFooter>
           </>

@@ -30,6 +30,8 @@ import {
 } from '../../runtime/runtime-git-client'
 import { useAppStore } from '../../store'
 import { useActiveWorktree } from '../../store/selectors'
+import { useI18n } from '@/i18n'
+import { getCommitMessageAiPaneSearchEntries } from './commit-message-ai-search'
 import { SearchableSetting } from './SearchableSetting'
 import { matchesSettingsSearch } from './settings-search'
 
@@ -110,6 +112,14 @@ function resolveSelectedThinking(
     return persisted
   }
   return model.defaultThinkingLevel
+}
+
+function translateThinkingLabel(
+  id: string,
+  label: string,
+  levels: Record<'off' | 'low' | 'medium' | 'high' | 'xhigh' | 'max', string>
+): string {
+  return id in levels ? levels[id as keyof typeof levels] : label
 }
 
 export function mergeDiscoveredModelsIntoCommitMessageConfig(
@@ -203,6 +213,9 @@ export function CommitMessageAiPane({
   onCustomPromptDirtyChange,
   customPromptDiscardSignal
 }: CommitMessageAiPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.commitMessageAi
+  const searchEntries = getCommitMessageAiPaneSearchEntries(copy)
   const searchQuery = useAppStore((s) => s.settingsSearchQuery)
   const activeWorktree = useActiveWorktree()
   const activeConnectionId = getConnectionId(activeWorktree?.id ?? null)
@@ -389,7 +402,7 @@ export function CommitMessageAiPane({
             prev[agentId]?.hostKey === discoveryHostKey
               ? (prev[agentId]?.models ?? capability.models)
               : capability.models,
-          error: error instanceof Error ? error.message : 'Failed to discover models'
+          error: error instanceof Error ? error.message : copy.model.discoveryFailed
         }
       }))
     }
@@ -574,26 +587,22 @@ export function CommitMessageAiPane({
 
   if (
     matchesSettingsSearch(searchQuery, {
-      title: 'Enable AI commit messages',
-      description: 'Adds a Generate button to the Source Control panel.',
-      keywords: ['ai', 'commit', 'message', 'generate', 'agent', 'enabled']
+      title: searchEntries[0].title,
+      description: searchEntries[0].description,
+      keywords: searchEntries[0].keywords
     })
   ) {
     sections.push(
       <SearchableSetting
         key="enabled"
-        title="Enable AI commit messages"
-        description="Adds a Generate button to the Source Control panel."
-        keywords={['ai', 'commit', 'message', 'generate', 'agent', 'enabled']}
+        title={copy.enable.title}
+        description={copy.enable.description}
+        keywords={copy.enable.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Enable AI commit messages</Label>
-          <p className="text-xs text-muted-foreground">
-            Adds a Generate button to the Source Control panel that drafts a commit message from
-            your staged changes. Runs the agent CLI locally (or on the SSH host when working
-            remotely) and waits for the response.
-          </p>
+          <Label>{copy.enable.title}</Label>
+          <p className="text-xs text-muted-foreground">{copy.enable.rowDescription}</p>
         </div>
         <button
           role="switch"
@@ -616,31 +625,27 @@ export function CommitMessageAiPane({
   if (
     config.enabled &&
     matchesSettingsSearch(searchQuery, {
-      title: 'Agent',
-      description: 'Which agent to invoke when generating a commit message.',
-      keywords: ['agent', 'claude', 'codex', 'opencode', 'gemini', 'cursor']
+      title: searchEntries[1].title,
+      description: searchEntries[1].description,
+      keywords: searchEntries[1].keywords
     })
   ) {
     sections.push(
       <SearchableSetting
         key="agent"
-        title="Agent"
-        description="Which agent to invoke when generating a commit message."
-        keywords={['agent', 'claude', 'codex', 'opencode', 'gemini', 'cursor']}
+        title={copy.agent.title}
+        description={copy.agent.description}
+        keywords={copy.agent.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Agent</Label>
-          <p className="text-xs text-muted-foreground">
-            Which agent drafts your commit messages. Orca invokes its CLI in the background, so the
-            agent must be installed on the machine that hosts the worktree - your computer for local
-            worktrees, or the SSH host for remote ones.
-          </p>
+          <Label>{copy.agent.title}</Label>
+          <p className="text-xs text-muted-foreground">{copy.agent.rowDescription}</p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <Select value={activeAgentSelectValue} onValueChange={onAgentChange}>
             <SelectTrigger size="sm" className="h-8 w-[260px] shrink-0 text-xs">
-              <SelectValue placeholder="Not configured" />
+              <SelectValue placeholder={copy.agent.notConfigured} />
             </SelectTrigger>
             <SelectContent>
               {agentCapabilities.map((capability) => {
@@ -661,30 +666,32 @@ export function CommitMessageAiPane({
                   <span className="flex items-center gap-2">
                     <AgentIcon agent={agent.id} size={14} />
                     <span>{agent.label}</span>
-                    <span className="text-[11px] text-muted-foreground">Coming soon</span>
+                    <span className="text-[11px] text-muted-foreground">
+                      {copy.agent.comingSoon}
+                    </span>
                   </span>
                 </SelectItem>
               ))}
               <SelectItem value={CUSTOM_AGENT_ID} className="cursor-pointer">
                 <span className="flex items-center gap-2">
                   <Terminal className="size-3.5" />
-                  <span>Custom</span>
+                  <span>{copy.agent.custom}</span>
                 </span>
               </SelectItem>
             </SelectContent>
           </Select>
           {unsupportedDefaultAgentLabel ? (
             <p className="max-w-[260px] text-right text-[11px] text-muted-foreground">
-              Your default agent is {unsupportedDefaultAgentLabel}, which does not support commit
-              message generation yet. Choose a supported agent or Custom.
+              {copy.agent.unsupportedDefault(unsupportedDefaultAgentLabel)}{' '}
+              {copy.agent.chooseSupported}
             </p>
           ) : null}
           {unsupportedSelectedAgentLabel ? (
             <p className="max-w-[260px] text-right text-[11px] text-muted-foreground">
               {unsupportedSelectedAgentIsComingSoon
-                ? `${unsupportedSelectedAgentLabel} commit message generation is coming soon.`
-                : `${unsupportedSelectedAgentLabel} does not support commit message generation yet.`}{' '}
-              Choose a supported agent or Custom.
+                ? copy.agent.unsupportedSelectedComingSoon(unsupportedSelectedAgentLabel)
+                : copy.agent.unsupportedSelected(unsupportedSelectedAgentLabel)}{' '}
+              {copy.agent.chooseSupported}
             </p>
           ) : null}
         </div>
@@ -696,32 +703,29 @@ export function CommitMessageAiPane({
     config.enabled &&
     isCustom &&
     matchesSettingsSearch(searchQuery, {
-      title: 'Custom command',
-      description: 'Command line Orca runs to generate the commit message.',
-      keywords: ['custom', 'command', 'cli', 'binary', 'prompt', 'placeholder']
+      title: searchEntries[5].title,
+      description: searchEntries[5].description,
+      keywords: searchEntries[5].keywords
     })
   ) {
     sections.push(
       <SearchableSetting
         key="custom-command"
-        title="Custom command"
-        description="Command line Orca runs to generate the commit message."
-        keywords={['custom', 'command', 'cli', 'binary', 'prompt', 'placeholder']}
+        title={copy.customCommand.title}
+        description={copy.customCommand.description}
+        keywords={copy.customCommand.keywords}
         className="space-y-2 py-2"
       >
         <div className="space-y-0.5">
-          <Label htmlFor="commit-message-ai-custom-command">Custom command</Label>
+          <Label htmlFor="commit-message-ai-custom-command">{copy.customCommand.label}</Label>
           <p className="text-xs text-muted-foreground">
-            Use{' '}
+            {copy.customCommand.help.beforePlaceholder}{' '}
             <code className="rounded bg-muted/60 px-1 py-0.5 text-[10px]">
               {CUSTOM_PROMPT_PLACEHOLDER}
             </code>{' '}
-            where the prompt should be substituted (passed as a single argument). Omit it and the
-            prompt is piped via stdin instead - useful for CLIs like{' '}
-            <code className="rounded bg-muted/60 px-1 py-0.5 text-[10px]">claude -p</code>. Quoting
-            is for grouping arguments only; we never invoke a shell, so{' '}
-            <code className="rounded bg-muted/60 px-1 py-0.5 text-[10px]">$VAR</code> and backticks
-            are not expanded.
+            {copy.customCommand.help.afterPlaceholder} {copy.customCommand.help.stdin}{' '}
+            <code className="rounded bg-muted/60 px-1 py-0.5 text-[10px]">claude -p</code>.{' '}
+            {copy.customCommand.help.quoting}
           </p>
         </div>
         <input
@@ -732,7 +736,7 @@ export function CommitMessageAiPane({
           autoCapitalize="off"
           value={config.customAgentCommand}
           onChange={(e) => onCustomCommandChange(e.target.value)}
-          placeholder={`e.g. ollama run llama3.1 ${CUSTOM_PROMPT_PLACEHOLDER}`}
+          placeholder={copy.customCommand.placeholder(CUSTOM_PROMPT_PLACEHOLDER)}
           className="w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-xs text-foreground outline-none placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-ring"
         />
       </SearchableSetting>
@@ -744,25 +748,25 @@ export function CommitMessageAiPane({
     activeCapability &&
     activeModel &&
     matchesSettingsSearch(searchQuery, {
-      title: 'Model',
-      description: 'Which model the selected agent uses to generate the message.',
-      keywords: ['model', 'haiku', 'sonnet', 'opus', 'gpt']
+      title: searchEntries[2].title,
+      description: searchEntries[2].description,
+      keywords: searchEntries[2].keywords
     })
   ) {
     sections.push(
       <SearchableSetting
         key="model"
-        title="Model"
-        description="Which model the selected agent uses to generate the message."
-        keywords={['model', 'haiku', 'sonnet', 'opus', 'gpt']}
+        title={copy.model.title}
+        description={copy.model.description}
+        keywords={copy.model.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Model</Label>
+          <Label>{copy.model.title}</Label>
           <p className="text-xs text-muted-foreground">
             {activeCapability.modelSource === 'dynamic'
-              ? 'Refreshes from the selected CLI when the CLI exposes model discovery.'
-              : 'This agent does not expose model discovery, so Orca uses a manual catalog.'}
+              ? copy.model.dynamicDescription
+              : copy.model.staticDescription}
           </p>
           {activeDiscovery?.status === 'error' && (
             <p className="text-xs text-destructive">{activeDiscovery.error}</p>
@@ -774,8 +778,8 @@ export function CommitMessageAiPane({
               type="button"
               onClick={() => void refreshModels(activeCapability.id)}
               disabled={activeDiscovery?.status === 'loading'}
-              title="Refresh models"
-              aria-label="Refresh models"
+              title={copy.model.refresh}
+              aria-label={copy.model.refresh}
               className="inline-flex size-8 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
             >
               <RefreshCw
@@ -805,24 +809,22 @@ export function CommitMessageAiPane({
     activeModel?.thinkingLevels &&
     activeThinking &&
     matchesSettingsSearch(searchQuery, {
-      title: 'Thinking effort',
-      description: 'Reasoning effort level for the selected model. Higher levels are slower.',
-      keywords: ['thinking', 'effort', 'reasoning']
+      title: searchEntries[3].title,
+      description: searchEntries[3].description,
+      keywords: searchEntries[3].keywords
     })
   ) {
     sections.push(
       <SearchableSetting
         key="thinking"
-        title="Thinking effort"
-        description="Reasoning effort level for the selected model. Higher levels are slower."
-        keywords={['thinking', 'effort', 'reasoning']}
+        title={copy.thinking.title}
+        description={copy.thinking.description}
+        keywords={copy.thinking.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Thinking effort</Label>
-          <p className="text-xs text-muted-foreground">
-            Higher effort produces more careful messages but takes longer and costs more tokens.
-          </p>
+          <Label>{copy.thinking.title}</Label>
+          <p className="text-xs text-muted-foreground">{copy.thinking.rowDescription}</p>
         </div>
         <Select value={activeThinking} onValueChange={onThinkingChange}>
           <SelectTrigger size="sm" className="h-8 text-xs w-[160px]">
@@ -831,7 +833,7 @@ export function CommitMessageAiPane({
           <SelectContent>
             {activeModel.thinkingLevels.map((level) => (
               <SelectItem key={level.id} value={level.id} className="cursor-pointer">
-                {level.label}
+                {translateThinkingLabel(level.id, level.label, copy.thinking.levels)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -844,39 +846,35 @@ export function CommitMessageAiPane({
     (config.enabled || isCustomPromptDirty) &&
     (isCustomPromptDirty ||
       matchesSettingsSearch(searchQuery, {
-        title: 'Custom prompt',
-        description:
-          'Optional instructions appended to the base prompt (e.g. Conventional Commits style).',
-        keywords: ['prompt', 'conventional commits', 'gitmoji', 'style']
+        title: searchEntries[4].title,
+        description: searchEntries[4].description,
+        keywords: searchEntries[4].keywords
       }))
   ) {
     sections.push(
       <SearchableSetting
         key="custom-prompt"
-        title="Custom prompt"
-        description="Optional instructions appended to the base prompt (e.g. Conventional Commits style)."
-        keywords={['prompt', 'conventional commits', 'gitmoji', 'style']}
+        title={copy.customPrompt.title}
+        description={copy.customPrompt.description}
+        keywords={copy.customPrompt.keywords}
         forceVisible={isCustomPromptDirty}
         className="space-y-2 py-2"
       >
         <div className="space-y-0.5">
-          <Label htmlFor="commit-message-ai-custom-prompt">Custom prompt</Label>
-          <p className="text-xs text-muted-foreground">
-            Appended verbatim to the base prompt. Use it to enforce Conventional Commits, gitmoji,
-            ticket prefixes, or any other style your team prefers.
-          </p>
+          <Label htmlFor="commit-message-ai-custom-prompt">{copy.customPrompt.title}</Label>
+          <p className="text-xs text-muted-foreground">{copy.customPrompt.rowDescription}</p>
         </div>
         <textarea
           id="commit-message-ai-custom-prompt"
           rows={4}
           value={customPromptDraft}
           onChange={(e) => setCustomPromptDraft(e.target.value)}
-          placeholder="Use Conventional Commits format (feat:, fix:, ...). Reference the ticket key when present."
+          placeholder={copy.customPrompt.placeholder}
           className="w-full resize-y rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground outline-none placeholder:text-muted-foreground/70 focus-visible:ring-1 focus-visible:ring-ring"
         />
         <div className="flex items-center justify-between gap-3">
           <p className="text-[11px] text-muted-foreground">
-            {isCustomPromptDirty ? 'Unsaved changes' : 'Saved'}
+            {isCustomPromptDirty ? copy.customPrompt.unsavedChanges : copy.customPrompt.saved}
           </p>
           <div className="flex items-center gap-2">
             {isCustomPromptDirty ? (
@@ -887,7 +885,7 @@ export function CommitMessageAiPane({
                 onClick={onDiscardCustomPrompt}
                 disabled={isSavingCustomPrompt}
               >
-                Discard
+                {copy.customPrompt.discard}
               </Button>
             ) : null}
             <Button
@@ -897,7 +895,7 @@ export function CommitMessageAiPane({
               onClick={() => void onSaveCustomPrompt()}
               disabled={!isCustomPromptDirty || isSavingCustomPrompt}
             >
-              {isSavingCustomPrompt ? 'Saving...' : 'Save'}
+              {isSavingCustomPrompt ? copy.customPrompt.saving : copy.customPrompt.save}
             </Button>
           </div>
         </div>
@@ -914,10 +912,8 @@ export function CommitMessageAiPane({
   return (
     <div className="space-y-4 border-t border-border/40 pt-4">
       <div className="space-y-0.5">
-        <h3 className="text-sm font-semibold">AI Commit Messages</h3>
-        <p className="text-xs text-muted-foreground">
-          Generate commit messages from staged changes using a local agent CLI.
-        </p>
+        <h3 className="text-sm font-semibold">{copy.header.title}</h3>
+        <p className="text-xs text-muted-foreground">{copy.header.description}</p>
       </div>
       {sections}
     </div>

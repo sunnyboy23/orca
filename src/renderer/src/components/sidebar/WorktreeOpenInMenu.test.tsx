@@ -103,7 +103,8 @@ describe('WorktreeOpenInMenu', () => {
     const tree = WorktreeOpenInSubMenu({
       worktreePath: '/tmp/workspace',
       connectionId: null,
-      disabled: true
+      disabled: true,
+      openInLabel: 'Open in'
     })
 
     expect(findByType(tree, DropdownMenuSubTrigger).props.disabled).toBe(true)
@@ -112,7 +113,8 @@ describe('WorktreeOpenInMenu', () => {
   it('stops menu item click propagation', () => {
     const tree = WorktreeOpenInSubMenu({
       worktreePath: '/tmp/workspace',
-      connectionId: null
+      connectionId: null,
+      openInLabel: 'Open in'
     })
     const menuContent = findByType(tree, DropdownMenuSubContent)
 

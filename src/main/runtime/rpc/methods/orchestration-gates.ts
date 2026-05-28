@@ -2,19 +2,21 @@ import { z } from 'zod'
 import { defineMethod, type RpcMethod } from '../core'
 import { OptionalFiniteNumber, OptionalString, requiredString } from '../schemas'
 import type { GateStatus } from '../../orchestration/db'
-import { Coordinator } from '../../orchestration/coordinator'
-
-// Why: the coordinator instance is stored at module scope so orchestration.runStop
-// can signal it to halt. Only one coordinator can run at a time (enforced by
-// the DB's active-run check), so a single reference suffices.
-let activeCoordinator: Coordinator | null = null
+import { startCoordinatorRun, stopActiveCoordinatorRun } from '../../orchestration/run-service'
 
 const RunParams = z.object({
   spec: requiredString('Missing --spec'),
   from: OptionalString,
   pollIntervalMs: OptionalFiniteNumber,
   maxConcurrent: OptionalFiniteNumber,
-  worktree: OptionalString
+  worktree: OptionalString,
+  mode: z.enum(['unknown', 'r0', 'r1', 'r2', 'fullstack']).optional(),
+  source: z.enum(['desktop', 'web', 'mobile', 'feishu', 'cli', 'unknown']).optional(),
+  projectId: OptionalString,
+  rootRepoName: OptionalString,
+  planPath: OptionalString,
+  workspaceRoot: OptionalString,
+  helloAgentsRoot: OptionalString
 })
 
 const RunStopParams = z.object({})
@@ -45,39 +47,7 @@ export const ORCHESTRATION_GATE_METHODS: RpcMethod[] = [
     params: RunParams,
     handler: (params, { runtime }) => {
       const db = runtime.getOrchestrationDb()
-
-      const existing = db.getActiveCoordinatorRun()
-      if (existing) {
-        throw new Error(`Coordinator already running: ${existing.id}`)
-      }
-
-      const coordinatorHandle = params.from ?? 'coordinator'
-      const coordinator = new Coordinator(db, runtime, {
-        spec: params.spec,
-        coordinatorHandle,
-        pollIntervalMs: params.pollIntervalMs,
-        maxConcurrent: params.maxConcurrent,
-        worktree: params.worktree
-      })
-
-      activeCoordinator = coordinator
-
-      const run = db.createCoordinatorRun({
-        spec: params.spec,
-        coordinatorHandle,
-        pollIntervalMs: params.pollIntervalMs
-      })
-
-      // Why: fire-and-forget — the coordinator loop runs in the event loop
-      // background. Results are persisted to the DB; callers query via
-      // orchestration.taskList or orchestration.runStatus.
-      coordinator.runFromExistingRun(run.id).finally(() => {
-        if (activeCoordinator === coordinator) {
-          activeCoordinator = null
-        }
-      })
-
-      return { runId: run.id, status: 'running' }
+      return startCoordinatorRun(db, runtime, params)
     }
   }),
 
@@ -86,17 +56,7 @@ export const ORCHESTRATION_GATE_METHODS: RpcMethod[] = [
     params: RunStopParams,
     handler: (_params, { runtime }) => {
       const db = runtime.getOrchestrationDb()
-      const run = db.getActiveCoordinatorRun()
-      if (!run) {
-        throw new Error('No active coordinator run')
-      }
-
-      if (activeCoordinator) {
-        activeCoordinator.stop()
-        activeCoordinator = null
-      }
-
-      return { runId: run.id, stopped: true }
+      return stopActiveCoordinatorRun(db)
     }
   }),
 

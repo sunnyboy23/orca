@@ -7,6 +7,8 @@ import {
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
+import { sshEn } from '@/i18n/settings-ssh-en'
+import type { SshSettingsMessages } from '@/i18n/settings-ssh-types'
 
 export type EditingTarget = {
   label: string
@@ -40,6 +42,7 @@ type SshTargetFormProps = {
   onFormChange: (updater: (prev: EditingTarget) => EditingTarget) => void
   onSave: () => void
   onCancel: () => void
+  copy?: SshSettingsMessages
 }
 
 export function SshTargetForm({
@@ -47,7 +50,8 @@ export function SshTargetForm({
   form,
   onFormChange,
   onSave,
-  onCancel
+  onCancel,
+  copy = sshEn
 }: SshTargetFormProps): React.JSX.Element {
   return (
     <form
@@ -57,40 +61,40 @@ export function SshTargetForm({
         onSave()
       }}
     >
-      <p className="text-sm font-medium">{editingId ? 'Edit SSH Target' : 'New SSH Target'}</p>
+      <p className="text-sm font-medium">{editingId ? copy.form.editTitle : copy.form.newTitle}</p>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label>Label</Label>
+          <Label>{copy.form.label}</Label>
           <Input
             value={form.label}
             onChange={(e) => onFormChange((f) => ({ ...f, label: e.target.value }))}
-            placeholder="My Server"
+            placeholder={copy.form.placeholders.label}
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Host *</Label>
+          <Label>{copy.form.host}</Label>
           <Input
             value={form.host}
             onChange={(e) => onFormChange((f) => ({ ...f, host: e.target.value }))}
-            placeholder="192.168.1.100 or server.example.com"
+            placeholder={copy.form.placeholders.host}
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Username *</Label>
+          <Label>{copy.form.username}</Label>
           <Input
             value={form.username}
             onChange={(e) => onFormChange((f) => ({ ...f, username: e.target.value }))}
-            placeholder="deploy"
+            placeholder={copy.form.placeholders.username}
           />
         </div>
         <div className="space-y-1.5">
-          <Label>Port</Label>
+          <Label>{copy.form.port}</Label>
           <Input
             type="number"
             value={form.port}
             onChange={(e) => onFormChange((f) => ({ ...f, port: e.target.value }))}
-            placeholder="22"
+            placeholder={copy.form.placeholders.port}
             min={1}
             max={65535}
           />
@@ -98,44 +102,48 @@ export function SshTargetForm({
         <div className="col-span-2 space-y-1.5">
           <Label className="flex items-center gap-1.5">
             <FileKey className="size-3.5" />
-            Identity File
+            {copy.form.identityFile}
           </Label>
           <Input
             value={form.identityFile}
             onChange={(e) => onFormChange((f) => ({ ...f, identityFile: e.target.value }))}
-            placeholder="~/.ssh/id_ed25519 (leave empty for SSH agent)"
+            placeholder={copy.form.placeholders.identityFile}
           />
           <p className="text-[11px] text-muted-foreground">
-            Optional. SSH agent is used by default.
+            {copy.form.help.identityFile}
           </p>
         </div>
         <div className="col-span-2 space-y-1.5">
-          <Label>Proxy Command</Label>
+          <Label>{copy.form.proxyCommand}</Label>
           <Input
             value={form.proxyCommand}
             onChange={(e) => onFormChange((f) => ({ ...f, proxyCommand: e.target.value }))}
-            placeholder="e.g. cloudflared access ssh --hostname %h"
+            placeholder={copy.form.placeholders.proxyCommand}
           />
           <p className="text-[11px] text-muted-foreground">
-            Optional. Used for tunneling (e.g. Cloudflare Access, ProxyCommand).
+            {copy.form.help.proxyCommand}
           </p>
         </div>
         <div className="col-span-2 space-y-1.5">
-          <Label>Jump Host</Label>
+          <Label>{copy.form.jumpHost}</Label>
           <Input
             value={form.jumpHost}
             onChange={(e) => onFormChange((f) => ({ ...f, jumpHost: e.target.value }))}
-            placeholder="bastion.example.com"
+            placeholder={copy.form.placeholders.jumpHost}
           />
           <p className="text-[11px] text-muted-foreground">
-            Optional. Equivalent to ProxyJump / ssh -J.
+            {copy.form.help.jumpHost}
           </p>
         </div>
         <div className="col-span-2 space-y-1.5">
-          <Label>Relay Grace Period (seconds)</Label>
+          <Label>{copy.form.relayGracePeriod}</Label>
           <Input
             type={form.relayKeepAliveUntilReset ? 'text' : 'number'}
-            value={form.relayKeepAliveUntilReset ? 'Until reset' : form.relayGracePeriodSeconds}
+            value={
+              form.relayKeepAliveUntilReset
+                ? copy.form.placeholders.untilReset
+                : form.relayGracePeriodSeconds
+            }
             onChange={(e) =>
               onFormChange((f) => ({ ...f, relayGracePeriodSeconds: e.target.value }))
             }
@@ -154,25 +162,24 @@ export function SshTargetForm({
               }
             />
             <span className="space-y-0.5">
-              <span className="block font-medium text-foreground">Keep alive until reset</span>
-              <span className="block text-muted-foreground">
-                Remote terminals stay available until you end them or reset the relay.
+              <span className="block font-medium text-foreground">
+                {copy.form.keepAliveUntilReset}
               </span>
+              <span className="block text-muted-foreground">{copy.form.keepAliveDescription}</span>
             </span>
           </label>
           <p className="text-[11px] text-muted-foreground">
-            How long the relay keeps terminals alive after disconnect. Default: 10800 (3 hours).
-            Maximum: {MAX_SSH_RELAY_GRACE_PERIOD_SECONDS} (7 days).
+            {copy.form.relayHelp(MAX_SSH_RELAY_GRACE_PERIOD_SECONDS)}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm">
-          {editingId ? 'Save Changes' : 'Add Target'}
+          {editingId ? copy.form.saveChanges : copy.form.addTarget}
         </Button>
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
+          {copy.form.cancel}
         </Button>
       </div>
     </form>

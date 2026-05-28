@@ -5,6 +5,7 @@ import NewWorkspaceComposerCard from '@/components/NewWorkspaceComposerCard'
 import AgentSettingsDialog from '@/components/agent/AgentSettingsDialog'
 import { useComposerState } from '@/hooks/useComposerState'
 import { AGENT_CATALOG } from '@/lib/agent-catalog'
+import { useI18n } from '@/i18n'
 import type { LinkedWorkItemSummary } from '@/lib/new-workspace'
 import { shouldAllowComposerEnterSubmitTarget } from '@/lib/new-workspace-enter-guard'
 import { isScreenSubmitShortcut } from '@/lib/screen-submit-shortcut'
@@ -99,6 +100,8 @@ function QuickTabBody({
   active: boolean
 }): React.JSX.Element {
   const settings = useAppStore((s) => s.settings)
+  const { messages } = useI18n()
+  const copy = messages.workspace.create
   const { cardProps, composerRef, nameInputRef, submitQuick, createDisabled } = useComposerState({
     initialName: modalData.prefilledName ?? '',
     // Why: the modal is quick-create only now, so prompt-prefill state is
@@ -151,7 +154,9 @@ function QuickTabBody({
   const handleCreate = useCallback(async (): Promise<void> => {
     await submitQuick(quickAgent)
   }, [quickAgent, submitQuick])
-  const primaryActionLabel = cardProps.selectedRepoIsGit ? 'Create Worktree' : 'Create Workspace'
+  const primaryActionLabel = cardProps.selectedRepoIsGit
+    ? copy.createWorktree
+    : copy.createWorkspace
 
   // Cmd/Ctrl+Enter submits, Esc first blurs the focused input (like the full page).
   useEffect(() => {

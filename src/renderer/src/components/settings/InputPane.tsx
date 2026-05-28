@@ -2,7 +2,8 @@ import type { GlobalSettings } from '../../../../shared/types'
 import { Label } from '../ui/label'
 import { SearchableSetting } from './SearchableSetting'
 import { isDefaultPrimarySelectionMiddleClickPasteUserAgent } from '@/hooks/usePrimarySelectionPaste'
-export { INPUT_PANE_SEARCH_ENTRIES } from './input-search'
+import { useI18n } from '@/i18n'
+export { getInputPaneSearchEntries, INPUT_PANE_SEARCH_ENTRIES } from './input-search'
 
 type InputPaneProps = {
   settings: GlobalSettings
@@ -10,6 +11,8 @@ type InputPaneProps = {
 }
 
 export function InputPane({ settings, updateSettings }: InputPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.input
   const enabled =
     settings.primarySelectionMiddleClickPaste ??
     isDefaultPrimarySelectionMiddleClickPasteUserAgent()
@@ -17,29 +20,14 @@ export function InputPane({ settings, updateSettings }: InputPaneProps): React.J
   return (
     <section className="space-y-4">
       <SearchableSetting
-        title="Middle-click Paste from Selection"
-        description="Enabled by default on Linux and macOS. Linux uses the system selection clipboard; other platforms use a private buffer."
-        keywords={[
-          'input',
-          'editing',
-          'selection',
-          'primary selection',
-          'middle click',
-          'middle mouse',
-          'paste',
-          'clipboard',
-          'x11',
-          'linux',
-          'macos'
-        ]}
+        title={copy.middleClickPaste.title}
+        description={copy.middleClickPaste.description}
+        keywords={copy.middleClickPaste.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Middle-click Paste from Selection</Label>
-          <p className="text-xs text-muted-foreground">
-            Enabled by default on Linux and macOS. Linux uses the system selection clipboard; other
-            platforms use a private buffer.
-          </p>
+          <Label>{copy.middleClickPaste.title}</Label>
+          <p className="text-xs text-muted-foreground">{copy.middleClickPaste.description}</p>
         </div>
         <button
           type="button"

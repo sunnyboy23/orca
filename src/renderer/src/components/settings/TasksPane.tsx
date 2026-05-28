@@ -10,6 +10,8 @@ import { LinearIcon } from '@/components/icons/LinearIcon'
 import { Label } from '../ui/label'
 import { SearchableSetting } from './SearchableSetting'
 import { SettingsSubsectionHeader } from './SettingsFormControls'
+import { useI18n } from '@/i18n'
+export { getTasksPaneSearchEntries, TASKS_PANE_SEARCH_ENTRIES } from './tasks-search'
 
 type TasksPaneProps = {
   settings: GlobalSettings
@@ -19,30 +21,28 @@ type TasksPaneProps = {
 const TASK_PROVIDER_OPTIONS: readonly {
   id: TaskProvider
   label: string
-  description: string
   Icon: (props: { className?: string }) => React.JSX.Element
 }[] = [
   {
     id: 'github',
     label: 'GitHub',
-    description: 'Show GitHub in the Tasks source picker and sidebar shortcuts.',
     Icon: ({ className }) => <Github className={className} />
   },
   {
     id: 'gitlab',
     label: 'GitLab',
-    description: 'Show GitLab in the Tasks source picker and sidebar shortcuts.',
     Icon: ({ className }) => <Gitlab className={className} />
   },
   {
     id: 'linear',
     label: 'Linear',
-    description: 'Show Linear in the Tasks source picker and sidebar shortcuts.',
     Icon: ({ className }) => <LinearIcon className={className} />
   }
 ]
 
 export function TasksPane({ settings, updateSettings }: TasksPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.tasks
   const visibleProviders = normalizeVisibleTaskProviders(settings.visibleTaskProviders)
 
   const toggleProvider = (provider: TaskProvider): void => {
@@ -65,23 +65,14 @@ export function TasksPane({ settings, updateSettings }: TasksPaneProps): React.J
     <div className="space-y-6">
       <section className="space-y-3">
         <SettingsSubsectionHeader
-          title="Task Sources"
-          description="Choose which task providers appear in the Tasks page source picker and sidebar shortcuts. At least one provider must stay visible."
+          title={copy.header.title}
+          description={copy.header.description}
         />
 
         <SearchableSetting
-          title="Task Providers"
-          description="Choose which task providers appear in the Tasks page and sidebar shortcuts."
-          keywords={[
-            'tasks',
-            'provider',
-            'source',
-            'github',
-            'gitlab',
-            'linear',
-            'display',
-            'hide'
-          ]}
+          title={copy.providersSearch.title}
+          description={copy.providersSearch.description}
+          keywords={copy.providersSearch.keywords}
           className="grid gap-2 py-2"
         >
           {TASK_PROVIDER_OPTIONS.map((option) => {
@@ -117,7 +108,9 @@ export function TasksPane({ settings, updateSettings }: TasksPaneProps): React.J
                 </span>
                 <span className="min-w-0 flex-1 space-y-0.5">
                   <Label className="cursor-inherit">{option.label}</Label>
-                  <span className="block text-xs text-muted-foreground">{option.description}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {copy.providerDescriptions[option.id]}
+                  </span>
                 </span>
                 <span
                   aria-hidden

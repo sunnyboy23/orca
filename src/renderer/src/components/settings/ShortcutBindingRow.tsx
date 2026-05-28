@@ -3,7 +3,6 @@ import { Ban, Keyboard, RotateCcw, Terminal } from 'lucide-react'
 import {
   formatKeybinding,
   type KeybindingActionId,
-  type KeybindingDefinition,
   type KeybindingInput
 } from '../../../../shared/keybindings'
 import { cn } from '../../lib/utils'
@@ -12,10 +11,13 @@ import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { SearchableSetting } from './SearchableSetting'
+import type { LocalizedKeybindingDefinition } from './shortcut-copy'
+import type { ShortcutsMessages } from '@/i18n/settings-shortcuts-types'
 
 type ShortcutBindingRowProps = {
-  item: KeybindingDefinition
+  item: LocalizedKeybindingDefinition
   groupTitle: string
+  copy: ShortcutsMessages['row']
   platform: NodeJS.Platform
   effective: readonly string[]
   modified: boolean
@@ -38,15 +40,17 @@ export type ShortcutTerminalStatus = {
 
 function BindingPreview({
   bindings,
+  unassignedLabel,
   platform
 }: {
   bindings: readonly string[]
+  unassignedLabel: string
   platform: NodeJS.Platform
 }): React.JSX.Element {
   if (bindings.length === 0) {
     return (
       <div className="flex min-h-7 items-center">
-        <span className="text-xs text-muted-foreground">Unassigned</span>
+        <span className="text-xs text-muted-foreground">{unassignedLabel}</span>
       </div>
     )
   }
@@ -62,6 +66,7 @@ function BindingPreview({
 export function ShortcutBindingRow({
   item,
   groupTitle,
+  copy,
   platform,
   effective,
   modified,
@@ -87,7 +92,7 @@ export function ShortcutBindingRow({
   }, [recording])
 
   const statusMessage = error ?? (warnings.length > 0 ? warnings.join(' ') : '')
-  const recordingMessage = recording ? 'Listening for shortcut. Esc cancels recording.' : ''
+  const recordingMessage = recording ? copy.recording : ''
   const helperMessage = statusMessage || recordingMessage
 
   const handleRecordKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>): void => {
@@ -121,17 +126,17 @@ export function ShortcutBindingRow({
 
   return (
     <SearchableSetting
-      title={item.title}
-      description={`${groupTitle} shortcut`}
-      keywords={[...item.searchKeywords]}
+      title={item.localizedTitle}
+      description={groupTitle}
+      keywords={[...item.localizedSearchKeywords]}
       className="grid min-h-[54px] grid-cols-1 gap-x-3 rounded-md px-2 py-1.5 transition-colors hover:bg-accent/40 lg:grid-cols-[minmax(0,1.1fr)_minmax(10rem,0.8fr)_10rem_4rem] lg:items-center"
     >
       <div className="min-w-0">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm text-foreground">{item.title}</span>
+          <span className="truncate text-sm text-foreground">{item.localizedTitle}</span>
           {modified ? (
             <Badge variant="outline" className="shrink-0 text-[11px]">
-              Modified
+              {copy.modified}
             </Badge>
           ) : null}
           {terminalStatus ? (
@@ -163,7 +168,11 @@ export function ShortcutBindingRow({
       </div>
 
       <div className="mt-1 min-w-0 lg:mt-0">
-        <BindingPreview bindings={effective} platform={platform} />
+        <BindingPreview
+          bindings={effective}
+          unassignedLabel={copy.unassigned}
+          platform={platform}
+        />
       </div>
 
       <Button
@@ -190,7 +199,7 @@ export function ShortcutBindingRow({
         )}
       >
         <Keyboard className="size-3.5" />
-        <span className="truncate">{recording ? 'Press keys...' : 'Change shortcut'}</span>
+        <span className="truncate">{recording ? copy.pressKeys : copy.changeShortcut}</span>
       </Button>
 
       <div className="mt-2 flex items-center gap-1 lg:mt-0 lg:justify-end">
@@ -200,14 +209,14 @@ export function ShortcutBindingRow({
               type="button"
               variant="ghost"
               size="icon-xs"
-              aria-label={`Disable ${item.title}`}
+              aria-label={copy.disableAria(item.localizedTitle)}
               onClick={() => onDisable(item.id)}
             >
               <Ban className="size-3" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={4}>
-            Disable
+            {copy.disableTooltip}
           </TooltipContent>
         </Tooltip>
         <Tooltip>
@@ -216,14 +225,14 @@ export function ShortcutBindingRow({
               type="button"
               variant="ghost"
               size="icon-xs"
-              aria-label={`Reset ${item.title}`}
+              aria-label={copy.resetAria(item.localizedTitle)}
               onClick={() => onReset(item.id)}
             >
               <RotateCcw className="size-3" />
             </Button>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={4}>
-            Reset
+            {copy.resetTooltip}
           </TooltipContent>
         </Tooltip>
       </div>

@@ -268,6 +268,8 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
     // false keeps the overlay unmounted for users who never enable it.
     experimentalPet: false,
     experimentalActivity: false,
+    appLanguage: 'system',
+    feishuIntegration: getDefaultFeishuIntegrationSettings(),
     experimentalActivityDefaultedOffForAllUsers: true,
     experimentalWorktreeSymlinks: false,
     // Why: local desktop remains the default server until the user explicitly
@@ -299,6 +301,33 @@ export function getDefaultSettings(homedir: string): GlobalSettings {
       customAgentCommand: ''
     },
     voice: getDefaultVoiceSettings()
+  }
+}
+
+function getDefaultFeishuIntegrationSettings(): GlobalSettings['feishuIntegration'] {
+  return {
+    enabled: false,
+    appId: '',
+    appSecret: '',
+    encryptKeyRef: '',
+    verificationTokenRef: '',
+    webhookPublicUrl: '',
+    tunnelCommand: '',
+    wikiSource: {
+      spaceId: '',
+      configNodeToken: '',
+      projectDocsRootToken: ''
+    },
+    baseAppToken: '',
+    baseViewId: '',
+    baseFieldMapping: {
+      reposTableId: '',
+      capabilitiesTableId: '',
+      dependenciesTableId: '',
+      agentsTableId: '',
+      policiesTableId: ''
+    },
+    repoBindings: []
   }
 }
 

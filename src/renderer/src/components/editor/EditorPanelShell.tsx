@@ -5,6 +5,7 @@ import type { OpenFile } from '@/store/slices/editor'
 import { EditorContent } from './EditorContent'
 import { EditorPanelHeader } from './EditorPanelHeader'
 import { UntitledFileRenameDialog } from './UntitledFileRenameDialog'
+import { EditorLoadingFallback as I18nEditorLoadingFallback } from './EditorLoadingFallback'
 import type { getEditorPanelRenderModel } from './editor-panel-render-model'
 import type { DiffContent, FileContent } from './editor-panel-content-types'
 import type { EditorToggleValue } from './EditorViewToggle'
@@ -169,9 +170,5 @@ export function EditorPanelShell({
 }
 
 function EditorLoadingFallback(): JSX.Element {
-  return (
-    <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-      Loading editor...
-    </div>
-  )
+  return <I18nEditorLoadingFallback />
 }

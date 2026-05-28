@@ -15,6 +15,7 @@ type SshDestructiveActionDialogProps = {
   description: string
   targetLabel?: string
   actionLabel: string
+  cancelLabel: string
   busyLabel?: string
   isBusy?: boolean
   onOpenChange: (open: boolean) => void
@@ -27,6 +28,7 @@ export function SshDestructiveActionDialog({
   description,
   targetLabel,
   actionLabel,
+  cancelLabel,
   busyLabel,
   isBusy = false,
   onOpenChange,
@@ -56,7 +58,7 @@ export function SshDestructiveActionDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isBusy}>
-            Cancel
+            {cancelLabel}
           </Button>
           <Button variant="destructive" onClick={onConfirm} disabled={isBusy} className="gap-1.5">
             {isBusy ? <Loader2 className="size-3 animate-spin" /> : null}

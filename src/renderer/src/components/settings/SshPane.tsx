@@ -14,11 +14,14 @@ import { removeSshTargetWithBestEffortCleanup } from './ssh-target-remove'
 import { SshTargetCard } from './SshTargetCard'
 import { SshTargetDestructiveActions } from './SshTargetDestructiveActions'
 import { SshTargetForm, EMPTY_FORM, type EditingTarget } from './SshTargetForm'
+import { useI18n } from '@/i18n'
 export { SSH_PANE_SEARCH_ENTRIES } from './ssh-search'
 
 type SshPaneProps = Record<string, never>
 
 export function SshPane(_props: SshPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.ssh
   const [targets, setTargets] = useState<SshTarget[]>([])
   // Why: connection states are already hydrated and kept up-to-date by the
   // global store (via useIpcEvents.ts). Reading from the store avoids
@@ -43,11 +46,11 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
         setSshTargetsMetadata(result)
       } catch {
         if (!opts?.signal?.aborted) {
-          toast.error('Failed to load SSH targets')
+          toast.error(copy.toasts.loadFailed)
         }
       }
     },
-    [setSshTargetsMetadata]
+    [copy.toasts.loadFailed, setSshTargetsMetadata]
   )
 
   useEffect(() => {
@@ -58,13 +61,13 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
 
   const handleSave = async (): Promise<void> => {
     if (!form.host.trim() || !form.username.trim()) {
-      toast.error('Host and username are required')
+      toast.error(copy.toasts.hostAndUsernameRequired)
       return
     }
 
     const port = parseInt(form.port, 10)
     if (isNaN(port) || port < 1 || port > 65535) {
-      toast.error('Port must be between 1 and 65535')
+      toast.error(copy.toasts.invalidPort)
       return
     }
 
@@ -77,9 +80,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
         graceSeconds < MIN_SSH_RELAY_GRACE_PERIOD_SECONDS ||
         graceSeconds > MAX_SSH_RELAY_GRACE_PERIOD_SECONDS)
     ) {
-      toast.error(
-        `Relay grace period must be between 60 and ${MAX_SSH_RELAY_GRACE_PERIOD_SECONDS} seconds, or choose keep alive until reset`
-      )
+      toast.error(copy.toasts.invalidRelayGracePeriod(MAX_SSH_RELAY_GRACE_PERIOD_SECONDS))
       return
     }
 
@@ -98,17 +99,17 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
     try {
       if (editingId) {
         await window.api.ssh.updateTarget({ id: editingId, updates: target })
-        toast.success('Target updated')
+        toast.success(copy.toasts.targetUpdated)
       } else {
         await window.api.ssh.addTarget({ target })
-        toast.success('Target added')
+        toast.success(copy.toasts.targetAdded)
       }
       setShowForm(false)
       setEditingId(null)
       setForm(EMPTY_FORM)
       await loadTargets()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save target')
+      toast.error(err instanceof Error ? err.message : copy.toasts.saveFailed)
     }
   }
 
@@ -133,10 +134,10 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
       // Why: a deleted passphrase-gated target may still have deferred
       // reconnect metadata; clear it so focused SSH tabs stop retrying it.
       clearRemovedSshTargetState(id)
-      toast.success('Target removed')
+      toast.success(copy.toasts.targetRemoved)
       await loadTargets()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove target')
+      toast.error(err instanceof Error ? err.message : copy.toasts.removeFailed)
     }
   }
 
@@ -165,7 +166,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
     try {
       await window.api.ssh.connect({ targetId })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Connection failed')
+      toast.error(err instanceof Error ? err.message : copy.toasts.connectionFailed)
     }
   }
 
@@ -173,26 +174,26 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
     try {
       await window.api.ssh.disconnect({ targetId })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Disconnect failed')
+      toast.error(err instanceof Error ? err.message : copy.toasts.disconnectFailed)
     }
   }
 
   const handleTerminateSessions = async (targetId: string): Promise<void> => {
     try {
       await terminateSessionsWithReconnect(targetId)
-      toast.success('Remote terminals ended')
+      toast.success(copy.toasts.remoteTerminalsEnded)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to end remote terminals')
+      toast.error(err instanceof Error ? err.message : copy.toasts.endRemoteTerminalsFailed)
     }
   }
 
   const handleResetRelay = async (targetId: string): Promise<void> => {
     try {
       await window.api.ssh.resetRelay({ targetId })
-      toast.success('Remote relay reset')
+      toast.success(copy.toasts.relayReset)
       await loadTargets()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to reset remote relay')
+      toast.error(err instanceof Error ? err.message : copy.toasts.relayResetFailed)
     }
   }
 
@@ -201,12 +202,12 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
     try {
       const result = await window.api.ssh.testConnection({ targetId })
       if (result.success) {
-        toast.success('Connection successful')
+        toast.success(copy.toasts.connectionSuccessful)
       } else {
-        toast.error(result.error ?? 'Connection test failed')
+        toast.error(result.error ?? copy.toasts.connectionTestFailed)
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Test failed')
+      toast.error(err instanceof Error ? err.message : copy.toasts.testFailed)
     } finally {
       setTestingIds((prev) => {
         const next = new Set(prev)
@@ -220,13 +221,13 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
     try {
       const imported = (await window.api.ssh.importConfig()) as SshTarget[]
       if (imported.length === 0) {
-        toast('No new hosts found in ~/.ssh/config')
+        toast(copy.toasts.noNewHosts)
       } else {
-        toast.success(`Imported ${imported.length} host${imported.length > 1 ? 's' : ''}`)
+        toast.success(copy.toasts.importedHosts(imported.length))
       }
       await loadTargets()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Import failed')
+      toast.error(err instanceof Error ? err.message : copy.toasts.importFailed)
     }
   }
 
@@ -241,10 +242,8 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
       {/* Header row */}
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-0.5">
-          <p className="text-sm font-medium">Targets</p>
-          <p className="text-xs text-muted-foreground">
-            Add a remote host to connect to it in Orca.
-          </p>
+          <p className="text-sm font-medium">{copy.header.targets}</p>
+          <p className="text-xs text-muted-foreground">{copy.header.description}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <Button
@@ -254,7 +253,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
             className="gap-1.5"
           >
             <Upload className="size-3" />
-            Import
+            {copy.header.import}
           </Button>
           {!showForm ? (
             <Button
@@ -268,7 +267,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
               className="gap-1.5"
             >
               <Plus className="size-3" />
-              Add Target
+              {copy.header.addTarget}
             </Button>
           ) : null}
         </div>
@@ -276,6 +275,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
 
       <SshTargetDestructiveActions
         connectionStates={sshConnectionStates}
+        copy={copy}
         onRemove={handleRemove}
         onResetRelay={handleResetRelay}
         onTerminateSessions={handleTerminateSessions}
@@ -285,7 +285,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
             {/* Target list */}
             {targets.length === 0 && !showForm ? (
               <div className="flex items-center justify-center rounded-lg border border-dashed border-border/60 bg-card/30 px-4 py-5 text-sm text-muted-foreground">
-                No SSH targets configured.
+                {copy.header.empty}
               </div>
             ) : (
               <div className="space-y-2">
@@ -296,6 +296,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
                     state={sshConnectionStates.get(target.id)}
                     testing={testingIds.has(target.id)}
                     busyAction={busyActionForTarget(target.id)}
+                    copy={copy}
                     onConnect={handleConnect}
                     onDisconnect={handleDisconnect}
                     onTerminateSessions={(id) =>
@@ -318,6 +319,7 @@ export function SshPane(_props: SshPaneProps): React.JSX.Element {
                 onFormChange={setForm}
                 onSave={() => void handleSave()}
                 onCancel={cancelForm}
+                copy={copy}
               />
             ) : null}
           </>

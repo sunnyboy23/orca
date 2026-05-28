@@ -1,51 +1,45 @@
 import type { SettingsSearchEntry } from './settings-search'
+import { accountsEn } from '@/i18n/settings-accounts-en'
+import type { AccountsMessages } from '@/i18n/settings-accounts-types'
 
-export const ACCOUNTS_CLAUDE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Claude Accounts',
-    description: 'Optional account switching for Claude while preserving shared chat context.',
-    keywords: ['claude', 'account', 'switch', 'active', 'status bar', 'quota', 'optional']
-  }
-]
+export function getAccountsClaudeSearchEntries(
+  messages: AccountsMessages = accountsEn
+): SettingsSearchEntry[] {
+  return [messages.search.claude]
+}
 
-export const ACCOUNTS_CODEX_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Codex Accounts',
-    description: 'Optional account switching for Codex and live rate limit fetching.',
-    keywords: ['codex', 'account', 'rate limit', 'status bar', 'quota', 'optional']
-  },
-  {
-    title: 'Active Codex Account',
-    description: 'Choose which optional saved Codex account powers live quota reads.',
-    keywords: ['codex', 'account', 'switch', 'active', 'status bar', 'optional']
-  }
-]
+export function getAccountsCodexSearchEntries(
+  messages: AccountsMessages = accountsEn
+): SettingsSearchEntry[] {
+  return [messages.search.codex, messages.search.activeCodex]
+}
 
-export const ACCOUNTS_GEMINI_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Use Gemini CLI credentials',
-    description:
-      'Extracts OAuth credentials from your local Gemini CLI installation to authenticate with Google.',
-    keywords: ['gemini', 'cli', 'oauth', 'credentials', 'experimental', 'rate limit', 'status bar']
-  }
-]
+export function getAccountsGeminiSearchEntries(
+  messages: AccountsMessages = accountsEn
+): SettingsSearchEntry[] {
+  return [messages.search.gemini]
+}
 
-export const ACCOUNTS_OPENCODE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'OpenCode Go Session Cookie',
-    description: 'Paste your opencode.ai session cookie for rate limit fetching.',
-    keywords: ['opencode', 'cookie', 'session', 'rate limit', 'status bar']
-  },
-  {
-    title: 'OpenCode Go Workspace ID',
-    description: 'Optional workspace ID override if the automatic lookup fails.',
-    keywords: ['opencode', 'workspace', 'id', 'wrk', 'rate limit', 'status bar']
-  }
-]
+export function getAccountsOpenCodeSearchEntries(
+  messages: AccountsMessages = accountsEn
+): SettingsSearchEntry[] {
+  return [messages.search.opencodeCookie, messages.search.opencodeWorkspace]
+}
 
-export const ACCOUNTS_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  ...ACCOUNTS_CLAUDE_SEARCH_ENTRIES,
-  ...ACCOUNTS_CODEX_SEARCH_ENTRIES,
-  ...ACCOUNTS_GEMINI_SEARCH_ENTRIES,
-  ...ACCOUNTS_OPENCODE_SEARCH_ENTRIES
-]
+export const ACCOUNTS_CLAUDE_SEARCH_ENTRIES = getAccountsClaudeSearchEntries()
+export const ACCOUNTS_CODEX_SEARCH_ENTRIES = getAccountsCodexSearchEntries()
+export const ACCOUNTS_GEMINI_SEARCH_ENTRIES = getAccountsGeminiSearchEntries()
+export const ACCOUNTS_OPENCODE_SEARCH_ENTRIES = getAccountsOpenCodeSearchEntries()
+
+export function getAccountsPaneSearchEntries(
+  messages: AccountsMessages = accountsEn
+): SettingsSearchEntry[] {
+  return [
+    ...getAccountsClaudeSearchEntries(messages),
+    ...getAccountsCodexSearchEntries(messages),
+    ...getAccountsGeminiSearchEntries(messages),
+    ...getAccountsOpenCodeSearchEntries(messages)
+  ]
+}
+
+export const ACCOUNTS_PANE_SEARCH_ENTRIES = getAccountsPaneSearchEntries()

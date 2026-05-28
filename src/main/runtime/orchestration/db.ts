@@ -8,11 +8,14 @@ import type {
   DispatchStatus,
   GateStatus,
   CoordinatorStatus,
+  CoordinatorRunMode,
+  CoordinatorRunSource,
   MessageRow,
   TaskRow,
   DispatchContextRow,
   DecisionGateRow,
-  CoordinatorRun
+  CoordinatorRun,
+  ArtifactManifestRow
 } from './types'
 
 export type {
@@ -22,11 +25,14 @@ export type {
   DispatchStatus,
   GateStatus,
   CoordinatorStatus,
+  CoordinatorRunMode,
+  CoordinatorRunSource,
   MessageRow,
   TaskRow,
   DispatchContextRow,
   DecisionGateRow,
-  CoordinatorRun
+  CoordinatorRun,
+  ArtifactManifestRow
 }
 
 function generateId(prefix: string): string {
@@ -38,8 +44,9 @@ function generateId(prefix: string): string {
 // push-on-idle can distinguish queued-but-undelivered from user-acknowledged
 // messages without touching the `read` bit (check-wait PR). v3 → v4 records
 // the terminal that created a task so task-record worktree creation can infer
-// the parent workspace even when no dispatch context exists.
-const SCHEMA_VERSION = 4
+// the parent workspace even when no dispatch context exists. v4 → v5 adds
+// HelloAGENTS run/task ownership fields and artifact manifest indexing.
+const SCHEMA_VERSION = 5
 
 export class OrchestrationDb {
   private db: Database.Database
@@ -82,6 +89,7 @@ export class OrchestrationDb {
 
       CREATE TABLE IF NOT EXISTS tasks (
         id            TEXT PRIMARY KEY,
+        run_id        TEXT,
         parent_id     TEXT,
         created_by_terminal_handle TEXT,
         spec          TEXT NOT NULL,
@@ -89,8 +97,11 @@ export class OrchestrationDb {
           CHECK(status IN (
             'pending', 'ready', 'dispatched',
             'completed', 'failed', 'blocked'
-          )),
+        )),
         deps          TEXT NOT NULL DEFAULT '[]',
+        repo_name     TEXT,
+        worktree_selector TEXT,
+        artifact_dir  TEXT,
         result        TEXT,
         created_at    TEXT NOT NULL DEFAULT (datetime('now')),
         completed_at  TEXT
@@ -136,12 +147,38 @@ export class OrchestrationDb {
         spec                TEXT NOT NULL,
         status              TEXT NOT NULL DEFAULT 'idle'
           CHECK(status IN ('idle', 'running', 'completed', 'failed')),
+        mode                TEXT NOT NULL DEFAULT 'unknown'
+          CHECK(mode IN ('unknown', 'r0', 'r1', 'r2', 'fullstack')),
+        source              TEXT NOT NULL DEFAULT 'unknown'
+          CHECK(source IN ('desktop', 'web', 'mobile', 'feishu', 'cli', 'unknown')),
         coordinator_handle  TEXT NOT NULL,
         poll_interval_ms    INTEGER NOT NULL DEFAULT 2000,
+        project_id          TEXT,
+        root_repo_name      TEXT,
+        plan_path           TEXT,
+        updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
         created_at          TEXT NOT NULL DEFAULT (datetime('now')),
         completed_at        TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS artifact_manifests (
+        id                  TEXT PRIMARY KEY,
+        run_id              TEXT,
+        task_id             TEXT NOT NULL,
+        manifest_path       TEXT NOT NULL,
+        status              TEXT NOT NULL,
+        files_changed       TEXT NOT NULL DEFAULT '[]',
+        contracts           TEXT NOT NULL DEFAULT '[]',
+        verification        TEXT NOT NULL DEFAULT '[]',
+        downstream_notes    TEXT,
+        created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_artifact_task ON artifact_manifests(task_id);
+      CREATE INDEX IF NOT EXISTS idx_artifact_run ON artifact_manifests(run_id);
     `)
+    this.createTaskRunIndexIfPossible()
     this.createUndeliveredInboxIndexIfPossible()
   }
 
@@ -234,6 +271,9 @@ export class OrchestrationDb {
           this.db.exec(`ALTER TABLE tasks ADD COLUMN created_by_terminal_handle TEXT`)
         }
       }
+      if (current < 5) {
+        this.migrateHelloAgentsOwnershipFields()
+      }
       this.createUndeliveredInboxIndexIfPossible()
 
       this.db.pragma(`user_version = ${SCHEMA_VERSION}`)
@@ -259,6 +299,13 @@ export class OrchestrationDb {
     `)
   }
 
+  private createTaskRunIndexIfPossible(): void {
+    if (!this.hasColumn('tasks', 'run_id')) {
+      return
+    }
+    this.db.exec(`CREATE INDEX IF NOT EXISTS idx_tasks_run ON tasks(run_id)`)
+  }
+
   // Why: sqlite_master stores the original CREATE TABLE SQL including the
   // CHECK clause. Inspecting that text is the cheapest reliable way to tell
   // whether the pre-rebuild schema already knows about 'heartbeat' without
@@ -268,6 +315,56 @@ export class OrchestrationDb {
       .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'messages'")
       .get() as { sql: string } | undefined
     return !!row && row.sql.includes("'heartbeat'")
+  }
+
+  private migrateHelloAgentsOwnershipFields(): void {
+    const taskColumns: [string, string][] = [
+      ['run_id', 'TEXT'],
+      ['repo_name', 'TEXT'],
+      ['worktree_selector', 'TEXT'],
+      ['artifact_dir', 'TEXT']
+    ]
+    for (const [column, definition] of taskColumns) {
+      if (!this.hasColumn('tasks', column)) {
+        this.db.exec(`ALTER TABLE tasks ADD COLUMN ${column} ${definition}`)
+      }
+    }
+
+    const runColumns: [string, string][] = [
+      ['mode', "TEXT NOT NULL DEFAULT 'unknown'"],
+      ['source', "TEXT NOT NULL DEFAULT 'unknown'"],
+      ['project_id', 'TEXT'],
+      ['root_repo_name', 'TEXT'],
+      ['plan_path', 'TEXT'],
+      ['updated_at', 'TEXT']
+    ]
+    for (const [column, definition] of runColumns) {
+      if (!this.hasColumn('coordinator_runs', column)) {
+        this.db.exec(`ALTER TABLE coordinator_runs ADD COLUMN ${column} ${definition}`)
+      }
+    }
+    this.db.exec(`UPDATE coordinator_runs SET updated_at = COALESCE(updated_at, datetime('now'))`)
+
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_tasks_run ON tasks(run_id);
+
+      CREATE TABLE IF NOT EXISTS artifact_manifests (
+        id                  TEXT PRIMARY KEY,
+        run_id              TEXT,
+        task_id             TEXT NOT NULL,
+        manifest_path       TEXT NOT NULL,
+        status              TEXT NOT NULL,
+        files_changed       TEXT NOT NULL DEFAULT '[]',
+        contracts           TEXT NOT NULL DEFAULT '[]',
+        verification        TEXT NOT NULL DEFAULT '[]',
+        downstream_notes    TEXT,
+        created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_artifact_task ON artifact_manifests(task_id);
+      CREATE INDEX IF NOT EXISTS idx_artifact_run ON artifact_manifests(run_id);
+    `)
   }
 
   // ── Messages ──
@@ -412,6 +509,10 @@ export class OrchestrationDb {
     deps?: string[]
     parentId?: string
     createdByTerminalHandle?: string
+    runId?: string
+    repoName?: string
+    worktreeSelector?: string
+    artifactDir?: string
   }): TaskRow {
     const id = generateId('task')
     const depsJson = JSON.stringify(task.deps ?? [])
@@ -419,15 +520,23 @@ export class OrchestrationDb {
     const status: TaskStatus = hasDeps ? 'pending' : 'ready'
     this.db
       .prepare(
-        'INSERT INTO tasks (id, parent_id, created_by_terminal_handle, spec, status, deps) VALUES (?, ?, ?, ?, ?, ?)'
+        `INSERT INTO tasks (
+          id, run_id, parent_id, created_by_terminal_handle, spec, status,
+          deps, repo_name, worktree_selector, artifact_dir
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
+        task.runId ?? null,
         task.parentId ?? null,
         task.createdByTerminalHandle ?? null,
         task.spec,
         status,
-        depsJson
+        depsJson,
+        task.repoName ?? null,
+        task.worktreeSelector ?? null,
+        task.artifactDir ?? null
       )
     return this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskRow
   }
@@ -436,18 +545,30 @@ export class OrchestrationDb {
     return this.db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskRow | undefined
   }
 
-  listTasks(filter?: { status?: TaskStatus; ready?: boolean }): TaskRow[] {
+  attachUnscopedTasksToRun(runId: string): number {
+    const result = this.db
+      .prepare("UPDATE tasks SET run_id = ? WHERE run_id IS NULL AND status IN ('pending', 'ready')")
+      .run(runId)
+    return result.changes
+  }
+
+  listTasks(filter?: { status?: TaskStatus; ready?: boolean; runId?: string }): TaskRow[] {
+    const whereClauses: string[] = []
+    const params: unknown[] = []
     if (filter?.ready) {
-      return this.db
-        .prepare("SELECT * FROM tasks WHERE status = 'ready' ORDER BY created_at")
-        .all() as TaskRow[]
+      whereClauses.push("status = 'ready'")
+    } else if (filter?.status) {
+      whereClauses.push('status = ?')
+      params.push(filter.status)
     }
-    if (filter?.status) {
-      return this.db
-        .prepare('SELECT * FROM tasks WHERE status = ? ORDER BY created_at')
-        .all(filter.status) as TaskRow[]
+    if (filter?.runId) {
+      whereClauses.push('run_id = ?')
+      params.push(filter.runId)
     }
-    return this.db.prepare('SELECT * FROM tasks ORDER BY created_at').all() as TaskRow[]
+    const where = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''
+    return this.db
+      .prepare(`SELECT * FROM tasks ${where} ORDER BY created_at`)
+      .all(...params) as TaskRow[]
   }
 
   // Why: surfaces the active dispatch (assignee handle + dispatch context id)
@@ -456,7 +577,7 @@ export class OrchestrationDb {
   // with NULL assignee/dispatch fields so non-dispatched output stays stable.
   // The inner subquery picks the most recent active dispatch per task to match
   // the semantics of getDispatchContext for dispatched tasks.
-  listTasksWithDispatch(filter?: { status?: TaskStatus; ready?: boolean }): (TaskRow & {
+  listTasksWithDispatch(filter?: { status?: TaskStatus; ready?: boolean; runId?: string }): (TaskRow & {
     assignee_handle: string | null
     dispatch_id: string | null
   })[] {
@@ -467,6 +588,10 @@ export class OrchestrationDb {
     } else if (filter?.status) {
       whereClauses.push('t.status = ?')
       params.push(filter.status)
+    }
+    if (filter?.runId) {
+      whereClauses.push('t.run_id = ?')
+      params.push(filter.runId)
     }
     const where = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''
     const sql = `
@@ -506,6 +631,8 @@ export class OrchestrationDb {
     if (status === 'completed') {
       this.promoteReadyTasks(id)
       this.completeActiveDispatchForTask(id)
+    } else if (status === 'failed' || status === 'blocked') {
+      this.blockDownstreamTasks(id, status)
     }
 
     return this.getTask(id)
@@ -534,6 +661,28 @@ export class OrchestrationDb {
       if (allDepsCompleted) {
         this.db.prepare("UPDATE tasks SET status = 'ready' WHERE id = ?").run(task.id)
       }
+    }
+  }
+
+  private blockDownstreamTasks(upstreamTaskId: string, upstreamStatus: TaskStatus): void {
+    const candidates = this.db
+      .prepare("SELECT * FROM tasks WHERE status IN ('pending', 'ready')")
+      .all() as TaskRow[]
+
+    for (const task of candidates) {
+      const deps: string[] = JSON.parse(task.deps)
+      if (!deps.includes(upstreamTaskId)) {
+        continue
+      }
+      const result = JSON.stringify({
+        blockedBy: upstreamTaskId,
+        upstreamStatus,
+        blockedAt: new Date().toISOString()
+      })
+      this.db
+        .prepare("UPDATE tasks SET status = 'blocked', result = ? WHERE id = ?")
+        .run(result, task.id)
+      this.blockDownstreamTasks(task.id, 'blocked')
     }
   }
 
@@ -709,6 +858,9 @@ export class OrchestrationDb {
     if (!gate) {
       return undefined
     }
+    if (gate.status !== 'pending') {
+      return undefined
+    }
 
     this.db
       .prepare(
@@ -772,13 +924,32 @@ export class OrchestrationDb {
     spec: string
     coordinatorHandle: string
     pollIntervalMs?: number
+    mode?: CoordinatorRunMode
+    source?: CoordinatorRunSource
+    projectId?: string
+    rootRepoName?: string
+    planPath?: string
   }): CoordinatorRun {
     const id = generateId('run')
     this.db
       .prepare(
-        "INSERT INTO coordinator_runs (id, spec, status, coordinator_handle, poll_interval_ms) VALUES (?, ?, 'running', ?, ?)"
+        `INSERT INTO coordinator_runs (
+          id, spec, status, mode, source, coordinator_handle, poll_interval_ms,
+          project_id, root_repo_name, plan_path, updated_at
+        )
+        VALUES (?, ?, 'running', ?, ?, ?, ?, ?, ?, ?, datetime('now'))`
       )
-      .run(id, run.spec, run.coordinatorHandle, run.pollIntervalMs ?? 2000)
+      .run(
+        id,
+        run.spec,
+        run.mode ?? 'unknown',
+        run.source ?? 'unknown',
+        run.coordinatorHandle,
+        run.pollIntervalMs ?? 2000,
+        run.projectId ?? null,
+        run.rootRepoName ?? null,
+        run.planPath ?? null
+      )
     return this.db.prepare('SELECT * FROM coordinator_runs WHERE id = ?').get(id) as CoordinatorRun
   }
 
@@ -788,15 +959,112 @@ export class OrchestrationDb {
       | undefined
   }
 
+  listCoordinatorRuns(limit = 50): CoordinatorRun[] {
+    return this.db
+      .prepare('SELECT * FROM coordinator_runs ORDER BY created_at DESC, rowid DESC LIMIT ?')
+      .all(limit) as CoordinatorRun[]
+  }
+
   updateCoordinatorRun(id: string, status: CoordinatorStatus): CoordinatorRun | undefined {
     const completedAt =
       status === 'completed' || status === 'failed' ? new Date().toISOString() : null
     this.db
       .prepare(
-        'UPDATE coordinator_runs SET status = ?, completed_at = COALESCE(?, completed_at) WHERE id = ?'
+        `UPDATE coordinator_runs
+         SET status = ?, completed_at = COALESCE(?, completed_at), updated_at = datetime('now')
+         WHERE id = ?`
       )
       .run(status, completedAt, id)
     return this.getCoordinatorRun(id)
+  }
+
+  upsertArtifactManifest(manifest: {
+    runId?: string
+    taskId: string
+    manifestPath: string
+    status: string
+    filesChanged?: string[]
+    contracts?: string[]
+    verification?: unknown[]
+    downstreamNotes?: string
+  }): ArtifactManifestRow {
+    const existing = this.db
+      .prepare('SELECT * FROM artifact_manifests WHERE task_id = ? AND manifest_path = ?')
+      .get(manifest.taskId, manifest.manifestPath) as ArtifactManifestRow | undefined
+    const filesChanged = JSON.stringify(manifest.filesChanged ?? [])
+    const contracts = JSON.stringify(manifest.contracts ?? [])
+    const verification = JSON.stringify(manifest.verification ?? [])
+
+    if (existing) {
+      this.db
+        .prepare(
+          `UPDATE artifact_manifests
+           SET run_id = ?, status = ?, files_changed = ?, contracts = ?, verification = ?,
+               downstream_notes = ?, updated_at = datetime('now')
+           WHERE id = ?`
+        )
+        .run(
+          manifest.runId ?? null,
+          manifest.status,
+          filesChanged,
+          contracts,
+          verification,
+          manifest.downstreamNotes ?? null,
+          existing.id
+        )
+      return this.getArtifactManifest(existing.id)!
+    }
+
+    const id = generateId('artifact')
+    this.db
+      .prepare(
+        `INSERT INTO artifact_manifests (
+          id, run_id, task_id, manifest_path, status, files_changed, contracts,
+          verification, downstream_notes
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        id,
+        manifest.runId ?? null,
+        manifest.taskId,
+        manifest.manifestPath,
+        manifest.status,
+        filesChanged,
+        contracts,
+        verification,
+        manifest.downstreamNotes ?? null
+      )
+    return this.getArtifactManifest(id)!
+  }
+
+  getArtifactManifest(id: string): ArtifactManifestRow | undefined {
+    return this.db.prepare('SELECT * FROM artifact_manifests WHERE id = ?').get(id) as
+      | ArtifactManifestRow
+      | undefined
+  }
+
+  listArtifactManifests(filter?: { runId?: string; taskId?: string }): ArtifactManifestRow[] {
+    if (filter?.runId && filter?.taskId) {
+      return this.db
+        .prepare(
+          'SELECT * FROM artifact_manifests WHERE run_id = ? AND task_id = ? ORDER BY created_at'
+        )
+        .all(filter.runId, filter.taskId) as ArtifactManifestRow[]
+    }
+    if (filter?.runId) {
+      return this.db
+        .prepare('SELECT * FROM artifact_manifests WHERE run_id = ? ORDER BY created_at')
+        .all(filter.runId) as ArtifactManifestRow[]
+    }
+    if (filter?.taskId) {
+      return this.db
+        .prepare('SELECT * FROM artifact_manifests WHERE task_id = ? ORDER BY created_at')
+        .all(filter.taskId) as ArtifactManifestRow[]
+    }
+    return this.db
+      .prepare('SELECT * FROM artifact_manifests ORDER BY created_at')
+      .all() as ArtifactManifestRow[]
   }
 
   getActiveCoordinatorRun(): CoordinatorRun | undefined {
@@ -833,6 +1101,7 @@ export class OrchestrationDb {
   // ── Lifecycle ──
 
   resetAll(): void {
+    this.db.exec('DELETE FROM artifact_manifests')
     this.db.exec('DELETE FROM coordinator_runs')
     this.db.exec('DELETE FROM decision_gates')
     this.db.exec('DELETE FROM dispatch_contexts')
@@ -841,6 +1110,7 @@ export class OrchestrationDb {
   }
 
   resetTasks(): void {
+    this.db.exec('DELETE FROM artifact_manifests')
     this.db.exec('DELETE FROM coordinator_runs')
     this.db.exec('DELETE FROM decision_gates')
     this.db.exec('DELETE FROM dispatch_contexts')

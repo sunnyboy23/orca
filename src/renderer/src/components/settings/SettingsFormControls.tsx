@@ -10,6 +10,8 @@ import { Check, ChevronsUpDown, CircleX } from 'lucide-react'
 import { BUILTIN_TERMINAL_THEME_NAMES, normalizeColor } from '@/lib/terminal-theme'
 import { MAX_THEME_RESULTS } from './SettingsConstants'
 import { cn } from '@/lib/utils'
+import { terminalEn } from '@/i18n/settings-terminal-en'
+import type { SettingsTerminalMessages } from '@/i18n/settings-terminal-types'
 
 type SettingsSwitchProps = {
   checked: boolean
@@ -232,6 +234,7 @@ type ThemePickerProps = {
   query: string
   onQueryChange: (value: string) => void
   onSelectTheme: (theme: string) => void
+  copy?: SettingsTerminalMessages['themePicker']
 }
 
 type ColorFieldProps = {
@@ -252,6 +255,7 @@ type NumberFieldProps = {
   step?: number
   onChange: (value: number) => void
   suffix?: string
+  defaultValueLabel?: (value: number) => string
 }
 
 type FontAutocompleteProps = {
@@ -259,6 +263,7 @@ type FontAutocompleteProps = {
   suggestions: string[]
   onChange: (value: string) => void
   placeholder?: string
+  copy?: SettingsTerminalMessages['formControls']
 }
 
 export function ThemePicker({
@@ -267,7 +272,8 @@ export function ThemePicker({
   selectedTheme,
   query,
   onQueryChange,
-  onSelectTheme
+  onSelectTheme,
+  copy = terminalEn.themePicker
 }: ThemePickerProps): React.JSX.Element {
   const normalizedQuery = query.trim().toLowerCase()
   const filteredThemes = BUILTIN_TERMINAL_THEME_NAMES.filter((theme) =>
@@ -283,16 +289,15 @@ export function ThemePicker({
       <Input
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        placeholder="Search builtin themes"
+        placeholder={copy.searchPlaceholder}
       />
       <div className="rounded-lg border border-border/50">
         <div className="flex items-center justify-between border-b border-border/50 px-3 py-2 text-xs text-muted-foreground">
-          <span>Selected: {selectedTheme}</span>
+          <span>{copy.selected(selectedTheme)}</span>
           <span>
-            Showing {filteredThemes.length}
             {normalizedQuery
-              ? ` matching "${query.trim()}"`
-              : ` of ${BUILTIN_TERMINAL_THEME_NAMES.length}`}
+              ? copy.showingMatching(filteredThemes.length, query.trim())
+              : copy.showingTotal(filteredThemes.length, BUILTIN_TERMINAL_THEME_NAMES.length)}
           </span>
         </div>
         <ScrollArea className="h-64">
@@ -310,13 +315,13 @@ export function ThemePicker({
                 <span className="truncate">{theme}</span>
                 {selectedTheme === theme ? (
                   <span className="ml-3 shrink-0 text-[11px] uppercase tracking-[0.16em]">
-                    Current
+                    {copy.current}
                   </span>
                 ) : null}
               </button>
             ))}
             {filteredThemes.length === 0 ? (
-              <div className="px-3 py-6 text-sm text-muted-foreground">No themes found.</div>
+              <div className="px-3 py-6 text-sm text-muted-foreground">{copy.noThemes}</div>
             ) : null}
           </div>
         </ScrollArea>
@@ -367,7 +372,8 @@ export function NumberField({
   max,
   step = 1,
   onChange,
-  suffix
+  suffix,
+  defaultValueLabel = terminalEn.formControls.defaultValue
 }: NumberFieldProps): React.JSX.Element {
   const [draft, setDraft] = useState(Number.isFinite(value) ? String(value) : '')
   const [prevValue, setPrevValue] = useState(value)
@@ -403,7 +409,7 @@ export function NumberField({
         <>
           {description}
           {defaultValue !== undefined ? (
-            <span className="ml-1 text-muted-foreground/70">· Default: {defaultValue}</span>
+            <span className="ml-1 text-muted-foreground/70">· {defaultValueLabel(defaultValue)}</span>
           ) : null}
         </>
       }
@@ -435,7 +441,8 @@ export function FontAutocomplete({
   value,
   suggestions,
   onChange,
-  placeholder = 'SF Mono'
+  placeholder = 'SF Mono',
+  copy = terminalEn.formControls
 }: FontAutocompleteProps): React.JSX.Element {
   const [query, setQuery] = useState(value)
   const [prevValue, setPrevValue] = useState(value)
@@ -596,8 +603,8 @@ export function FontAutocomplete({
                 focusInput()
               }}
               className="rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              aria-label="Clear font selection"
-              title="Clear"
+              aria-label={copy.clearFontSelection}
+              title={copy.clear}
             >
               <CircleX className="size-3.5" />
             </button>
@@ -613,8 +620,8 @@ export function FontAutocomplete({
               }
             }}
             className="rounded-sm p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Toggle font suggestions"
-            title="Fonts"
+            aria-label={copy.toggleFontSuggestions}
+            title={copy.fonts}
           >
             <ChevronsUpDown className="size-3.5" />
           </button>
@@ -654,7 +661,9 @@ export function FontAutocomplete({
                   </button>
                 ))
               ) : (
-                <div className="px-3 py-3 text-sm text-muted-foreground">No matching fonts.</div>
+                <div className="px-3 py-3 text-sm text-muted-foreground">
+                  {copy.noMatchingFonts}
+                </div>
               )}
             </div>
           </ScrollArea>

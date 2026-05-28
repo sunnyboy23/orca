@@ -20,6 +20,7 @@ import RepoBadgeLabel from '@/components/repo/RepoBadgeLabel'
 import { searchRepos } from '@/lib/repo-search'
 import { cn } from '@/lib/utils'
 import { DEFAULT_SHOW_SLEEPING_WORKSPACES } from '../../../../shared/constants'
+import { useI18n } from '@/i18n'
 
 type SidebarFilterProps = {
   preserveWorkspaceBoardOpen?: boolean
@@ -42,6 +43,8 @@ const SidebarFilter = React.memo(function SidebarFilter({
   const setFilterRepoIds = useAppStore((s) => s.setFilterRepoIds)
   const repos = useAppStore((s) => s.repos)
   const addRepo = useAppStore((s) => s.addRepo)
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
 
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -131,7 +134,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
               size="icon-xs"
               type="button"
               aria-label={
-                hasAnyFilter ? `Edit filters (${activeFilterCount} active)` : 'Filter workspaces'
+                hasAnyFilter ? copy.editFiltersWithCount(activeFilterCount) : copy.filterWorkspaces
               }
               className="relative text-muted-foreground"
               data-workspace-board-preserve-open={preserveWorkspaceBoardOpen ? '' : undefined}
@@ -151,7 +154,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
           </DropdownMenuTrigger>
         </TooltipTrigger>
         <TooltipContent side={tooltipSide} sideOffset={6}>
-          {hasAnyFilter ? 'Edit filters' : 'Filter workspaces'}
+          {hasAnyFilter ? copy.editFilters : copy.filterWorkspaces}
         </TooltipContent>
       </Tooltip>
       <DropdownMenuContent
@@ -163,13 +166,13 @@ const SidebarFilter = React.memo(function SidebarFilter({
       >
         <FilterToggleRow
           icon={<Moon className="size-3.5" />}
-          label="Hide sleeping"
+          label={copy.hideSleeping}
           checked={!showSleepingWorkspaces}
           onChange={(hideSleeping) => setShowSleepingWorkspaces(!hideSleeping)}
         />
         <FilterToggleRow
           icon={<GitBranch className="size-3.5" />}
-          label="Hide default branch"
+          label={copy.hideDefaultBranch}
           checked={hideDefaultBranchWorkspace}
           onChange={setHideDefaultBranchWorkspace}
         />
@@ -179,7 +182,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
             <DropdownMenuSeparator />
             <div className="flex items-center justify-between px-2 py-1">
               <span className="text-[11px] font-semibold tracking-wide uppercase text-muted-foreground">
-                Projects
+                {copy.projects}
                 {hasRepoFilter && (
                   <span className="ml-1.5 normal-case tracking-normal font-medium text-foreground">
                     · {selectedCount}
@@ -193,7 +196,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
                   className="rounded-full px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-40 disabled:hover:bg-transparent"
                   disabled={allSelected}
                 >
-                  Select all
+                  {copy.selectAll}
                 </button>
                 <button
                   type="button"
@@ -201,7 +204,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
                   className="rounded-full px-2 py-0.5 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-40 disabled:hover:bg-transparent"
                   disabled={!hasRepoFilter}
                 >
-                  Clear
+                  {copy.clear}
                 </button>
               </div>
             </div>
@@ -214,7 +217,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
             >
               <CommandInput
                 autoFocus
-                placeholder="Search projects..."
+                placeholder={copy.searchProjects}
                 value={query}
                 onValueChange={setQuery}
                 onKeyDown={(event) => event.stopPropagation()}
@@ -223,7 +226,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
                 iconClassName="h-3.5 w-3.5"
               />
               <CommandList className="max-h-64 py-1">
-                <CommandEmpty className="py-4 text-[11px]">No projects match</CommandEmpty>
+                <CommandEmpty className="py-4 text-[11px]">{copy.noProjects}</CommandEmpty>
                 {filteredRepos.map((r) => {
                   const checked = selectedRepoIdSet.has(r.id)
                   return (
@@ -268,7 +271,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
               onClick={clearAll}
               className="rounded-[5px] px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             >
-              Reset filters
+              {copy.resetFilters}
             </button>
           ) : (
             <span />
@@ -279,7 +282,7 @@ const SidebarFilter = React.memo(function SidebarFilter({
             className="inline-flex items-center gap-1.5 rounded-[5px] px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <FolderPlus className="size-3.5" />
-            Add project
+            {copy.addProject}
           </button>
         </div>
       </DropdownMenuContent>

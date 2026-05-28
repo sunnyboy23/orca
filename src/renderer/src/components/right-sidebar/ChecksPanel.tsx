@@ -42,8 +42,10 @@ import {
   shouldCommitChecksPanelAsyncResult
 } from './checks-panel-async-result-key'
 import { installWindowVisibilityTimeoutPoller } from '@/lib/window-visibility-timeout-poller'
+import { useI18n } from '@/i18n'
 
 export default function ChecksPanel(): React.JSX.Element {
+  const { messages } = useI18n()
   const activeWorktree = useActiveWorktree()
   const activeWorktreeId = useAppStore((s) => s.activeWorktreeId)
   const repo = useRepoById(activeWorktree?.repoId ?? null)
@@ -794,7 +796,7 @@ export default function ChecksPanel(): React.JSX.Element {
     try {
       const connectionId = getConnectionId(activeWorktreeId)
       if (connectionId === undefined) {
-        toast.error('Unable to resolve the workspace connection.')
+        toast.error(messages.sourceControl.workspaceConnectionUnavailable)
         return
       }
       const store = useAppStore.getState()
@@ -804,7 +806,7 @@ export default function ChecksPanel(): React.JSX.Element {
           : await store.ensureDetectedAgents()
       const agent = pickDefaultSourceControlAgent(store.settings?.defaultTuiAgent, detectedAgents)
       if (!agent) {
-        toast.error('No AI agents detected. Configure a default agent in Settings.')
+        toast.error(messages.sourceControl.noAgentsDetected)
         return
       }
       const prompt = buildResolvePullRequestConflictsPrompt({
@@ -820,15 +822,24 @@ export default function ChecksPanel(): React.JSX.Element {
         launchSource: 'conflict_resolution'
       })
       if (!result) {
-        toast.error('Could not build the agent launch command.')
+        toast.error(messages.sourceControl.agentLaunchCommandFailed)
         return
       }
       focusTerminalTabSurface(result.tabId)
-      toast.success('Started an AI agent for the conflicts.')
+      toast.success(messages.sourceControl.conflictsAgentStarted)
     } finally {
       setIsResolvingConflictsWithAI(false)
     }
-  }, [activeWorktreeId, activeWorktreePath, isResolvingConflictsWithAI, pr])
+  }, [
+    activeWorktreeId,
+    activeWorktreePath,
+    isResolvingConflictsWithAI,
+    messages.sourceControl.agentLaunchCommandFailed,
+    messages.sourceControl.conflictsAgentStarted,
+    messages.sourceControl.noAgentsDetected,
+    messages.sourceControl.workspaceConnectionUnavailable,
+    pr
+  ])
 
   const handleFixChecksWithAI = useCallback(async (): Promise<void> => {
     if (isFixingChecksWithAI || !activeWorktreeId || !pr) {
@@ -843,7 +854,7 @@ export default function ChecksPanel(): React.JSX.Element {
     try {
       const connectionId = getConnectionId(activeWorktreeId)
       if (connectionId === undefined) {
-        toast.error('Unable to resolve the workspace connection.')
+        toast.error(messages.sourceControl.workspaceConnectionUnavailable)
         return
       }
       const store = useAppStore.getState()
@@ -853,7 +864,7 @@ export default function ChecksPanel(): React.JSX.Element {
           : await store.ensureDetectedAgents()
       const agent = pickDefaultSourceControlAgent(store.settings?.defaultTuiAgent, detectedAgents)
       if (!agent) {
-        toast.error('No AI agents detected. Configure a default agent in Settings.')
+        toast.error(messages.sourceControl.noAgentsDetected)
         return
       }
       const prompt = buildFixBrokenChecksPrompt({
@@ -870,15 +881,24 @@ export default function ChecksPanel(): React.JSX.Element {
         launchSource: 'task_page'
       })
       if (!result) {
-        toast.error('Could not build the agent launch command.')
+        toast.error(messages.sourceControl.agentLaunchCommandFailed)
         return
       }
       focusTerminalTabSurface(result.tabId)
-      toast.success('Started an AI agent for the broken checks.')
+      toast.success(messages.sourceControl.commitFailureAgentStarted)
     } finally {
       setIsFixingChecksWithAI(false)
     }
-  }, [activeWorktreeId, checks, isFixingChecksWithAI, pr])
+  }, [
+    activeWorktreeId,
+    checks,
+    isFixingChecksWithAI,
+    messages.sourceControl.agentLaunchCommandFailed,
+    messages.sourceControl.commitFailureAgentStarted,
+    messages.sourceControl.noAgentsDetected,
+    messages.sourceControl.workspaceConnectionUnavailable,
+    pr
+  ])
 
   // Refresh PR (passed to PRActions)
   const handleRefreshPR = useCallback(async () => {

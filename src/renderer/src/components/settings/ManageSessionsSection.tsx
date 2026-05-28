@@ -17,12 +17,12 @@ import {
 } from '../ui/dialog'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import { SearchableSetting } from './SearchableSetting'
-import { MANAGE_SESSIONS_SEARCH_ENTRIES } from './terminal-search'
 import { splitWorktreeIdForFilesystem } from '../../../../shared/worktree-id'
 import { useAppStore } from '../../store'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { activateTabAndFocusPane } from '@/lib/activate-tab-and-focus-pane'
 import { useDaemonActions, DaemonActionDialog } from '../shared/useDaemonActions'
+import type { SettingsTerminalMessages } from '@/i18n/settings-terminal-types'
 
 type ConfirmKind = 'killOne'
 
@@ -32,18 +32,21 @@ type PendingConfirm = { kind: 'killOne'; session: PtyManagementSession } | null
 // path segments joined by the platform separator, no ellipsis prefix. This
 // keeps the Manage Sessions table visually consistent with how Orca labels
 // the same worktrees in the bottom status bar ("orca/Anemone").
-function shortCwd(cwd: string): string {
+function shortCwd(cwd: string, unknownLabel: string): string {
   if (!cwd) {
-    return 'unknown'
+    return unknownLabel
   }
   const separator = cwd.includes('\\') ? '\\' : '/'
   const parts = cwd.split(/[\\/]+/).filter(Boolean)
   return parts.length > 2 ? parts.slice(-2).join(separator) : cwd
 }
 
-function formatWorkspace(session: { cwd: string | null; sessionId: string }): string {
+function formatWorkspace(
+  session: { cwd: string | null; sessionId: string },
+  unknownLabel: string
+): string {
   if (session.cwd) {
-    return shortCwd(session.cwd)
+    return shortCwd(session.cwd, unknownLabel)
   }
   // Why: the daemon doesn't always populate `cwd` on listSessions (legacy
   // revived sessions, older protocol versions). Orca's session IDs embed
@@ -55,25 +58,34 @@ function formatWorkspace(session: { cwd: string | null; sessionId: string }): st
     const worktreeId = session.sessionId.slice(0, sep)
     // Why: take everything after the first `::` to recover the worktree path
     // from the canonical `${repoId}::${path}` worktreeId encoding.
-    return shortCwd(splitWorktreeIdForFilesystem(worktreeId)?.worktreePath ?? worktreeId)
+    return shortCwd(
+      splitWorktreeIdForFilesystem(worktreeId)?.worktreePath ?? worktreeId,
+      unknownLabel
+    )
   }
-  return 'unknown'
+  return unknownLabel
 }
 
-function formatState(session: PtyManagementSession): string {
+function formatState(
+  session: PtyManagementSession,
+  states: SettingsTerminalMessages['manageSessions']['states']
+): string {
   if (!session.isAlive) {
-    return 'exited'
+    return states.exited
   }
   if (session.shellState === 'ready') {
-    return 'running'
+    return states.running
   }
   if (session.shellState === 'pending') {
-    return 'starting'
+    return states.starting
   }
   return session.state
 }
 
-function getConfirmCopy(confirm: PendingConfirm): {
+function getConfirmCopy(
+  confirm: PendingConfirm,
+  copy: SettingsTerminalMessages['manageSessions']
+): {
   title: string
   description: React.ReactNode
   confirmLabel: string
@@ -82,20 +94,25 @@ function getConfirmCopy(confirm: PendingConfirm): {
   if (!confirm) {
     return null
   }
+  const description = copy.confirmOne.description(confirm.session.sessionId)
   return {
-    title: 'Kill this session?',
-    description: (
-      <>
-        Force-quits <span className="font-medium text-foreground">{confirm.session.sessionId}</span>
-        . Any unsaved work in that pane is lost. This can&apos;t be undone.
-      </>
-    ),
-    confirmLabel: 'Kill session',
-    busyLabel: 'Killing…'
+    title: copy.confirmOne.title,
+    description,
+    confirmLabel: copy.confirmOne.confirmLabel,
+    busyLabel: copy.confirmOne.busyLabel
   }
 }
 
-export function ManageSessionsSection(): React.JSX.Element {
+export function ManageSessionsSection({
+  copy
+}: {
+  copy: SettingsTerminalMessages
+}): React.JSX.Element {
+  const sessionsCopy = copy.manageSessions
+  const daemonCopy = {
+    toasts: sessionsCopy.toasts,
+    dialog: sessionsCopy.daemonDialog
+  }
   const activeRuntimeEnvironmentId = useAppStore(
     (s) => s.settings?.activeRuntimeEnvironmentId ?? null
   )
@@ -198,7 +215,7 @@ export function ManageSessionsSection(): React.JSX.Element {
     } catch (err) {
       console.error('[manage-sessions] listSessions failed', err)
       if (isMounted.current && !mutationInFlight.current) {
-        toast.error('Couldn’t load sessions.', {
+        toast.error(sessionsCopy.toasts.loadFailed, {
           description: err instanceof Error ? err.message : undefined
         })
       }
@@ -209,7 +226,7 @@ export function ManageSessionsSection(): React.JSX.Element {
         setHasLoadedOnce(true)
       }
     }
-  }, [activeRuntimeEnvironmentId])
+  }, [activeRuntimeEnvironmentId, sessionsCopy.toasts.loadFailed])
 
   useEffect(() => {
     void refresh()
@@ -239,7 +256,8 @@ export function ManageSessionsSection(): React.JSX.Element {
     },
     onRestartSettled: () => {
       void refresh()
-    }
+    },
+    copy: daemonCopy
   })
 
   const handleKillOne = useCallback(
@@ -251,14 +269,14 @@ export function ManageSessionsSection(): React.JSX.Element {
           sessionId: session.sessionId
         })
         if (success) {
-          toast.success('Killed session.')
+          toast.success(sessionsCopy.toasts.killedSession)
         } else {
-          toast.error('Couldn’t kill session — it may already be gone.')
+          toast.error(sessionsCopy.toasts.killSessionGone)
         }
         mutationInFlight.current = false
         await refresh()
       } catch (err) {
-        toast.error('Couldn’t kill session.', {
+        toast.error(sessionsCopy.toasts.killSessionFailed, {
           description: err instanceof Error ? err.message : undefined
         })
       } finally {
@@ -269,7 +287,7 @@ export function ManageSessionsSection(): React.JSX.Element {
         }
       }
     },
-    [refresh]
+    [refresh, sessionsCopy.toasts]
   )
 
   // Why: do NOT clear `confirm` here — the dialog must stay open for the
@@ -283,26 +301,24 @@ export function ManageSessionsSection(): React.JSX.Element {
     void handleKillOne(confirm.session)
   }, [confirm, handleKillOne])
 
-  const copy = useMemo(() => getConfirmCopy(confirm), [confirm])
+  const confirmCopy = useMemo(() => getConfirmCopy(confirm, sessionsCopy), [confirm, sessionsCopy])
   const isBusy = busyKind !== null || daemonActions.isBusy
 
   if (activeRuntimeEnvironmentId?.trim()) {
     return (
       <section className="space-y-4">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold">Manage Sessions</h3>
-          <p className="text-xs text-muted-foreground">
-            Session management is unavailable while a remote runtime server is active.
-          </p>
+          <h3 className="text-sm font-semibold">{sessionsCopy.search.title}</h3>
+          <p className="text-xs text-muted-foreground">{sessionsCopy.unavailableDescription}</p>
         </div>
         <SearchableSetting
-          title={MANAGE_SESSIONS_SEARCH_ENTRIES[0].title}
-          description={MANAGE_SESSIONS_SEARCH_ENTRIES[0].description}
-          keywords={MANAGE_SESSIONS_SEARCH_ENTRIES[0].keywords}
+          title={sessionsCopy.search.title}
+          description={sessionsCopy.search.description}
+          keywords={sessionsCopy.search.keywords}
           className="space-y-3"
         >
           <div className="rounded-lg border border-border/60 px-3 py-3 text-xs text-muted-foreground">
-            Switch back to the local runtime to restart or kill local daemon sessions.
+            {sessionsCopy.localRuntimeRequired}
           </div>
         </SearchableSetting>
       </section>
@@ -312,17 +328,14 @@ export function ManageSessionsSection(): React.JSX.Element {
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold">Manage Sessions</h3>
-        <p className="text-xs text-muted-foreground">
-          Recover from a frozen or misbehaving terminal by killing sessions or restarting the
-          underlying daemon.
-        </p>
+        <h3 className="text-sm font-semibold">{sessionsCopy.search.title}</h3>
+        <p className="text-xs text-muted-foreground">{sessionsCopy.description}</p>
       </div>
 
       <SearchableSetting
-        title={MANAGE_SESSIONS_SEARCH_ENTRIES[0].title}
-        description={MANAGE_SESSIONS_SEARCH_ENTRIES[0].description}
-        keywords={MANAGE_SESSIONS_SEARCH_ENTRIES[0].keywords}
+        title={sessionsCopy.search.title}
+        description={sessionsCopy.search.description}
+        keywords={sessionsCopy.search.keywords}
         className="space-y-3"
       >
         {/* Why: full-width sessions card. The table *is* the primary
@@ -335,7 +348,7 @@ export function ManageSessionsSection(): React.JSX.Element {
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-muted-foreground">
-                Sessions
+                {sessionsCopy.sessions}
                 {hasLoadedOnce ? <span className="ml-1 tabular-nums">({sessionCount})</span> : null}
               </span>
               <Button
@@ -343,7 +356,7 @@ export function ManageSessionsSection(): React.JSX.Element {
                 size="icon-xs"
                 onClick={() => void refresh()}
                 disabled={isBusy || isRefreshing}
-                aria-label="Refresh"
+                aria-label={sessionsCopy.refresh}
                 className="text-muted-foreground"
               >
                 <RefreshCw className={isRefreshing ? 'animate-spin' : ''} />
@@ -363,7 +376,7 @@ export function ManageSessionsSection(): React.JSX.Element {
                     size="icon-xs"
                     disabled={isBusy || sessionCount === 0}
                     onClick={() => daemonActions.setPending('killAll')}
-                    aria-label="Kill all sessions"
+                    aria-label={sessionsCopy.killAll}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     {daemonActions.busyKind === 'killAll' ? (
@@ -374,7 +387,7 @@ export function ManageSessionsSection(): React.JSX.Element {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" sideOffset={6}>
-                  Kill all sessions
+                  {sessionsCopy.killAll}
                 </TooltipContent>
               </Tooltip>
               <Tooltip>
@@ -384,7 +397,7 @@ export function ManageSessionsSection(): React.JSX.Element {
                     size="icon-xs"
                     disabled={isBusy}
                     onClick={() => daemonActions.setPending('restart')}
-                    aria-label="Restart daemon"
+                    aria-label={sessionsCopy.restartDaemon}
                     className="text-muted-foreground"
                   >
                     {daemonActions.busyKind === 'restart' ? (
@@ -395,7 +408,7 @@ export function ManageSessionsSection(): React.JSX.Element {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" sideOffset={6}>
-                  Restart daemon
+                  {sessionsCopy.restartDaemon}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -403,11 +416,11 @@ export function ManageSessionsSection(): React.JSX.Element {
 
           {!hasLoadedOnce ? (
             <div className="flex items-center justify-center px-3 py-8 text-xs text-muted-foreground">
-              Loading…
+              {sessionsCopy.loading}
             </div>
           ) : sessions.length === 0 ? (
             <div className="flex items-center justify-center px-3 py-8 text-xs text-muted-foreground">
-              No sessions.
+              {sessionsCopy.empty}
             </div>
           ) : (
             <div className="max-h-[360px] overflow-y-auto scrollbar-sleek">
@@ -435,19 +448,23 @@ export function ManageSessionsSection(): React.JSX.Element {
                         }`}
                         onClick={rowClickable ? () => handleNavigate(tabId) : undefined}
                         aria-label={
-                          rowClickable ? `Go to terminal ${formatWorkspace(session)}` : undefined
+                          rowClickable
+                            ? sessionsCopy.goToTerminal(
+                                formatWorkspace(session, sessionsCopy.unknown)
+                              )
+                            : undefined
                         }
                       >
                         <td className="px-3 py-1.5">
                           <span
                             className={`block size-1.5 rounded-full ${dotClass}`}
-                            aria-label={formatState(session)}
-                            title={formatState(session)}
+                            aria-label={formatState(session, sessionsCopy.states)}
+                            title={formatState(session, sessionsCopy.states)}
                           />
                         </td>
                         <td className="px-3 py-1.5">
                           <span className="truncate font-mono font-medium">
-                            {formatWorkspace(session)}
+                            {formatWorkspace(session, sessionsCopy.unknown)}
                           </span>
                         </td>
                         <td
@@ -468,7 +485,7 @@ export function ManageSessionsSection(): React.JSX.Element {
                               setConfirm({ kind: 'killOne', session })
                             }}
                             disabled={isBusy}
-                            aria-label={`Kill session ${session.sessionId}`}
+                            aria-label={sessionsCopy.killSessionAria(session.sessionId)}
                             className="text-muted-foreground hover:text-destructive"
                           >
                             <X />
@@ -514,26 +531,26 @@ export function ManageSessionsSection(): React.JSX.Element {
             }
           }}
         >
-          {copy ? (
+          {confirmCopy ? (
             <>
               <DialogHeader>
-                <DialogTitle className="text-sm">{copy.title}</DialogTitle>
-                <DialogDescription className="text-xs">{copy.description}</DialogDescription>
+                <DialogTitle className="text-sm">{confirmCopy.title}</DialogTitle>
+                <DialogDescription className="text-xs">{confirmCopy.description}</DialogDescription>
               </DialogHeader>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setConfirm(null)} disabled={isBusy}>
-                  Cancel
+                  {sessionsCopy.daemonDialog.cancel}
                 </Button>
                 <Button variant="destructive" onClick={runConfirmed} disabled={isBusy}>
                   {isBusy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-                  {isBusy ? copy.busyLabel : copy.confirmLabel}
+                  {isBusy ? confirmCopy.busyLabel : confirmCopy.confirmLabel}
                 </Button>
               </DialogFooter>
             </>
           ) : null}
         </DialogContent>
       </Dialog>
-      <DaemonActionDialog api={daemonActions} />
+      <DaemonActionDialog api={daemonActions} copy={daemonCopy} />
     </section>
   )
 }

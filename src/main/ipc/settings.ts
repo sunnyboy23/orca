@@ -8,6 +8,8 @@ import { track } from '../telemetry/client'
 import { SETTINGS_CHANGED_WHITELIST, type SettingsChangedKey } from '../../shared/telemetry-events'
 import type { AgentAwakeService } from '../agent-awake-service'
 import { sanitizeFloatingWorkspaceDirectorySetting } from './floating-workspace-directory'
+import { checkFeishuAppCredentials } from '../runtime/integrations/feishu/openapi-client'
+import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 
 // Why: the whitelist is the source-of-truth for which keys we emit on. Casting
 // to a Set once at module load lets the IPC handler's per-key membership
@@ -26,7 +28,8 @@ const APPEARANCE_MENU_KEYS: readonly (keyof GlobalSettings)[] = [
 
 export function registerSettingsHandlers(
   store: Store,
-  agentAwakeService?: AgentAwakeService
+  agentAwakeService?: AgentAwakeService,
+  runtime?: OrcaRuntimeService
 ): void {
   ipcMain.handle('settings:get', () => {
     return store.getSettings()
@@ -95,6 +98,32 @@ export function registerSettingsHandlers(
 
   ipcMain.handle('settings:previewGhosttyImport', () => {
     return previewGhosttyImport(store)
+  })
+
+  ipcMain.handle('settings:feishuCheckConnection', () => {
+    const settings = store.getSettings().feishuIntegration
+    return checkFeishuAppCredentials({
+      appId: settings?.appId ?? '',
+      appSecret: settings?.appSecret ?? ''
+    })
+  })
+
+  ipcMain.handle('settings:feishuBotGetStatus', () => {
+    return runtime?.getFeishuBotStatus() ?? { state: 'idle', configured: false }
+  })
+
+  ipcMain.handle('settings:feishuBotStart', () => {
+    if (!runtime) {
+      throw new Error('runtime_unavailable')
+    }
+    return runtime.startFeishuBot()
+  })
+
+  ipcMain.handle('settings:feishuBotStop', () => {
+    if (!runtime) {
+      throw new Error('runtime_unavailable')
+    }
+    return runtime.stopFeishuBot()
   })
 
   ipcMain.handle('cache:getGitHub', () => {

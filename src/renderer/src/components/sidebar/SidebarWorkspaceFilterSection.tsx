@@ -2,27 +2,30 @@ import React from 'react'
 import { GitBranch, Moon } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
+import { useI18n } from '@/i18n'
 
 const SidebarWorkspaceFilterSection = React.memo(function SidebarWorkspaceFilterSection() {
   const showSleepingWorkspaces = useAppStore((s) => s.showSleepingWorkspaces)
   const setShowSleepingWorkspaces = useAppStore((s) => s.setShowSleepingWorkspaces)
   const hideDefaultBranchWorkspace = useAppStore((s) => s.hideDefaultBranchWorkspace)
   const setHideDefaultBranchWorkspace = useAppStore((s) => s.setHideDefaultBranchWorkspace)
+  const { messages } = useI18n()
+  const copy = messages.workspace.menu
 
   return (
     <>
       <div className="flex items-center justify-between px-2 py-1">
-        <span className="text-[11px] font-semibold text-muted-foreground">Filters</span>
+        <span className="text-[11px] font-semibold text-muted-foreground">{copy.filters}</span>
       </div>
       <FilterToggleRow
         icon={<Moon className="size-3.5" />}
-        label="Hide sleeping"
+        label={copy.hideSleeping}
         checked={!showSleepingWorkspaces}
         onChange={(hideSleeping) => setShowSleepingWorkspaces(!hideSleeping)}
       />
       <FilterToggleRow
         icon={<GitBranch className="size-3.5" />}
-        label="Hide default branch"
+        label={copy.hideDefaultBranch}
         checked={hideDefaultBranchWorkspace}
         onChange={setHideDefaultBranchWorkspace}
       />

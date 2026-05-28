@@ -12,8 +12,14 @@ import {
   getDiagnosticBundleDescription,
   PrivacyDiagnosticBundleControls
 } from './PrivacyDiagnosticBundleControls'
+import { privacyEn } from '@/i18n/settings-core-panes-en'
+import type { PrivacyMessages } from '@/i18n/settings-core-panes-types'
 
-export function PrivacyDiagnosticsSection(): React.JSX.Element {
+export function PrivacyDiagnosticsSection({
+  copy = privacyEn
+}: {
+  readonly copy?: PrivacyMessages
+}): React.JSX.Element {
   const [status, setStatus] = useState<DiagnosticsStatusPayload | null>(null)
   const [bundle, setBundle] = useState<DiagnosticsBundlePayload | null>(null)
   const [previewOpened, setPreviewOpened] = useState(false)
@@ -60,9 +66,9 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
     try {
       await window.api.diagnostics.openTraceFolder()
     } catch {
-      toast.error('Could not open trace folder')
+      toast.error(copy.diagnostics.toasts.openTraceFolderFailed)
     }
-  }, [])
+  }, [copy.diagnostics.toasts.openTraceFolderFailed])
 
   const handleClear = useCallback(async (): Promise<void> => {
     try {
@@ -75,13 +81,17 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
       setPreviewOpened(false)
       setTicketId(null)
       await refreshStatus()
-      toast.success('Local trace files cleared')
+      toast.success(copy.diagnostics.toasts.localTracesCleared)
     } catch {
       if (mountedRef.current) {
-        toast.error('Could not clear trace files')
+        toast.error(copy.diagnostics.toasts.clearTraceFilesFailed)
       }
     }
-  }, [refreshStatus])
+  }, [
+    copy.diagnostics.toasts.clearTraceFilesFailed,
+    copy.diagnostics.toasts.localTracesCleared,
+    refreshStatus
+  ])
 
   const handleCollectBundle = useCallback(async (): Promise<void> => {
     setCollecting(true)
@@ -94,17 +104,17 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
       setBundle(nextBundle)
       setPreviewOpened(false)
       setTicketId(null)
-      toast.success('Diagnostic bundle preview created')
+      toast.success(copy.diagnostics.toasts.previewCreated)
     } catch (error) {
       if (mountedRef.current) {
-        toast.error(getDiagnosticsErrorMessage(error, 'Could not create diagnostic bundle'))
+        toast.error(getDiagnosticsErrorMessage(error, copy.diagnostics.toasts.previewCreateFailed))
       }
     } finally {
       if (mountedRef.current) {
         setCollecting(false)
       }
     }
-  }, [])
+  }, [copy.diagnostics.toasts.previewCreateFailed, copy.diagnostics.toasts.previewCreated])
 
   const handleOpenPreview = useCallback(async (): Promise<void> => {
     if (!bundle) {
@@ -117,17 +127,17 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
         return
       }
       setPreviewOpened(true)
-      toast.success('Diagnostic bundle preview opened')
+      toast.success(copy.diagnostics.toasts.previewOpened)
     } catch (error) {
       if (mountedRef.current) {
-        toast.error(getDiagnosticsErrorMessage(error, 'Could not open diagnostic bundle preview'))
+        toast.error(getDiagnosticsErrorMessage(error, copy.diagnostics.toasts.previewOpenFailed))
       }
     } finally {
       if (mountedRef.current) {
         setOpeningPreview(false)
       }
     }
-  }, [bundle])
+  }, [bundle, copy.diagnostics.toasts.previewOpenFailed, copy.diagnostics.toasts.previewOpened])
 
   const handleUploadBundle = useCallback(async (): Promise<void> => {
     if (!bundle) {
@@ -143,17 +153,17 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
       setBundle(null)
       setPreviewOpened(false)
       setTicketId(upload.ticketId)
-      toast.success('Diagnostic bundle uploaded')
+      toast.success(copy.diagnostics.toasts.bundleUploaded)
     } catch (error) {
       if (mountedRef.current) {
-        toast.error(getDiagnosticsErrorMessage(error, 'Could not upload diagnostic bundle'))
+        toast.error(getDiagnosticsErrorMessage(error, copy.diagnostics.toasts.bundleUploadFailed))
       }
     } finally {
       if (mountedRef.current) {
         setUploading(false)
       }
     }
-  }, [bundle])
+  }, [bundle, copy.diagnostics.toasts.bundleUploadFailed, copy.diagnostics.toasts.bundleUploaded])
 
   const handleDiscardBundle = useCallback(async (): Promise<void> => {
     if (!bundle) {
@@ -168,19 +178,17 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
       activeBundleSubmissionIdRef.current = null
       setBundle(null)
       setPreviewOpened(false)
-      toast.success('Diagnostic bundle preview discarded')
+      toast.success(copy.diagnostics.toasts.previewDiscarded)
     } catch (error) {
       if (mountedRef.current) {
-        toast.error(
-          getDiagnosticsErrorMessage(error, 'Could not discard diagnostic bundle preview')
-        )
+        toast.error(getDiagnosticsErrorMessage(error, copy.diagnostics.toasts.previewDiscardFailed))
       }
     } finally {
       if (mountedRef.current) {
         setDiscarding(false)
       }
     }
-  }, [bundle])
+  }, [bundle, copy.diagnostics.toasts.previewDiscardFailed, copy.diagnostics.toasts.previewDiscarded])
 
   const handleCopyTicket = useCallback(async (): Promise<void> => {
     if (!ticketId) {
@@ -192,17 +200,17 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
       if (!mountedRef.current) {
         return
       }
-      toast.success('Diagnostic ticket copied')
+      toast.success(copy.diagnostics.toasts.ticketCopied)
     } catch {
       if (mountedRef.current) {
-        toast.error('Could not copy diagnostic ticket')
+        toast.error(copy.diagnostics.toasts.ticketCopyFailed)
       }
     } finally {
       if (mountedRef.current) {
         setCopyingTicket(false)
       }
     }
-  }, [ticketId])
+  }, [copy.diagnostics.toasts.ticketCopied, copy.diagnostics.toasts.ticketCopyFailed, ticketId])
 
   const handleDeleteUploadedBundle = useCallback(async (): Promise<void> => {
     if (!ticketId) {
@@ -215,28 +223,32 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
         return
       }
       setTicketId(null)
-      toast.success('Uploaded diagnostic bundle deleted')
+      toast.success(copy.diagnostics.toasts.uploadedBundleDeleted)
     } catch (error) {
       if (mountedRef.current) {
-        toast.error(getDiagnosticsErrorMessage(error, 'Could not delete diagnostic bundle'))
+        toast.error(getDiagnosticsErrorMessage(error, copy.diagnostics.toasts.bundleDeleteFailed))
       }
     } finally {
       if (mountedRef.current) {
         setDeletingTicket(false)
       }
     }
-  }, [ticketId])
+  }, [
+    copy.diagnostics.toasts.bundleDeleteFailed,
+    copy.diagnostics.toasts.uploadedBundleDeleted,
+    ticketId
+  ])
 
   return (
     <>
       {status?.disabledReason ? (
-        <DiagnosticsDisabledStateNote reason={status.disabledReason} />
+        <DiagnosticsDisabledStateNote reason={status.disabledReason} copy={copy} />
       ) : null}
       <Separator />
       <Section
         icon={<FileText className="size-4" />}
-        title="Diagnostic bundle"
-        description={getDiagnosticBundleDescription({ bundle, previewOpened, ticketId })}
+        title={copy.diagnostics.bundle.title}
+        description={getDiagnosticBundleDescription({ bundle, previewOpened, ticketId, copy })}
       >
         <PrivacyDiagnosticBundleControls
           status={status}
@@ -256,23 +268,26 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
           onCopyTicket={handleCopyTicket}
           onDeleteUploadedBundle={handleDeleteUploadedBundle}
           onDismissTicket={() => setTicketId(null)}
+          copy={copy}
         />
       </Section>
       <Separator />
       <Section
         icon={<Folder className="size-4" />}
-        title="Open trace folder"
-        description={`Reveals ${status?.traceFilePath || 'the trace folder'} in your file manager.`}
+        title={copy.diagnostics.traceFolder.title}
+        description={copy.diagnostics.traceFolder.description(
+          status?.traceFilePath || copy.diagnostics.traceFolder.fallbackPath
+        )}
       >
         <Button variant="outline" size="sm" onClick={() => void handleOpenFolder()}>
-          Open trace folder
+          {copy.diagnostics.traceFolder.action}
         </Button>
       </Section>
       <Separator />
       <Section
         icon={<Trash2 className="size-4" />}
-        title="Clear local traces"
-        description="Deletes every rotated trace file on this machine."
+        title={copy.diagnostics.clearTraces.title}
+        description={copy.diagnostics.clearTraces.description}
       >
         <Button
           variant="outline"
@@ -280,16 +295,16 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
           disabled={!status?.localFileEnabled}
           onClick={() => void handleClear()}
         >
-          Clear local traces
+          {copy.diagnostics.clearTraces.action}
         </Button>
       </Section>
       <Separator />
       <Section
         icon={<Globe className="size-4" />}
-        title="OTLP export"
+        title={copy.diagnostics.otlp.title}
         description={
           status?.otlpStatus ??
-          'Set ORCA_OTLP_TRACES_URL to point Orca at your own OpenTelemetry collector.'
+          copy.diagnostics.otlp.description
         }
       >
         <span
@@ -299,7 +314,7 @@ export function PrivacyDiagnosticsSection(): React.JSX.Element {
               : 'text-xs text-muted-foreground'
           }
         >
-          {status?.otlpEnabled ? 'Enabled' : 'Disabled'}
+          {status?.otlpEnabled ? copy.diagnostics.otlp.enabled : copy.diagnostics.otlp.disabled}
         </span>
       </Section>
     </>
@@ -311,20 +326,22 @@ function getDiagnosticsErrorMessage(error: unknown, fallback: string): string {
 }
 
 function DiagnosticsDisabledStateNote({
-  reason
+  reason,
+  copy
 }: {
   reason: NonNullable<DiagnosticsStatusPayload['disabledReason']>
+  copy: PrivacyMessages
 }): React.JSX.Element {
   const message =
     reason === 'do_not_track'
-      ? 'DO_NOT_TRACK=1 is set — network-bound diagnostics are disabled. The local trace file is still active.'
+      ? copy.diagnostics.disabledNote.doNotTrack
       : reason === 'orca_telemetry_disabled'
-        ? 'ORCA_TELEMETRY_DISABLED=1 is set — network-bound diagnostics are disabled. The local trace file is still active.'
+        ? copy.diagnostics.disabledNote.telemetryDisabled
         : reason === 'orca_diagnostics_disabled'
-          ? 'ORCA_DIAGNOSTICS_DISABLED=1 is set — every diagnostics surface is off, including local trace writes.'
+          ? copy.diagnostics.disabledNote.diagnosticsDisabled
           : reason === 'ci'
-            ? 'Running in CI — diagnostics are off.'
-            : 'Diagnostics are disabled by an environment variable.'
+            ? copy.diagnostics.disabledNote.ci
+            : copy.diagnostics.disabledNote.fallback
 
   return (
     <div className="rounded border border-dashed border-border/60 bg-card/30 px-3 py-2 text-xs text-muted-foreground">

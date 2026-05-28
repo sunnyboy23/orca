@@ -3,6 +3,8 @@ import { Check, ChevronDown, ExternalLink, RefreshCw, Terminal } from 'lucide-re
 import type { GlobalSettings, TuiAgent } from '../../../../shared/types'
 import { AGENT_CATALOG, AgentIcon } from '@/lib/agent-catalog'
 import { useDetectedAgents } from '@/hooks/useDetectedAgents'
+import { useI18n } from '@/i18n'
+import type { AgentsMessages } from '@/i18n/settings-agents-types'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { cn } from '@/lib/utils'
@@ -21,6 +23,7 @@ type AgentRowProps = {
   label: string
   homepageUrl: string
   defaultCmd: string
+  copy: AgentsMessages['row']
   isDetected: boolean
   isDefault: boolean
   cmdOverride: string | undefined
@@ -30,12 +33,14 @@ type AgentRowProps = {
 
 type AgentCommandOverrideInputProps = {
   defaultCmd: string
+  copy: AgentsMessages['row']
   cmdOverride: string | undefined
   onSaveOverride: (value: string) => void
 }
 
 function AgentCommandOverrideInput({
   defaultCmd,
+  copy,
   cmdOverride,
   onSaveOverride
 }: AgentCommandOverrideInputProps): React.JSX.Element {
@@ -54,7 +59,7 @@ function AgentCommandOverrideInput({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="shrink-0 text-xs text-muted-foreground">Command</span>
+      <span className="shrink-0 text-xs text-muted-foreground">{copy.command}</span>
       <Input
         value={cmdDraft}
         onChange={(e) => setCmdDraft(e.target.value)}
@@ -84,7 +89,7 @@ function AgentCommandOverrideInput({
           }}
           className="h-7 shrink-0 text-xs text-muted-foreground hover:text-foreground"
         >
-          Reset
+          {copy.reset}
         </Button>
       )}
     </div>
@@ -96,6 +101,7 @@ function AgentRow({
   label,
   homepageUrl,
   defaultCmd,
+  copy,
   isDetected,
   isDefault,
   cmdOverride,
@@ -115,9 +121,9 @@ function AgentRow({
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium leading-none">{label}</span>
             {isDetected ? (
-              <SettingsBadge tone="accent">Detected</SettingsBadge>
+              <SettingsBadge tone="accent">{copy.detected}</SettingsBadge>
             ) : (
-              <SettingsBadge tone="muted">Not installed</SettingsBadge>
+              <SettingsBadge tone="muted">{copy.notInstalled}</SettingsBadge>
             )}
           </div>
           <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
@@ -139,11 +145,11 @@ function AgentRow({
               variant={isDefault ? 'secondary' : 'ghost'}
               size="xs"
               onClick={onSetDefault}
-              title={isDefault ? 'Default agent' : 'Set as default'}
+              title={isDefault ? copy.defaultAgent : copy.setDefault}
               className="h-7 gap-1 text-xs"
             >
               {isDefault && <Check className="size-3" />}
-              {isDefault ? 'Default' : 'Set default'}
+              {isDefault ? copy.default : copy.setDefault}
             </Button>
           )}
 
@@ -153,7 +159,7 @@ function AgentRow({
               variant="ghost"
               size="icon-sm"
               onClick={() => setCmdOpen((prev) => !prev)}
-              title="Customize command"
+              title={copy.customizeCommand}
               aria-expanded={cmdOpen}
               className={cn(
                 'size-7 text-muted-foreground hover:text-foreground',
@@ -168,7 +174,7 @@ function AgentRow({
             href={homepageUrl}
             target="_blank"
             rel="noopener noreferrer"
-            title={isDetected ? 'Docs' : 'Install'}
+            title={isDetected ? copy.docs : copy.install}
             className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
           >
             <ExternalLink className="size-3.5" />
@@ -180,7 +186,7 @@ function AgentRow({
               variant="ghost"
               size="icon-sm"
               onClick={() => setCmdOpen((prev) => !prev)}
-              aria-label={cmdOpen ? 'Collapse command override' : 'Expand command override'}
+              aria-label={cmdOpen ? copy.collapseCommand : copy.expandCommand}
               className="size-7 text-muted-foreground hover:text-foreground"
             >
               <ChevronDown
@@ -197,12 +203,11 @@ function AgentRow({
           <AgentCommandOverrideInput
             key={cmdOverride ?? defaultCmd}
             defaultCmd={defaultCmd}
+            copy={copy}
             cmdOverride={cmdOverride}
             onSaveOverride={onSaveOverride}
           />
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            Override the binary path or name used to launch this agent.
-          </p>
+          <p className="mt-1.5 text-[11px] text-muted-foreground">{copy.overrideHelp}</p>
         </div>
       )}
     </div>
@@ -234,6 +239,8 @@ function DefaultAgentPill({ active, onClick, children }: DefaultAgentPillProps):
 }
 
 export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.agents
   const { detectedIds: detectedList, isRefreshing, refresh } = useDetectedAgents()
   // Why: refresh re-spawns the user's login shell to re-capture PATH
   // (preflight:refreshAgents on the main side). This handles the
@@ -279,14 +286,14 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
     <div className="space-y-8">
       <section className="space-y-4">
         <SettingsSubsectionHeader
-          title="Default Agent"
-          description="Pre-selected agent when opening a new workspace."
+          title={copy.defaultAgent.title}
+          description={copy.defaultAgent.description}
         />
 
         <div className="flex flex-wrap gap-2">
           <DefaultAgentPill active={isAutoDefault} onClick={() => setDefault(null)}>
             {isAutoDefault && <Check className="size-3.5" />}
-            Auto
+            {copy.defaultAgent.auto}
           </DefaultAgentPill>
 
           {/* Why: users who prefer to open a raw shell by default need a
@@ -295,7 +302,7 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
               agent, which is the opposite of what they want. */}
           <DefaultAgentPill active={isBlankDefault} onClick={() => setDefault('blank')}>
             <Terminal className="size-3.5" />
-            No agent (blank terminal)
+            {copy.defaultAgent.blank}
             {isBlankDefault && <Check className="size-3.5" />}
           </DefaultAgentPill>
 
@@ -323,8 +330,10 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
           <SettingsSubsectionHeader
             title={
               <span className="flex items-center gap-2">
-                Installed
-                <SettingsBadge tone="accent">{detectedAgents.length} detected</SettingsBadge>
+                {copy.sections.installed}
+                <SettingsBadge tone="accent">
+                  {copy.sections.detectedCount(detectedAgents.length)}
+                </SettingsBadge>
               </span>
             }
             action={
@@ -334,11 +343,11 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
                 size="xs"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                title="Re-read your shell PATH and re-detect installed agents"
+                title={copy.sections.refreshTitle}
                 className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 <RefreshCw className={cn('size-3', isRefreshing && 'animate-spin')} />
-                {isRefreshing ? 'Refreshing…' : 'Refresh'}
+                {isRefreshing ? copy.sections.refreshing : copy.sections.refresh}
               </Button>
             }
           />
@@ -351,6 +360,7 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
                 label={agent.label}
                 homepageUrl={agent.homepageUrl}
                 defaultCmd={agent.cmd}
+                copy={copy.row}
                 isDetected
                 isDefault={defaultAgent === agent.id}
                 cmdOverride={cmdOverrides[agent.id]}
@@ -367,8 +377,10 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
           <SettingsSubsectionHeader
             title={
               <span className="flex items-center gap-2 text-muted-foreground">
-                Available to install
-                <SettingsBadge tone="muted">{undetectedAgents.length} agents</SettingsBadge>
+                {copy.sections.availableToInstall}
+                <SettingsBadge tone="muted">
+                  {copy.sections.agentsCount(undetectedAgents.length)}
+                </SettingsBadge>
               </span>
             }
           />
@@ -381,6 +393,7 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
                 label={agent.label}
                 homepageUrl={agent.homepageUrl}
                 defaultCmd={agent.cmd}
+                copy={copy.row}
                 isDetected={false}
                 isDefault={false}
                 cmdOverride={undefined}
@@ -394,7 +407,7 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
 
       {detectedIds === null && (
         <div className="flex items-center justify-center rounded-md border border-dashed border-border/50 py-6 text-sm text-muted-foreground">
-          Detecting installed agents…
+          {copy.sections.detecting}
         </div>
       )}
     </div>

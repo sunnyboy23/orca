@@ -4,6 +4,8 @@ import type {
   DiagnosticsStatusPayload
 } from '../../../../preload/api-types'
 import { Button } from '../ui/button'
+import { privacyEn } from '@/i18n/settings-core-panes-en'
+import type { PrivacyMessages } from '@/i18n/settings-core-panes-types'
 
 export function PrivacyDiagnosticBundleControls({
   status,
@@ -22,7 +24,8 @@ export function PrivacyDiagnosticBundleControls({
   onDiscard,
   onCopyTicket,
   onDeleteUploadedBundle,
-  onDismissTicket
+  onDismissTicket,
+  copy = privacyEn
 }: {
   readonly status: DiagnosticsStatusPayload | null
   readonly bundle: DiagnosticsBundlePayload | null
@@ -41,6 +44,7 @@ export function PrivacyDiagnosticBundleControls({
   readonly onCopyTicket: () => Promise<void>
   readonly onDeleteUploadedBundle: () => Promise<void>
   readonly onDismissTicket: () => void
+  readonly copy?: PrivacyMessages
 }): React.JSX.Element {
   if (ticketId) {
     return (
@@ -52,7 +56,7 @@ export function PrivacyDiagnosticBundleControls({
           onClick={() => void onCopyTicket()}
         >
           <ActionIcon busy={copyingTicket} icon={<Clipboard className="size-3.5" />} />
-          Copy ticket
+          {copy.diagnostics.bundle.copyTicket}
         </Button>
         <Button
           variant="destructive"
@@ -61,11 +65,11 @@ export function PrivacyDiagnosticBundleControls({
           onClick={() => void onDeleteUploadedBundle()}
         >
           <ActionIcon busy={deletingTicket} icon={<Trash2 className="size-3.5" />} />
-          Delete bundle
+          {copy.diagnostics.bundle.deleteBundle}
         </Button>
         <Button variant="ghost" size="sm" disabled={deletingTicket} onClick={onDismissTicket}>
           <Check className="size-3.5" />
-          Done
+          {copy.diagnostics.bundle.done}
         </Button>
       </>
     )
@@ -81,15 +85,15 @@ export function PrivacyDiagnosticBundleControls({
           onClick={() => void onOpenPreview()}
         >
           <ActionIcon busy={openingPreview} icon={<Eye className="size-3.5" />} />
-          Open preview
+          {copy.diagnostics.bundle.openPreview}
         </Button>
         <Button size="sm" disabled={!previewOpened || uploading} onClick={() => void onUpload()}>
           <ActionIcon busy={uploading} icon={<UploadCloud className="size-3.5" />} />
-          Upload
+          {copy.diagnostics.bundle.upload}
         </Button>
         <Button variant="ghost" size="sm" disabled={discarding} onClick={() => void onDiscard()}>
           <ActionIcon busy={discarding} icon={<X className="size-3.5" />} />
-          Discard
+          {copy.diagnostics.bundle.discard}
         </Button>
       </>
     )
@@ -103,7 +107,7 @@ export function PrivacyDiagnosticBundleControls({
       onClick={() => void onCollect()}
     >
       <ActionIcon busy={collecting} icon={<FileText className="size-3.5" />} />
-      Create preview
+      {copy.diagnostics.bundle.createPreview}
     </Button>
   )
 }
@@ -111,20 +115,24 @@ export function PrivacyDiagnosticBundleControls({
 export function getDiagnosticBundleDescription({
   bundle,
   previewOpened,
-  ticketId
+  ticketId,
+  copy = privacyEn
 }: {
   readonly bundle: DiagnosticsBundlePayload | null
   readonly previewOpened: boolean
   readonly ticketId: string | null
+  readonly copy?: PrivacyMessages
 }): string {
   if (ticketId) {
-    return `Uploaded ticket ${ticketId}.`
+    return copy.diagnostics.bundle.uploadedTicket(ticketId)
   }
   if (bundle) {
-    const previewState = previewOpened ? 'Ready to upload.' : 'Open the preview before uploading.'
-    return `${bundle.spanCount} span(s), ${formatBytes(bundle.bytes)}. ${previewState}`
+    const previewState = previewOpened
+      ? copy.diagnostics.bundle.readyToUpload
+      : copy.diagnostics.bundle.openPreviewBeforeUpload
+    return copy.diagnostics.bundle.spanSummary(bundle.spanCount, formatBytes(bundle.bytes), previewState)
   }
-  return 'Creates a redacted NDJSON preview for support upload.'
+  return copy.diagnostics.bundle.redactedPreview
 }
 
 function ActionIcon({ busy, icon }: { readonly busy: boolean; readonly icon: React.ReactNode }) {

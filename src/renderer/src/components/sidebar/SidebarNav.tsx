@@ -1,5 +1,15 @@
 import React from 'react'
-import { Bell, CalendarClock, EyeOff, Github, Gitlab, List, Search, Smartphone } from 'lucide-react'
+import {
+  Bell,
+  CalendarClock,
+  EyeOff,
+  Github,
+  GitBranch,
+  Gitlab,
+  List,
+  Search,
+  Smartphone
+} from 'lucide-react'
 import { useAppStore } from '@/store'
 import { useRepoMap } from '@/store/selectors'
 import { cn } from '@/lib/utils'
@@ -21,6 +31,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger
 } from '@/components/ui/context-menu'
+import { useI18n } from '@/i18n'
 
 export function shouldShowAgentsButton(
   settings: Pick<GlobalSettings, 'experimentalActivity'> | null | undefined
@@ -35,9 +46,11 @@ export function shouldShowMobileButton(
 }
 
 const SidebarNav = React.memo(function SidebarNav() {
+  const { messages } = useI18n()
   const worktreePaletteShortcut = useShortcutLabel('worktree.palette')
   const openTaskPage = useAppStore((s) => s.openTaskPage)
   const openAutomationsPage = useAppStore((s) => s.openAutomationsPage)
+  const openOrchestrationPage = useAppStore((s) => s.openOrchestrationPage)
   const openActivityPage = useAppStore((s) => s.openActivityPage)
   const openMobilePage = useAppStore((s) => s.openMobilePage)
   const openModal = useAppStore((s) => s.openModal)
@@ -131,6 +144,7 @@ const SidebarNav = React.memo(function SidebarNav() {
 
   const tasksActive = activeView === 'tasks'
   const automationsActive = activeView === 'automations'
+  const orchestrationActive = activeView === 'orchestration'
   const activityActive = activeView === 'activity'
   const mobileActive = activeView === 'mobile'
   const activityUnreadCount = useActivityUnreadCount(showAgentsButton, 'sidebar-badge')
@@ -166,7 +180,7 @@ const SidebarNav = React.memo(function SidebarNav() {
             className={cn('size-4 shrink-0', !tasksActive && 'text-sidebar-foreground/30')}
             strokeWidth={tasksActive ? 2.25 : 1.75}
           />
-          <span className="flex-1">Tasks</span>
+          <span className="flex-1">{messages.navigation.tasks}</span>
           <span className="flex items-center gap-1">
             {visibleTaskProviders.includes('github') ? (
               <span
@@ -180,7 +194,7 @@ const SidebarNav = React.memo(function SidebarNav() {
                   openTaskPage({ taskSource: 'github' })
                 }}
                 className="rounded p-0.5 text-muted-foreground/70 transition-colors hover:text-foreground"
-                aria-label="Open GitHub tasks"
+                aria-label={messages.navigation.openGitHubTasks}
               >
                 <Github className="size-3.5" aria-hidden />
               </span>
@@ -197,7 +211,7 @@ const SidebarNav = React.memo(function SidebarNav() {
                   openTaskPage({ taskSource: 'gitlab' })
                 }}
                 className="rounded p-0.5 text-muted-foreground/70 transition-colors hover:text-foreground"
-                aria-label="Open GitLab tasks"
+                aria-label={messages.navigation.openGitLabTasks}
               >
                 <Gitlab className="size-3.5" aria-hidden />
               </span>
@@ -214,7 +228,7 @@ const SidebarNav = React.memo(function SidebarNav() {
                   openTaskPage({ taskSource: 'linear' })
                 }}
                 className="rounded p-0.5 text-muted-foreground/70 transition-colors hover:text-foreground"
-                aria-label="Open Linear tasks"
+                aria-label={messages.navigation.openLinearTasks}
               >
                 <LinearIcon className="size-3.5" />
               </span>
@@ -237,7 +251,24 @@ const SidebarNav = React.memo(function SidebarNav() {
           className={cn('size-4 shrink-0', !automationsActive && 'text-sidebar-foreground/30')}
           strokeWidth={automationsActive ? 2.25 : 1.75}
         />
-        <span className="flex-1">Automations</span>
+        <span className="flex-1">{messages.navigation.automations}</span>
+      </button>
+      <button
+        type="button"
+        onClick={openOrchestrationPage}
+        aria-current={orchestrationActive ? 'page' : undefined}
+        className={cn(
+          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors',
+          orchestrationActive
+            ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+            : 'text-sidebar-foreground/60 hover:bg-sidebar-foreground/8'
+        )}
+      >
+        <GitBranch
+          className={cn('size-4 shrink-0', !orchestrationActive && 'text-sidebar-foreground/30')}
+          strokeWidth={orchestrationActive ? 2.25 : 1.75}
+        />
+        <span className="flex-1">{messages.navigation.orchestration}</span>
       </button>
       {showAgentsButton ? (
         <button
@@ -255,7 +286,7 @@ const SidebarNav = React.memo(function SidebarNav() {
             className={cn('size-4 shrink-0', !activityActive && 'text-sidebar-foreground/30')}
             strokeWidth={activityActive ? 2.25 : 1.75}
           />
-          <span className="flex-1">Agents</span>
+          <span className="flex-1">{messages.navigation.agents}</span>
           {activityUnreadCount > 0 ? (
             <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">
               {activityUnreadCount}
@@ -284,10 +315,10 @@ const SidebarNav = React.memo(function SidebarNav() {
                 className={cn('size-4 shrink-0', !mobileActive && 'text-sidebar-foreground/30')}
                 strokeWidth={mobileActive ? 2.25 : 1.75}
               />
-              <span className="flex-1">Orca Mobile</span>
+              <span className="flex-1">{messages.navigation.orcaMobile}</span>
               {mobileOnboardingBadge.visible ? (
                 <span className="rounded-full bg-primary px-1.5 py-px text-[10px] font-semibold text-primary-foreground">
-                  New
+                  {messages.navigation.newBadge}
                 </span>
               ) : null}
             </button>
@@ -295,7 +326,7 @@ const SidebarNav = React.memo(function SidebarNav() {
           <ContextMenuContent>
             <ContextMenuItem onSelect={hideMobileButton}>
               <EyeOff className="size-3.5" />
-              Hide from sidebar
+              {messages.navigation.hideFromSidebar}
             </ContextMenuItem>
           </ContextMenuContent>
         </ContextMenu>
@@ -303,11 +334,11 @@ const SidebarNav = React.memo(function SidebarNav() {
       <button
         type="button"
         onClick={() => openModal('worktree-palette')}
-        aria-label="Search worktrees and browser tabs"
+        aria-label={messages.navigation.searchWorktreesAndBrowserTabs}
         className="group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[13px] font-medium tracking-tight text-sidebar-foreground/60 transition-colors hover:bg-sidebar-foreground/8"
       >
         <Search className="size-4 shrink-0 text-sidebar-foreground/30" strokeWidth={1.75} />
-        <span className="flex-1">Search</span>
+        <span className="flex-1">{messages.navigation.search}</span>
         <kbd className="hidden rounded border border-border/60 bg-background/40 px-1.5 py-px font-mono text-[10px] font-medium text-muted-foreground group-hover:inline-flex items-center">
           {worktreePaletteShortcut}
         </kbd>

@@ -1,65 +1,48 @@
 import type { SettingsSearchEntry } from './settings-search'
+import { enSettingsMessages, type SettingsMessages } from '@/i18n/settings'
 
-export const GENERAL_WORKSPACE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Workspace Directory',
-    description: 'Root directory where workspace folders are created.',
-    keywords: ['workspace', 'folder', 'path', 'worktree']
-  },
-  {
-    title: 'Nest Workspaces',
-    description: 'Create workspaces inside a repo-named subfolder.',
-    keywords: ['nested', 'subfolder', 'directory']
-  },
-  {
-    title: 'Ask Before Deleting Workspaces',
-    description: 'Show a confirmation dialog before deleting a workspace.',
-    keywords: ['delete', 'worktree', 'confirm', 'dialog', 'skip', 'prompt']
-  },
-  {
-    title: 'Ask Before Deleting Automations',
-    description: 'Show a confirmation dialog before deleting an automation and its run history.',
-    keywords: ['delete', 'automation', 'confirm', 'dialog', 'skip', 'prompt']
-  },
-  {
-    title: 'Open In Menu',
-    description: 'Add custom launchers to the workspace Open in menu.',
-    keywords: ['open in', 'editor', 'launcher', 'cursor', 'zed', 'command', 'vscode']
-  }
-]
+const toEntry = (copy: {
+  title: string
+  description?: string
+  keywords?: string[]
+}): SettingsSearchEntry => ({
+  title: copy.title,
+  description: copy.description,
+  keywords: copy.keywords ?? []
+})
 
-export const GENERAL_EDITOR_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Auto Save Files',
-    description: 'Save editor and editable diff changes automatically after a short pause.',
-    keywords: ['autosave', 'save']
-  },
-  {
-    title: 'Auto Save Delay',
-    description: 'How long Orca waits after your last edit before saving automatically.',
-    keywords: ['autosave', 'delay', 'milliseconds']
-  },
-  {
-    title: 'Default Diff View',
-    description: 'Preferred presentation format for showing git diffs by default.',
-    keywords: ['diff', 'view', 'inline', 'side-by-side', 'split']
-  },
-  {
-    title: 'Default Diff File Tree',
-    description: 'Show or hide the file tree when opening combined diff views.',
-    keywords: ['diff', 'tree', 'file tree', 'combined diff', 'sidebar']
-  },
-  {
-    title: 'Minimap',
-    description: 'Show the minimap overview when editing a file.',
-    keywords: ['minimap', 'overview', 'code', 'scroll']
-  },
-  {
-    title: 'Markdown Review Notes',
-    description: 'Show local markdown review note controls in rich editor mode.',
-    keywords: ['markdown', 'review', 'notes', 'annotations', 'agents']
+export function getGeneralWorkspaceSearchEntries(
+  messages: SettingsMessages = enSettingsMessages,
+  languageEntry: SettingsSearchEntry = {
+    title: 'Language',
+    description: 'Choose the display language for Orca.',
+    keywords: ['language', 'locale', '中文', 'chinese', 'english', '语言']
   }
-]
+): SettingsSearchEntry[] {
+  const fields = messages.general.fields
+  return [
+    languageEntry,
+    toEntry(fields.workspaceDirectory),
+    toEntry(fields.nestWorkspaces),
+    toEntry(fields.askBeforeDeletingWorkspaces),
+    toEntry(fields.askBeforeDeletingAutomations),
+    toEntry(fields.openInMenu)
+  ]
+}
+
+export function getGeneralEditorSearchEntries(
+  messages: SettingsMessages = enSettingsMessages
+): SettingsSearchEntry[] {
+  const fields = messages.general.fields
+  return [
+    toEntry(fields.autoSaveFiles),
+    toEntry(fields.autoSaveDelay),
+    toEntry(fields.defaultDiffView),
+    toEntry(fields.defaultDiffFileTree),
+    toEntry(fields.minimap),
+    toEntry(fields.markdownReviewNotes)
+  ]
+}
 
 export const GENERAL_CLI_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   {
@@ -74,54 +57,41 @@ export const GENERAL_CLI_SEARCH_ENTRIES: SettingsSearchEntry[] = [
   }
 ]
 
-export const GENERAL_UPDATE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Check for Updates',
-    description: 'Check for app updates and install a newer Orca version.',
-    keywords: ['update', 'version', 'release notes', 'download']
-  }
-]
+export function getGeneralUpdateSearchEntries(
+  messages: SettingsMessages = enSettingsMessages
+): SettingsSearchEntry[] {
+  return [toEntry(messages.general.updates.check)]
+}
 
-export const GENERAL_CACHE_TIMER_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Prompt Cache Timer',
-    description: 'Countdown timer showing time until prompt cache expires (Claude agents).',
-    keywords: ['cache', 'timer', 'prompt', 'ttl', 'claude', 'cost', 'tokens']
-  }
-]
+export function getGeneralCacheTimerSearchEntries(
+  messages: SettingsMessages = enSettingsMessages
+): SettingsSearchEntry[] {
+  return [toEntry(messages.general.cacheTimer.header)]
+}
 
-export const GENERAL_AGENT_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Default Agent',
-    description: 'Pre-select an AI coding agent in the new-workspace composer.',
-    keywords: [
-      'agent',
-      'default',
-      'claude',
-      'codex',
-      'opencode',
-      'pi',
-      'gemini',
-      'aider',
-      'copilot',
-      'grok'
-    ]
-  }
-]
+export function getGeneralSupportSearchEntries(
+  messages: SettingsMessages = enSettingsMessages
+): SettingsSearchEntry[] {
+  return [toEntry(messages.general.support.star)]
+}
 
-export const GENERAL_SUPPORT_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  {
-    title: 'Star Orca on GitHub',
-    description: 'Support the project with a GitHub star via the gh CLI.',
-    keywords: ['star', 'github', 'support', 'feedback', 'like']
-  }
-]
+export function getGeneralPaneSearchEntries(
+  messages: SettingsMessages = enSettingsMessages,
+  languageEntry?: SettingsSearchEntry
+): SettingsSearchEntry[] {
+  return [
+    ...getGeneralWorkspaceSearchEntries(messages, languageEntry),
+    ...getGeneralEditorSearchEntries(messages),
+    ...GENERAL_CLI_SEARCH_ENTRIES,
+    ...getGeneralCacheTimerSearchEntries(messages),
+    ...getGeneralUpdateSearchEntries(messages),
+    ...getGeneralSupportSearchEntries(messages)
+  ]
+}
 
-export const GENERAL_PANE_SEARCH_ENTRIES: SettingsSearchEntry[] = [
-  ...GENERAL_WORKSPACE_SEARCH_ENTRIES,
-  ...GENERAL_EDITOR_SEARCH_ENTRIES,
-  ...GENERAL_CLI_SEARCH_ENTRIES,
-  ...GENERAL_CACHE_TIMER_SEARCH_ENTRIES,
-  ...GENERAL_UPDATE_SEARCH_ENTRIES,
-  ...GENERAL_SUPPORT_SEARCH_ENTRIES
-]
+export const GENERAL_WORKSPACE_SEARCH_ENTRIES = getGeneralWorkspaceSearchEntries()
+export const GENERAL_EDITOR_SEARCH_ENTRIES = getGeneralEditorSearchEntries()
+export const GENERAL_UPDATE_SEARCH_ENTRIES = getGeneralUpdateSearchEntries()
+export const GENERAL_CACHE_TIMER_SEARCH_ENTRIES = getGeneralCacheTimerSearchEntries()
+export const GENERAL_SUPPORT_SEARCH_ENTRIES = getGeneralSupportSearchEntries()
+export const GENERAL_PANE_SEARCH_ENTRIES = getGeneralPaneSearchEntries()

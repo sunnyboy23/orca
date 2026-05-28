@@ -6,6 +6,12 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { preloadE2EConfig } from './e2e-config'
 import { glApi } from './gitlab'
 import type { AppIdentity } from '../shared/app-identity'
+import type {
+  FeishuChannelEvent,
+  FeishuChannelSendMessageParams,
+  FeishuChannelCreateRunFromMessageParams,
+  FeishuChannelMarkReadParams
+} from '../shared/feishu-collaboration-types'
 import type { CliInstallStatus } from '../shared/cli-install-types'
 import type { AgentHookInstallStatus } from '../shared/agent-hook-types'
 import type {
@@ -1252,6 +1258,12 @@ const api = {
     previewGhosttyImport: (): Promise<GhosttyImportPreview> =>
       ipcRenderer.invoke('settings:previewGhosttyImport'),
 
+    feishuCheckConnection: (): Promise<unknown> =>
+      ipcRenderer.invoke('settings:feishuCheckConnection'),
+    feishuBotGetStatus: (): Promise<unknown> => ipcRenderer.invoke('settings:feishuBotGetStatus'),
+    feishuBotStart: (): Promise<unknown> => ipcRenderer.invoke('settings:feishuBotStart'),
+    feishuBotStop: (): Promise<unknown> => ipcRenderer.invoke('settings:feishuBotStop'),
+
     onChanged: (callback: (updates: Record<string, unknown>) => void): (() => void) => {
       const listener = (
         _event: Electron.IpcRendererEvent,
@@ -1259,6 +1271,50 @@ const api = {
       ): void => callback(updates)
       ipcRenderer.on('settings:changed', listener)
       return () => ipcRenderer.removeListener('settings:changed', listener)
+    }
+  },
+
+  feishuChannel: {
+    listConversations: (): Promise<unknown> =>
+      ipcRenderer.invoke('feishu-channel:list-conversations'),
+    listMessages: (args: { chatId: string }): Promise<unknown> =>
+      ipcRenderer.invoke('feishu-channel:list-messages', args),
+    getStatus: (): Promise<unknown> => ipcRenderer.invoke('feishu-channel:get-status'),
+    sendMessage: (args: FeishuChannelSendMessageParams): Promise<unknown> =>
+      ipcRenderer.invoke('feishu-channel:send-message', args),
+    createRunFromMessage: (args: FeishuChannelCreateRunFromMessageParams): Promise<unknown> =>
+      ipcRenderer.invoke('feishu-channel:create-run-from-message', args),
+    markRead: (args: FeishuChannelMarkReadParams): Promise<unknown> =>
+      ipcRenderer.invoke('feishu-channel:mark-read', args),
+    subscribe: (callback: (event: FeishuChannelEvent) => void): (() => void) => {
+      let active = true
+      let subscriptionId: string | null = null
+      const listener = (
+        _event: Electron.IpcRendererEvent,
+        payload: { subscriptionId: string; event: FeishuChannelEvent }
+      ): void => {
+        if (payload.subscriptionId === subscriptionId) {
+          callback(payload.event)
+        }
+      }
+      ipcRenderer.on('feishu-channel:event', listener)
+      void ipcRenderer.invoke('feishu-channel:subscribe').then((result: unknown) => {
+        if (
+          active &&
+          result &&
+          typeof result === 'object' &&
+          typeof (result as { subscriptionId?: unknown }).subscriptionId === 'string'
+        ) {
+          subscriptionId = (result as { subscriptionId: string }).subscriptionId
+        }
+      })
+      return () => {
+        active = false
+        ipcRenderer.removeListener('feishu-channel:event', listener)
+        if (subscriptionId) {
+          void ipcRenderer.invoke('feishu-channel:unsubscribe', { subscriptionId })
+        }
+      }
     }
   },
 

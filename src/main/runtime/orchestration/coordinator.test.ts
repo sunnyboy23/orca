@@ -1,4 +1,7 @@
 /* eslint-disable max-lines -- Why: coordinator tests cover dispatch, DAG ordering, escalation, decision gates, concurrency, and stop — splitting by category would scatter shared setup without improving clarity. */
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import { OrchestrationDb } from './db'
 import {
@@ -7,6 +10,8 @@ import {
   parseAllowStaleBaseFromSpec,
   type CoordinatorRuntime
 } from './coordinator'
+import { createStaticDispatchTargetResolver } from '../team-config/dispatch-resolver'
+import type { PersonalTeamConfig, TeamConfig } from '../team-config/schema'
 
 type DriftResult = {
   base: string
@@ -18,6 +23,7 @@ function createMockRuntime(): CoordinatorRuntime & {
   sentMessages: { handle: string; text: string }[]
   terminals: { handle: string; worktreeId: string; connected: boolean; writable: boolean }[]
   createdTerminals: string[]
+  terminalCreateRequests: { worktree?: string; title?: string }[]
   probeDriftCalls: string[]
   probeDriftResult: DriftResult
   setProbeDrift(result: DriftResult): void
@@ -32,6 +38,7 @@ function createMockRuntime(): CoordinatorRuntime & {
       writable: boolean
     }[],
     createdTerminals: [] as string[],
+    terminalCreateRequests: [] as { worktree?: string; title?: string }[],
     probeDriftCalls: [] as string[],
     probeDriftResult: null as DriftResult,
     throwProbeDrift: null as Error | null,
@@ -48,6 +55,7 @@ function createMockRuntime(): CoordinatorRuntime & {
     async createTerminal(_worktree?: string, opts?: { title?: string }) {
       const handle = `term_worker_${mock.createdTerminals.length}`
       mock.createdTerminals.push(handle)
+      mock.terminalCreateRequests.push({ worktree: _worktree, title: opts?.title })
       mock.terminals.push({ handle, worktreeId: 'wt1', connected: true, writable: true })
       return { handle, worktreeId: 'wt1', title: opts?.title ?? '' }
     },
@@ -65,12 +73,80 @@ function createMockRuntime(): CoordinatorRuntime & {
   return mock
 }
 
+function makeTeamConfig(): TeamConfig {
+  return {
+    version: 1,
+    repos: [
+      {
+        repoName: 'qc_support',
+        displayName: 'QC Support',
+        provider: 'gitlab',
+        remoteUrl: 'ssh://git.example/qc_support.git',
+        serviceType: 'domain',
+        status: 'active'
+      }
+    ],
+    capabilities: [],
+    dependencies: [],
+    agents: [],
+    policies: []
+  }
+}
+
+function makePersonalConfig(): PersonalTeamConfig {
+  return {
+    version: 1,
+    bot: {},
+    webhook: {},
+    repoBindings: [
+      {
+        repoName: 'qc_support',
+        localPath: '/workspace/qc_support',
+        worktreePath: '/workspace/qc_support-wt'
+      }
+    ]
+  }
+}
+
 describe('Coordinator', () => {
   let db: OrchestrationDb
+  let tempDir: string | undefined
 
   afterEach(() => {
     db?.close()
+    if (tempDir) {
+      rmSync(tempDir, { recursive: true, force: true })
+      tempDir = undefined
+    }
   })
+
+  function createWorkspace(): string {
+    tempDir = mkdtempSync(join(tmpdir(), 'orca-coordinator-'))
+    return tempDir
+  }
+
+  function writeManifest(
+    taskId: string,
+    opts: { status?: 'completed' | 'failed' | 'blocked'; filesChanged?: string[] } = {}
+  ): string {
+    const root = tempDir ?? createWorkspace()
+    const dir = join(root, 'artifacts', taskId)
+    mkdirSync(dir, { recursive: true })
+    writeFileSync(
+      join(dir, 'manifest.json'),
+      JSON.stringify({
+        taskId,
+        status: opts.status ?? 'completed',
+        filesChanged: opts.filesChanged ?? ['src/example.ts'],
+        verification: [{ command: 'pnpm test', status: 'passed' }]
+      })
+    )
+    return `artifacts/${taskId}/manifest.json`
+  }
+
+  function workerDonePayload(taskId: string): string {
+    return JSON.stringify({ taskId, manifestPath: writeManifest(taskId) })
+  }
 
   it('throws if no tasks exist', async () => {
     db = new OrchestrationDb(':memory:')
@@ -82,7 +158,7 @@ describe('Coordinator', () => {
     await expect(coordinator.run()).rejects.toThrow('No tasks found')
   })
 
-  it('dispatches a ready task to an available terminal', async () => {
+  it('dispatches a ready task to an available terminal and indexes its artifact', async () => {
     db = new OrchestrationDb(':memory:')
     const runtime = createMockRuntime()
     runtime.terminals = [{ handle: 'term_a', worktreeId: 'wt1', connected: true, writable: true }]
@@ -93,7 +169,8 @@ describe('Coordinator', () => {
     const coordinator = new Coordinator(db, runtime, {
       spec: 'build it',
       coordinatorHandle: 'coord',
-      pollIntervalMs: 50
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace()
     })
 
     // Run coordinator in background, then simulate completion
@@ -110,13 +187,61 @@ describe('Coordinator', () => {
       to: 'coord',
       subject: 'Done',
       type: 'worker_done',
-      payload: JSON.stringify({ taskId: task.id, filesModified: ['a.ts'] })
+      payload: JSON.stringify({
+        taskId: task.id,
+        manifestPath: writeManifest(task.id, { filesChanged: ['a.ts'] }),
+        filesModified: ['a.ts']
+      })
     })
 
     const result = await runPromise
     expect(result.status).toBe('completed')
     expect(result.completedTasks).toContain(task.id)
     expect(runtime.sentMessages.length).toBeGreaterThan(0)
+    const manifests = db.listArtifactManifests({ taskId: task.id })
+    expect(manifests).toHaveLength(1)
+    expect(manifests[0].manifest_path).toBe(`artifacts/${task.id}/manifest.json`)
+    expect(JSON.parse(manifests[0].files_changed)).toEqual(['a.ts'])
+  })
+
+  it('blocks worker_done when artifact manifest is missing from payload', async () => {
+    db = new OrchestrationDb(':memory:')
+    const runtime = createMockRuntime()
+    runtime.terminals = [{ handle: 'term_a', worktreeId: 'wt1', connected: true, writable: true }]
+
+    const task = db.createTask({ spec: 'work without manifest' })
+    const logs: string[] = []
+    const coordinator = new Coordinator(db, runtime, {
+      spec: 'go',
+      coordinatorHandle: 'coord',
+      pollIntervalMs: 20,
+      workspaceRoot: createWorkspace(),
+      onLog: (msg) => logs.push(msg)
+    })
+
+    const runPromise = coordinator.run()
+    await new Promise((r) => {
+      setTimeout(r, 80)
+    })
+
+    db.insertMessage({
+      from: 'term_a',
+      to: 'coord',
+      subject: 'Done',
+      type: 'worker_done',
+      payload: JSON.stringify({ taskId: task.id })
+    })
+
+    await new Promise((r) => {
+      setTimeout(r, 80)
+    })
+    coordinator.stop()
+    const result = await runPromise
+
+    expect(result.status).toBe('failed')
+    expect(db.getTask(task.id)?.status).toBe('blocked')
+    expect(db.listArtifactManifests({ taskId: task.id })).toEqual([])
+    expect(logs.some((msg) => msg.includes('worker_done missing payload.manifestPath'))).toBe(true)
   })
 
   it('creates a terminal when none are available', async () => {
@@ -128,7 +253,8 @@ describe('Coordinator', () => {
     const coordinator = new Coordinator(db, runtime, {
       spec: 'go',
       coordinatorHandle: 'coord',
-      pollIntervalMs: 50
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace()
     })
 
     const runPromise = coordinator.run()
@@ -145,11 +271,78 @@ describe('Coordinator', () => {
       to: 'coord',
       subject: 'Done',
       type: 'worker_done',
-      payload: JSON.stringify({ taskId: task.id })
+      payload: workerDonePayload(task.id)
     })
 
     const result = await runPromise
     expect(result.status).toBe('completed')
+  })
+
+  it('resolves task repo_name through Team Config before dispatch', async () => {
+    db = new OrchestrationDb(':memory:')
+    const runtime = createMockRuntime()
+    const task = db.createTask({ spec: 'repo-scoped work', repoName: 'qc_support' })
+    const coordinator = new Coordinator(db, runtime, {
+      spec: 'go',
+      coordinatorHandle: 'coord',
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace(),
+      dispatchTargetResolver: createStaticDispatchTargetResolver({
+        teamConfig: makeTeamConfig(),
+        localBindings: makePersonalConfig().repoBindings,
+        repos: [
+          {
+            id: 'repo-qc',
+            path: '/workspace/qc_support',
+            displayName: 'QC Support',
+            connectionId: null
+          }
+        ],
+        worktrees: [{ id: 'wt-qc', repoId: 'repo-qc', path: '/workspace/qc_support-wt' }]
+      })
+    })
+
+    const runPromise = coordinator.run()
+    await new Promise((r) => {
+      setTimeout(r, 100)
+    })
+
+    expect(runtime.terminalCreateRequests[0]).toMatchObject({ worktree: 'wt-qc' })
+    expect(runtime.sentMessages[0].text).toContain('Repo: qc_support')
+    expect(runtime.sentMessages[0].text).toContain('Worktree: wt-qc')
+
+    db.insertMessage({
+      from: runtime.createdTerminals[0],
+      to: 'coord',
+      subject: 'Done',
+      type: 'worker_done',
+      payload: workerDonePayload(task.id)
+    })
+
+    const result = await runPromise
+    expect(result.status).toBe('completed')
+  })
+
+  it('blocks repo-scoped tasks when no dispatch target resolver is configured', async () => {
+    db = new OrchestrationDb(':memory:')
+    const runtime = createMockRuntime()
+    const logs: string[] = []
+    const task = db.createTask({ spec: 'repo-scoped work', repoName: 'qc_support' })
+    const coordinator = new Coordinator(db, runtime, {
+      spec: 'go',
+      coordinatorHandle: 'coord',
+      pollIntervalMs: 20,
+      onLog: (msg) => logs.push(msg)
+    })
+
+    const result = await coordinator.run()
+
+    expect(result.status).toBe('failed')
+    expect(db.getTask(task.id)?.status).toBe('blocked')
+    expect(runtime.createdTerminals).toEqual([])
+    expect(logs.some((msg) => msg.includes('no dispatch target resolver is configured'))).toBe(
+      true
+    )
   })
 
   it('handles escalation and circuit breaker', async () => {
@@ -165,7 +358,8 @@ describe('Coordinator', () => {
     const coordinator = new Coordinator(db, runtime, {
       spec: 'go',
       coordinatorHandle: 'coord',
-      pollIntervalMs: 50
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace()
     })
 
     const runPromise = coordinator.run()
@@ -180,7 +374,7 @@ describe('Coordinator', () => {
         to: 'coord',
         subject: `Failed attempt ${i + 1}`,
         type: 'escalation',
-        payload: JSON.stringify({ taskId: task.id })
+        payload: workerDonePayload(task.id)
       })
     }
 
@@ -221,7 +415,8 @@ describe('Coordinator', () => {
     const coordinator = new Coordinator(db, runtime, {
       spec: 'go',
       coordinatorHandle: 'coord',
-      pollIntervalMs: 50
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace()
     })
 
     const runPromise = coordinator.run()
@@ -268,7 +463,7 @@ describe('Coordinator', () => {
       to: 'coord',
       subject: 'Done',
       type: 'worker_done',
-      payload: JSON.stringify({ taskId: task.id })
+      payload: workerDonePayload(task.id)
     })
 
     const result = await runPromise
@@ -289,7 +484,8 @@ describe('Coordinator', () => {
     const coordinator = new Coordinator(db, runtime, {
       spec: 'go',
       coordinatorHandle: 'coord',
-      pollIntervalMs: 50
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace()
     })
 
     const runPromise = coordinator.run()
@@ -308,7 +504,7 @@ describe('Coordinator', () => {
       to: 'coord',
       subject: 'Done',
       type: 'worker_done',
-      payload: JSON.stringify({ taskId: t1.id })
+      payload: workerDonePayload(t1.id)
     })
 
     // Wait for t2 to be promoted and dispatched
@@ -326,13 +522,103 @@ describe('Coordinator', () => {
       to: 'coord',
       subject: 'Done',
       type: 'worker_done',
-      payload: JSON.stringify({ taskId: t2.id })
+      payload: workerDonePayload(t2.id)
     })
 
     const result = await runPromise
     expect(result.status).toBe('completed')
     expect(result.completedTasks).toContain(t1.id)
     expect(result.completedTasks).toContain(t2.id)
+  })
+
+  it('injects upstream artifact summaries into dependent task preambles', async () => {
+    db = new OrchestrationDb(':memory:')
+    const runtime = createMockRuntime()
+    runtime.terminals = [{ handle: 'term_a', worktreeId: 'wt1', connected: true, writable: true }]
+
+    const t1 = db.createTask({ spec: 'build api' })
+    const t2 = db.createTask({ spec: 'build ui', deps: [t1.id] })
+    const coordinator = new Coordinator(db, runtime, {
+      spec: 'go',
+      coordinatorHandle: 'coord',
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace()
+    })
+
+    const runPromise = coordinator.run()
+    await new Promise((r) => {
+      setTimeout(r, 100)
+    })
+
+    db.insertMessage({
+      from: 'term_a',
+      to: 'coord',
+      subject: 'Done',
+      type: 'worker_done',
+      payload: JSON.stringify({
+        taskId: t1.id,
+        manifestPath: writeManifest(t1.id, { filesChanged: ['src/api.ts'] })
+      })
+    })
+
+    await new Promise((r) => {
+      setTimeout(r, 200)
+    })
+
+    const dependentDispatch = runtime.sentMessages.find(
+      (message) => message.text.includes(`Your task ID is: ${t2.id}`)
+    )
+    expect(dependentDispatch?.text).toContain('=== UPSTREAM ARTIFACTS ===')
+    expect(dependentDispatch?.text).toContain(`Dependency task: ${t1.id}`)
+    expect(dependentDispatch?.text).toContain('src/api.ts')
+
+    db.insertMessage({
+      from: 'term_a',
+      to: 'coord',
+      subject: 'Done',
+      type: 'worker_done',
+      payload: workerDonePayload(t2.id)
+    })
+
+    const result = await runPromise
+    expect(result.status).toBe('completed')
+  })
+
+  it('blocks downstream tasks when an upstream worker reports failed artifact status', async () => {
+    db = new OrchestrationDb(':memory:')
+    const runtime = createMockRuntime()
+    runtime.terminals = [{ handle: 'term_a', worktreeId: 'wt1', connected: true, writable: true }]
+
+    const upstream = db.createTask({ spec: 'build api' })
+    const downstream = db.createTask({ spec: 'build ui', deps: [upstream.id] })
+    const coordinator = new Coordinator(db, runtime, {
+      spec: 'go',
+      coordinatorHandle: 'coord',
+      pollIntervalMs: 50,
+      workspaceRoot: createWorkspace()
+    })
+
+    const runPromise = coordinator.run()
+    await new Promise((r) => {
+      setTimeout(r, 100)
+    })
+
+    db.insertMessage({
+      from: 'term_a',
+      to: 'coord',
+      subject: 'Failed',
+      type: 'worker_done',
+      payload: JSON.stringify({
+        taskId: upstream.id,
+        manifestPath: writeManifest(upstream.id, { status: 'failed' })
+      })
+    })
+
+    const result = await runPromise
+    expect(result.status).toBe('failed')
+    expect(db.getTask(upstream.id)?.status).toBe('failed')
+    expect(db.getTask(downstream.id)?.status).toBe('blocked')
+    expect(runtime.sentMessages.some((message) => message.text.includes(downstream.id))).toBe(false)
   })
 
   it('respects maxConcurrent limit', async () => {
@@ -352,7 +638,8 @@ describe('Coordinator', () => {
       spec: 'go',
       coordinatorHandle: 'coord',
       pollIntervalMs: 50,
-      maxConcurrent: 2
+      maxConcurrent: 2,
+      workspaceRoot: createWorkspace()
     })
 
     const runPromise = coordinator.run()
@@ -372,7 +659,7 @@ describe('Coordinator', () => {
         to: 'coord',
         subject: 'Done',
         type: 'worker_done',
-        payload: JSON.stringify({ taskId: task.id })
+        payload: workerDonePayload(task.id)
       })
       await new Promise((r) => {
         setTimeout(r, 100)
@@ -433,7 +720,8 @@ describe('Coordinator', () => {
     const coordinator = new Coordinator(db, runtime, {
       spec: 'go',
       coordinatorHandle: 'coord',
-      pollIntervalMs: 20
+      pollIntervalMs: 20,
+      workspaceRoot: createWorkspace()
     })
 
     const runPromise = coordinator.run()
@@ -458,7 +746,7 @@ describe('Coordinator', () => {
       to: 'coord',
       subject: 'Done',
       type: 'worker_done',
-      payload: JSON.stringify({ taskId: task.id })
+      payload: workerDonePayload(task.id)
     })
 
     const result = await runPromise
@@ -504,7 +792,8 @@ describe('Coordinator', () => {
         spec: 'go',
         coordinatorHandle: 'coord',
         pollIntervalMs: 50,
-        worktree: 'wt1'
+        worktree: 'wt1',
+        workspaceRoot: createWorkspace()
       })
 
       const runPromise = coordinator.run()
@@ -517,7 +806,7 @@ describe('Coordinator', () => {
         to: 'coord',
         subject: 'Done',
         type: 'worker_done',
-        payload: JSON.stringify({ taskId: task.id })
+        payload: workerDonePayload(task.id)
       })
 
       const result = await runPromise
@@ -546,7 +835,8 @@ describe('Coordinator', () => {
         spec: 'go',
         coordinatorHandle: 'coord',
         pollIntervalMs: 50,
-        worktree: 'wt1'
+        worktree: 'wt1',
+        workspaceRoot: createWorkspace()
       })
 
       const runPromise = coordinator.run()
@@ -586,7 +876,8 @@ allow-stale-base: true`
         spec: 'go',
         coordinatorHandle: 'coord',
         pollIntervalMs: 50,
-        worktree: 'wt1'
+        worktree: 'wt1',
+        workspaceRoot: createWorkspace()
       })
 
       const runPromise = coordinator.run()
@@ -599,7 +890,7 @@ allow-stale-base: true`
         to: 'coord',
         subject: 'Done',
         type: 'worker_done',
-        payload: JSON.stringify({ taskId: task.id })
+        payload: workerDonePayload(task.id)
       })
 
       const result = await runPromise
@@ -625,7 +916,8 @@ allow-stale-base: true`
         spec: 'go',
         coordinatorHandle: 'coord',
         pollIntervalMs: 50,
-        worktree: 'wt1'
+        worktree: 'wt1',
+        workspaceRoot: createWorkspace()
       })
 
       const runPromise = coordinator.run()
@@ -638,7 +930,7 @@ allow-stale-base: true`
         to: 'coord',
         subject: 'Done',
         type: 'worker_done',
-        payload: JSON.stringify({ taskId: task.id })
+        payload: workerDonePayload(task.id)
       })
 
       const result = await runPromise
@@ -661,6 +953,7 @@ allow-stale-base: true`
         coordinatorHandle: 'coord',
         pollIntervalMs: 50,
         // worktree deliberately omitted
+        workspaceRoot: createWorkspace(),
         onLog: (msg) => logs.push(msg)
       })
 
@@ -674,7 +967,7 @@ allow-stale-base: true`
         to: 'coord',
         subject: 'Done',
         type: 'worker_done',
-        payload: JSON.stringify({ taskId: task.id })
+        payload: workerDonePayload(task.id)
       })
 
       const result = await runPromise
@@ -697,7 +990,8 @@ allow-stale-base: true`
         spec: 'go',
         coordinatorHandle: 'coord',
         pollIntervalMs: 50,
-        worktree: 'wt1'
+        worktree: 'wt1',
+        workspaceRoot: createWorkspace()
       })
 
       const runPromise = coordinator.run()
@@ -710,7 +1004,7 @@ allow-stale-base: true`
         to: 'coord',
         subject: 'Done',
         type: 'worker_done',
-        payload: JSON.stringify({ taskId: task.id })
+        payload: workerDonePayload(task.id)
       })
 
       const result = await runPromise

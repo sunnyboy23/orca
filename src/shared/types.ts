@@ -518,6 +518,57 @@ export type BrowserCookieImportSummary = {
   domains: string[]
 }
 
+export type FeishuTeamBaseFieldMapping = {
+  reposTableId: string
+  capabilitiesTableId: string
+  dependenciesTableId: string
+  agentsTableId: string
+  policiesTableId: string
+}
+
+export type FeishuTeamWikiSource = {
+  spaceId: string
+  configNodeToken: string
+  projectDocsRootToken: string
+}
+
+export type FeishuLocalRepoBinding = {
+  repoName: string
+  localPath: string
+  worktreePath?: string
+  connectionId?: string | null
+}
+
+export type FeishuIntegrationSettings = {
+  enabled: boolean
+  appId: string
+  appSecret: string
+  appSecretRef?: string
+  encryptKeyRef: string
+  verificationTokenRef: string
+  webhookPublicUrl: string
+  tunnelCommand: string
+  wikiSource: FeishuTeamWikiSource
+  baseAppToken: string
+  baseViewId: string
+  baseFieldMapping: FeishuTeamBaseFieldMapping
+  repoBindings: FeishuLocalRepoBinding[]
+}
+
+export type FeishuCredentialCheckResult =
+  | {
+      ok: true
+      expiresIn: number
+    }
+  | {
+      ok: false
+      reason: 'missing_credentials' | 'network_error' | 'invalid_response' | 'feishu_error'
+      message: string
+      code?: number
+    }
+
+export type AppLanguage = 'system' | 'en' | 'zh-CN'
+
 export type BrowserCookieImportResult =
   | { ok: true; profileId: string; summary: BrowserCookieImportSummary }
   | { ok: false; reason: string }
@@ -1085,7 +1136,17 @@ export type ClassifiedError = {
     | 'rate_limited'
     | 'network_error'
     | 'unknown'
-  message: string
+      message: string
+    }
+
+export type FeishuBotConnectionState = 'idle' | 'connecting' | 'connected' | 'failed' | 'stopped'
+
+export type FeishuBotConnectionStatus = {
+  state: FeishuBotConnectionState
+  configured: boolean
+  lastConnectedAt?: number
+  lastEventAt?: number
+  lastError?: string
 }
 
 // Why: declared here as a shared shape so IPC return envelopes and renderer
@@ -1812,6 +1873,10 @@ export type GlobalSettings = {
   /** Experimental: left-sidebar Agents view with a threaded feed for agent
    *  completions, blocking states, unread state, and worktree creation events. */
   experimentalActivity: boolean
+  /** UI language preference. `system` follows the browser/Electron locale. */
+  appLanguage?: AppLanguage
+  /** Local-only Feishu integration setup. App Secret is encrypted on disk. */
+  feishuIntegration?: FeishuIntegrationSettings
   /** One-shot migration guard for defaulting the Agents view off for all
    *  users. Once set, later explicit opt-ins persist normally. */
   experimentalActivityDefaultedOffForAllUsers?: boolean

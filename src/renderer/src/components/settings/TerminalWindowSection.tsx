@@ -6,76 +6,55 @@ import { Label } from '../ui/label'
 import { ColorField, NumberField } from './SettingsFormControls'
 import { SearchableSetting } from './SearchableSetting'
 import { clampNumber } from '@/lib/terminal-theme'
+import type { SettingsTerminalMessages } from '@/i18n/settings-terminal-types'
 
 type TerminalWindowSectionProps = {
   settings: GlobalSettings
   updateSettings: (updates: Partial<GlobalSettings>) => void
+  copy: SettingsTerminalMessages
 }
 
-const COLOR_OVERRIDE_GROUPS: {
-  label: string
-  keys: { key: keyof TerminalColorOverrides; label: string; description: string }[]
+const COLOR_OVERRIDE_GROUP_KEYS: {
+  group: keyof SettingsTerminalMessages['window']['colorOverrideGroups']
+  keys: (keyof TerminalColorOverrides)[]
 }[] = [
   {
-    label: 'Base',
+    group: 'base',
     keys: [
-      { key: 'foreground', label: 'Foreground', description: 'Main text color' },
-      { key: 'background', label: 'Background', description: 'Terminal background color' },
-      { key: 'cursor', label: 'Cursor', description: 'Cursor color' },
-      {
-        key: 'cursorAccent',
-        label: 'Cursor Text',
-        description: 'Color of text under the cursor (block cursor)'
-      },
-      {
-        key: 'selectionBackground',
-        label: 'Selection Background',
-        description: 'Background color of selected text'
-      },
-      {
-        key: 'selectionForeground',
-        label: 'Selection Foreground',
-        description: 'Text color of selected text'
-      },
-      {
-        key: 'bold',
-        label: 'Bold Text',
-        description: 'Color for bold text. Falls back to the normal color if not set.'
-      }
+      'foreground',
+      'background',
+      'cursor',
+      'cursorAccent',
+      'selectionBackground',
+      'selectionForeground',
+      'bold'
     ]
   },
   {
-    label: 'ANSI Normal',
-    keys: [
-      { key: 'black', label: 'Black', description: 'ANSI black color' },
-      { key: 'red', label: 'Red', description: 'ANSI red color' },
-      { key: 'green', label: 'Green', description: 'ANSI green color' },
-      { key: 'yellow', label: 'Yellow', description: 'ANSI yellow color' },
-      { key: 'blue', label: 'Blue', description: 'ANSI blue color' },
-      { key: 'magenta', label: 'Magenta', description: 'ANSI magenta color' },
-      { key: 'cyan', label: 'Cyan', description: 'ANSI cyan color' },
-      { key: 'white', label: 'White', description: 'ANSI white color' }
-    ]
+    group: 'ansiNormal',
+    keys: ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white']
   },
   {
-    label: 'ANSI Bright',
+    group: 'ansiBright',
     keys: [
-      { key: 'brightBlack', label: 'Bright Black', description: 'ANSI bright black color' },
-      { key: 'brightRed', label: 'Bright Red', description: 'ANSI bright red color' },
-      { key: 'brightGreen', label: 'Bright Green', description: 'ANSI bright green color' },
-      { key: 'brightYellow', label: 'Bright Yellow', description: 'ANSI bright yellow color' },
-      { key: 'brightBlue', label: 'Bright Blue', description: 'ANSI bright blue color' },
-      { key: 'brightMagenta', label: 'Bright Magenta', description: 'ANSI bright magenta color' },
-      { key: 'brightCyan', label: 'Bright Cyan', description: 'ANSI bright cyan color' },
-      { key: 'brightWhite', label: 'Bright White', description: 'ANSI bright white color' }
+      'brightBlack',
+      'brightRed',
+      'brightGreen',
+      'brightYellow',
+      'brightBlue',
+      'brightMagenta',
+      'brightCyan',
+      'brightWhite'
     ]
   }
 ]
 
 export function TerminalWindowSection({
   settings,
-  updateSettings
+  updateSettings,
+  copy
 }: TerminalWindowSectionProps): React.JSX.Element {
+  const windowCopy = copy.window
   const [colorOverridesExpanded, setColorOverridesExpanded] = useState(false)
   // Why: windowBackgroundBlur is only read by createMainWindow() at startup
   // (macOS vibrancy / Windows acrylic both require window creation options),
@@ -111,24 +90,25 @@ export function TerminalWindowSection({
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h3 className="text-sm font-semibold">Window</h3>
-        <p className="text-xs text-muted-foreground">Window appearance and background settings.</p>
+        <h3 className="text-sm font-semibold">{copy.sections.window.title}</h3>
+        <p className="text-xs text-muted-foreground">{copy.sections.window.description}</p>
       </div>
 
       <SearchableSetting
-        title="Background Opacity"
-        description="Controls the transparency of the terminal background."
-        keywords={['opacity', 'transparency', 'background', 'alpha']}
+        title={windowCopy.backgroundOpacity.title}
+        description={windowCopy.backgroundOpacity.description}
+        keywords={windowCopy.backgroundOpacity.keywords}
       >
         <NumberField
-          label="Background Opacity"
-          description="Controls the transparency of the terminal background. 1 is fully opaque, 0 is fully transparent."
+          label={windowCopy.backgroundOpacity.title}
+          description={windowCopy.backgroundOpacity.rowDescription}
           value={settings.terminalBackgroundOpacity ?? 1}
           defaultValue={1}
           min={0}
           max={1}
           step={0.05}
           suffix="0 to 1"
+          defaultValueLabel={copy.formControls.defaultValue}
           onChange={(value) =>
             updateSettings({ terminalBackgroundOpacity: clampNumber(value, 0, 1) })
           }
@@ -136,17 +116,15 @@ export function TerminalWindowSection({
       </SearchableSetting>
 
       <SearchableSetting
-        title="Window Blur"
-        description="Apply background blur to the terminal window. Requires restart."
-        keywords={['window', 'blur', 'background', 'transparency', 'vibrancy']}
+        title={windowCopy.blur.title}
+        description={windowCopy.blur.description}
+        keywords={windowCopy.blur.keywords}
         className="space-y-3 py-2"
       >
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-0.5">
-            <Label>Window Blur</Label>
-            <p className="text-xs text-muted-foreground">
-              Apply background blur to the terminal window. Requires restart.
-            </p>
+            <Label>{windowCopy.blur.title}</Label>
+            <p className="text-xs text-muted-foreground">{windowCopy.blur.description}</p>
           </div>
           <button
             role="switch"
@@ -168,11 +146,9 @@ export function TerminalWindowSection({
           <div className="flex items-center justify-between gap-3 rounded-md border border-yellow-500/50 bg-yellow-500/10 px-3 py-2.5">
             <div className="min-w-0 flex-1 space-y-0.5">
               <p className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
-                Restart required
+                {windowCopy.restartRequired}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Restart Orca to apply the window blur change.
-              </p>
+              <p className="text-xs text-muted-foreground">{windowCopy.restartDescription}</p>
             </div>
             <Button
               size="sm"
@@ -182,59 +158,59 @@ export function TerminalWindowSection({
               onClick={() => void handleRelaunch()}
             >
               <RotateCw className={`size-3 ${relaunchingBlur ? 'animate-spin' : ''}`} />
-              {relaunchingBlur ? 'Restarting…' : 'Restart now'}
+              {relaunchingBlur ? windowCopy.restarting : windowCopy.restartNow}
             </Button>
           </div>
         ) : null}
       </SearchableSetting>
 
       <SearchableSetting
-        title="Horizontal Padding"
-        description="Horizontal padding around the terminal grid in pixels."
-        keywords={['padding', 'horizontal', 'spacing', 'margin']}
+        title={windowCopy.horizontalPadding.title}
+        description={windowCopy.horizontalPadding.description}
+        keywords={windowCopy.horizontalPadding.keywords}
       >
         <NumberField
-          label="Horizontal Padding"
-          description="Horizontal padding around the terminal grid in pixels."
+          label={windowCopy.horizontalPadding.title}
+          description={windowCopy.horizontalPadding.description ?? ''}
           value={settings.terminalPaddingX ?? 4}
           defaultValue={4}
           min={0}
           max={512}
           step={1}
           suffix="px"
+          defaultValueLabel={copy.formControls.defaultValue}
           onChange={(value) => updateSettings({ terminalPaddingX: Math.max(0, value) })}
         />
       </SearchableSetting>
 
       <SearchableSetting
-        title="Vertical Padding"
-        description="Vertical padding around the terminal grid in pixels."
-        keywords={['padding', 'vertical', 'spacing', 'margin']}
+        title={windowCopy.verticalPadding.title}
+        description={windowCopy.verticalPadding.description}
+        keywords={windowCopy.verticalPadding.keywords}
       >
         <NumberField
-          label="Vertical Padding"
-          description="Vertical padding around the terminal grid in pixels."
+          label={windowCopy.verticalPadding.title}
+          description={windowCopy.verticalPadding.description ?? ''}
           value={settings.terminalPaddingY ?? 4}
           defaultValue={4}
           min={0}
           max={512}
           step={1}
           suffix="px"
+          defaultValueLabel={copy.formControls.defaultValue}
           onChange={(value) => updateSettings({ terminalPaddingY: Math.max(0, value) })}
         />
       </SearchableSetting>
 
       <SearchableSetting
-        title="Hide Mouse While Typing"
-        description="Hide the mouse cursor when typing in the terminal."
-        keywords={['mouse', 'hide', 'typing', 'cursor']}
+        title={windowCopy.hideMouse.title}
+        description={windowCopy.hideMouse.description}
+        keywords={windowCopy.hideMouse.keywords}
         className="flex items-center justify-between gap-4 py-2"
       >
         <div className="space-y-0.5">
-          <Label>Hide Mouse While Typing</Label>
-          <p className="text-xs text-muted-foreground">
-            Hide the mouse cursor when typing in the terminal.
-          </p>
+          <Label>{windowCopy.hideMouse.title}</Label>
+          <p className="text-xs text-muted-foreground">{windowCopy.hideMouse.description}</p>
         </div>
         <button
           role="switch"
@@ -259,9 +235,9 @@ export function TerminalWindowSection({
       </SearchableSetting>
 
       <SearchableSetting
-        title="Color Overrides"
-        description="Override individual terminal colors."
-        keywords={['color', 'override', 'ansi', 'palette', 'theme']}
+        title={windowCopy.colorOverrides.title}
+        description={windowCopy.colorOverrides.description}
+        keywords={windowCopy.colorOverrides.keywords}
         className="space-y-3"
       >
         <div className="space-y-2">
@@ -272,7 +248,7 @@ export function TerminalWindowSection({
             <span className={`transition-transform ${colorOverridesExpanded ? 'rotate-90' : ''}`}>
               ▶
             </span>
-            Color Overrides
+            {windowCopy.colorOverrides.title}
           </button>
           <div
             className={`grid overflow-hidden transition-all duration-300 ease-out ${
@@ -280,22 +256,24 @@ export function TerminalWindowSection({
             }`}
           >
             <div className="min-h-0 space-y-4">
-              {COLOR_OVERRIDE_GROUPS.map((group) => (
-                <div key={group.label} className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground">{group.label}</p>
+              {COLOR_OVERRIDE_GROUP_KEYS.map((group) => (
+                <div key={group.group} className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    {windowCopy.colorOverrideGroups[group.group]}
+                  </p>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {group.keys.map((item) => (
+                    {group.keys.map((key) => (
                       <ColorField
-                        key={item.key}
-                        label={item.label}
-                        description={item.description}
-                        value={settings.terminalColorOverrides?.[item.key] ?? ''}
+                        key={key}
+                        label={windowCopy.colorFields[key].label}
+                        description={windowCopy.colorFields[key].description}
+                        value={settings.terminalColorOverrides?.[key] ?? ''}
                         fallback=""
                         onChange={(value) =>
                           updateSettings({
                             terminalColorOverrides: {
                               ...settings.terminalColorOverrides,
-                              [item.key]: value || undefined
+                              [key]: value || undefined
                             }
                           })
                         }
@@ -309,7 +287,7 @@ export function TerminalWindowSection({
                 size="sm"
                 onClick={() => updateSettings({ terminalColorOverrides: undefined })}
               >
-                Reset all color overrides
+                {windowCopy.resetColorOverrides}
               </Button>
             </div>
           </div>

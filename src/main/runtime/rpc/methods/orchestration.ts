@@ -82,7 +82,11 @@ const TaskCreateParams = z.object({
   spec: requiredString('Missing --spec'),
   deps: OptionalString,
   parent: OptionalString,
-  callerTerminalHandle: OptionalString
+  callerTerminalHandle: OptionalString,
+  runId: OptionalString,
+  repoName: OptionalString,
+  worktree: OptionalString,
+  artifactDir: OptionalString
 })
 
 const TaskListParams = z.object({
@@ -140,6 +144,14 @@ const ResetParams = z.object({
   all: OptionalBoolean,
   tasks: OptionalBoolean,
   messages: OptionalBoolean
+})
+
+const RunListParams = z.object({
+  limit: OptionalFiniteNumber
+})
+
+const RunDetailParams = z.object({
+  runId: requiredString('Missing --run-id')
 })
 
 export const ORCHESTRATION_METHODS: RpcMethod[] = [
@@ -330,7 +342,11 @@ export const ORCHESTRATION_METHODS: RpcMethod[] = [
         spec: params.spec,
         deps,
         parentId: params.parent,
-        createdByTerminalHandle: params.callerTerminalHandle
+        createdByTerminalHandle: params.callerTerminalHandle,
+        runId: params.runId,
+        repoName: params.repoName,
+        worktreeSelector: params.worktree,
+        artifactDir: params.artifactDir
       })
       return { task }
     }
@@ -564,6 +580,33 @@ export const ORCHESTRATION_METHODS: RpcMethod[] = [
   }),
 
   ...ORCHESTRATION_GATE_METHODS,
+
+  defineMethod({
+    name: 'orchestration.runList',
+    params: RunListParams,
+    handler: (params, { runtime }) => {
+      const db = runtime.getOrchestrationDb()
+      const runs = db.listCoordinatorRuns(params.limit ?? 50)
+      return { runs, count: runs.length }
+    }
+  }),
+
+  defineMethod({
+    name: 'orchestration.runDetail',
+    params: RunDetailParams,
+    handler: (params, { runtime }) => {
+      const db = runtime.getOrchestrationDb()
+      const run = db.getCoordinatorRun(params.runId)
+      if (!run) {
+        throw new Error(`Coordinator run not found: ${params.runId}`)
+      }
+      const tasks = db.listTasksWithDispatch({ runId: params.runId })
+      const taskIds = new Set(tasks.map((task) => task.id))
+      const gates = db.listGates().filter((gate) => taskIds.has(gate.task_id))
+      const artifacts = db.listArtifactManifests({ runId: params.runId })
+      return { run, tasks, gates, artifacts }
+    }
+  }),
 
   defineMethod({
     name: 'orchestration.reset',
