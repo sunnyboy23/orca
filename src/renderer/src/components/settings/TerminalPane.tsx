@@ -20,11 +20,7 @@ import { Input } from '../ui/input'
 import { Separator } from '../ui/separator'
 import { ToggleGroup, ToggleGroupItem } from '../ui/toggle-group'
 import { Minus, Plus } from 'lucide-react'
-import {
-  clampNumber,
-  resolveEffectiveTerminalAppearance,
-  resolvePaneStyleOptions
-} from '@/lib/terminal-theme'
+import { clampNumber, resolvePaneStyleOptions } from '@/lib/terminal-theme'
 import {
   FontAutocomplete,
   NumberField,
@@ -114,15 +110,6 @@ export function TerminalPane({
   const windowsPowerShellImplementationSearchEntry =
     getTerminalWindowsPowerShellImplementationSearchEntry(copy)
   const rightClickToPasteSearchEntry = getTerminalRightClickToPasteSearchEntry(copy)
-
-  const darkPreviewAppearance = resolveEffectiveTerminalAppearance(
-    { ...settings, theme: 'dark' },
-    systemPrefersDark
-  )
-  const lightPreviewAppearance = resolveEffectiveTerminalAppearance(
-    { ...settings, theme: 'light' },
-    systemPrefersDark
-  )
   const paneStyleOptions = resolvePaneStyleOptions(settings)
   const detectedLayout = useDetectedOptionAsAlt()
   const detectedLayoutLabel =
@@ -653,8 +640,6 @@ export function TerminalPane({
         themeSearchDark={themeSearchDark}
         setThemeSearchDark={setThemeSearchDark}
         updateSettings={updateSettings}
-        previewProps={paneStyleOptions}
-        darkPreviewAppearance={darkPreviewAppearance}
         copy={copy}
       />
     ) : null,
@@ -665,8 +650,6 @@ export function TerminalPane({
         themeSearchLight={themeSearchLight}
         setThemeSearchLight={setThemeSearchLight}
         updateSettings={updateSettings}
-        previewProps={paneStyleOptions}
-        lightPreviewAppearance={lightPreviewAppearance}
         copy={copy}
       />
     ) : null,

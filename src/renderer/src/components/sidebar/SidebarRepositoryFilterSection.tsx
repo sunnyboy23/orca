@@ -84,7 +84,7 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
     [filterRepoIds, setFilterRepoIds]
   )
 
-  const handleRemoveRepo = useCallback(
+  const handleRemoveProject = useCallback(
     (repoId: string) => {
       setFilterRepoIds(filterRepoIds.filter((id) => id !== repoId))
     },
@@ -102,7 +102,7 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
         if (lastRepo) {
           event.preventDefault()
           event.stopPropagation()
-          handleRemoveRepo(lastRepo.id)
+          handleRemoveProject(lastRepo.id)
         }
         return
       }
@@ -124,7 +124,7 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
     },
     [
       availableRepos,
-      handleRemoveRepo,
+      handleRemoveProject,
       handleSelectRepo,
       highlightedRepoId,
       matchingAvailableRepos,
@@ -153,7 +153,7 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
       >
         <SelectedProjectPills
           selectedRepos={selectedRepos}
-          onRemoveRepo={handleRemoveRepo}
+          onRemoveProject={handleRemoveProject}
           copy={copy}
         />
         <CommandInput
@@ -201,11 +201,11 @@ const SidebarRepositoryFilterSection = React.memo(function SidebarRepositoryFilt
 
 function SelectedProjectPills({
   selectedRepos,
-  onRemoveRepo,
+  onRemoveProject,
   copy
 }: {
   selectedRepos: Repo[]
-  onRemoveRepo: (repoId: string) => void
+  onRemoveProject: (repoId: string) => void
   copy: WorkspaceMenuCopy
 }) {
   if (selectedRepos.length === 0) {
@@ -233,7 +233,7 @@ function SelectedProjectPills({
             aria-label={copy.removeProjectFilter(repo.displayName)}
             className="-mr-1 size-4 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onRemoveRepo(repo.id)}
+            onClick={() => onRemoveProject(repo.id)}
           >
             <X className="size-2.5" strokeWidth={2.5} />
           </Button>

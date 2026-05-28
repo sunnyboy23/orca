@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Terminal } from 'lucide-react'
+import { RefreshCw, Terminal } from 'lucide-react'
 import { IntegrationStatusPill } from '../integration-status-pill'
 import { OnboardingInlineCommandTerminal } from '../onboarding/OnboardingInlineCommandTerminal'
 import { Button } from '../ui/button'
@@ -55,12 +55,6 @@ export function AgentSkillSetupPanel({
   const { messages } = useI18n()
   const [terminalOpen, setTerminalOpen] = useState(false)
   const [preInstallNoticeVisible, setPreInstallNoticeVisible] = useState(Boolean(preInstallNotice))
-
-  useEffect(() => {
-    if (installed) {
-      setTerminalOpen(false)
-    }
-  }, [installed])
 
   useEffect(() => {
     if (!preInstallNotice) {
@@ -130,9 +124,11 @@ export function AgentSkillSetupPanel({
             type="button"
             variant="ghost"
             size="sm"
+            className="gap-1.5"
             onClick={() => void onRecheck()}
             disabled={loading}
           >
+            <RefreshCw className={cn('size-3.5', loading && 'animate-spin')} />
             {messages.common.recheck}
           </Button>
         ) : null}
@@ -186,7 +182,7 @@ export function AgentSkillSetupPanel({
           ) : null}
         </div>
       </div>
-      {!installed && terminalOpen ? (
+      {terminalOpen ? (
         <div className={cn(variant === 'card' ? 'px-5 pb-5' : 'mt-2')}>
           <OnboardingInlineCommandTerminal
             worktreeId={terminalWorktreeId}

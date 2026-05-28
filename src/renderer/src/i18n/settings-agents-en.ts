@@ -59,6 +59,24 @@ export const agentsEn: AgentsMessages = {
         'grok'
       ]
     },
+    statusHooks: {
+      title: 'Agent status hooks',
+      description:
+        'Shows working, waiting, and done states in Orca. Turn off to remove Orca-managed hooks and stop reinstalling them.',
+      keywords: [
+        'hooks',
+        'status',
+        'working',
+        'waiting',
+        'done',
+        'remove',
+        'restore',
+        'settings',
+        'config',
+        'claude',
+        'codex'
+      ]
+    },
     awake: {
       title: 'Keep computer awake while agents are working',
       description:
@@ -80,6 +98,11 @@ export const agentsEn: AgentsMessages = {
       'Keeps this computer and display awake while agents are working. Orca also asks this device to stay awake when the lid is closed, subject to its power policy.',
     windowsDescription:
       "Keeps this computer and display awake while agents are working. Lid-close behavior follows this device's power settings."
+  },
+  statusHooks: {
+    title: 'Agent status hooks',
+    description:
+      'Shows working, waiting, and done states in Orca. Turn off to remove Orca-managed hooks and stop reinstalling them.'
   },
   row: {
     command: 'Command',

@@ -28,6 +28,7 @@ export function getAgentsPaneSearchEntries(
   return [
     messages.search.agents,
     messages.search.defaultAgent,
+    messages.search.statusHooks,
     {
       title: messages.search.awake.title,
       description: getAgentAwakeDescription(messages, resolvedUserAgent),

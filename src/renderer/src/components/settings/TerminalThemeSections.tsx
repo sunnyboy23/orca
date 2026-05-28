@@ -1,16 +1,9 @@
 import type { Dispatch, SetStateAction } from 'react'
 import type { GlobalSettings } from '../../../../shared/types'
-import type { EffectiveTerminalAppearance } from '@/lib/terminal-theme'
 import { ColorField, ThemePicker } from './SettingsFormControls'
 import { SearchableSetting } from './SearchableSetting'
-import { TerminalThemePreview } from './TerminalThemePreview'
+import { TerminalSettingsPreview } from './TerminalSettingsPreview'
 import type { SettingsTerminalMessages } from '@/i18n/settings-terminal-types'
-
-type ThemePreviewProps = {
-  dividerThicknessPx: number
-  inactivePaneOpacity: number
-  activePaneOpacity: number
-}
 
 type DarkTerminalThemeSectionProps = {
   settings: GlobalSettings
@@ -18,8 +11,7 @@ type DarkTerminalThemeSectionProps = {
   themeSearchDark: string
   setThemeSearchDark: Dispatch<SetStateAction<string>>
   updateSettings: (updates: Partial<GlobalSettings>) => void
-  previewProps: ThemePreviewProps
-  darkPreviewAppearance: EffectiveTerminalAppearance
+  previewFontFamily?: string | null
   copy: SettingsTerminalMessages
 }
 
@@ -28,8 +20,7 @@ type LightTerminalThemeSectionProps = {
   themeSearchLight: string
   setThemeSearchLight: Dispatch<SetStateAction<string>>
   updateSettings: (updates: Partial<GlobalSettings>) => void
-  previewProps: ThemePreviewProps
-  lightPreviewAppearance: EffectiveTerminalAppearance
+  previewFontFamily?: string | null
   copy: SettingsTerminalMessages
 }
 
@@ -39,8 +30,7 @@ export function DarkTerminalThemeSection({
   themeSearchDark,
   setThemeSearchDark,
   updateSettings,
-  previewProps,
-  darkPreviewAppearance,
+  previewFontFamily = null,
   copy
 }: DarkTerminalThemeSectionProps): React.JSX.Element {
   const darkThemeCopy = copy.theme.darkTheme
@@ -85,7 +75,7 @@ export function DarkTerminalThemeSection({
         </SearchableSetting>
       </div>
 
-      <TerminalThemePreview
+      <TerminalSettingsPreview
         title={copy.theme.darkPreviewTitle}
         description={
           settings.theme === 'system'
@@ -94,10 +84,10 @@ export function DarkTerminalThemeSection({
                 settings.theme === 'dark' ? copy.theme.mode.dark : copy.theme.mode.light
               )
         }
-        appearance={darkPreviewAppearance}
-        dividerThicknessPx={previewProps.dividerThicknessPx}
-        inactivePaneOpacity={previewProps.inactivePaneOpacity}
-        activePaneOpacity={previewProps.activePaneOpacity}
+        settings={settings}
+        systemPrefersDark={systemPrefersDark}
+        previewFontFamily={previewFontFamily}
+        modeOverride="dark"
       />
     </section>
   )
@@ -108,8 +98,7 @@ export function LightTerminalThemeSection({
   themeSearchLight,
   setThemeSearchLight,
   updateSettings,
-  previewProps,
-  lightPreviewAppearance,
+  previewFontFamily = null,
   copy
 }: LightTerminalThemeSectionProps): React.JSX.Element {
   const separateLightCopy = copy.theme.separateLight
@@ -148,15 +137,9 @@ export function LightTerminalThemeSection({
         </button>
       </SearchableSetting>
 
-      <div
-        className={`grid overflow-hidden transition-all duration-300 ease-out ${
-          settings.terminalUseSeparateLightTheme
-            ? 'grid-rows-[1fr] opacity-100'
-            : 'grid-rows-[0fr] opacity-0'
-        }`}
-      >
-        <div className="min-h-0">
-          <div className="grid gap-6 pt-2 xl:grid-cols-[minmax(0,1fr)_360px]">
+      {settings.terminalUseSeparateLightTheme ? (
+        <div className="grid overflow-hidden pt-2">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
             <div className="space-y-6">
               <div className="space-y-1">
                 <h3 className="text-sm font-semibold">{copy.sections.lightTheme.title}</h3>
@@ -196,17 +179,17 @@ export function LightTerminalThemeSection({
               </SearchableSetting>
             </div>
 
-            <TerminalThemePreview
+            <TerminalSettingsPreview
               title={copy.theme.lightPreviewTitle}
               description={copy.theme.lightPreviewDescription}
-              appearance={lightPreviewAppearance}
-              dividerThicknessPx={previewProps.dividerThicknessPx}
-              inactivePaneOpacity={previewProps.inactivePaneOpacity}
-              activePaneOpacity={previewProps.activePaneOpacity}
+              settings={settings}
+              systemPrefersDark={false}
+              previewFontFamily={previewFontFamily}
+              modeOverride="light"
             />
           </div>
         </div>
-      </div>
+      ) : null}
     </section>
   )
 }

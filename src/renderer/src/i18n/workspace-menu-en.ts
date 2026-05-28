@@ -59,6 +59,8 @@ export const enWorkspaceMenuMessages = {
       noDeletableWorkspacesSelected: 'No deletable workspaces selected',
       staleWorkspaceList: 'Refresh Space and try again if the workspace list looks stale.',
       deleteChangedFilesHint: 'It has changed files. Use Force Delete to delete it anyway.',
+      deleteOrphanedDirectoryHint:
+        'Git already forgot this workspace, but its directory is still on disk. Use Force Delete to remove the orphaned directory.',
       openIn: 'Open in',
       openInBrowser: 'Open in Browser',
       copyAddress: (address: string) => `Copy ${address}`,

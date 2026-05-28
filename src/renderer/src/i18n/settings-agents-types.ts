@@ -4,6 +4,7 @@ export type AgentsMessages = {
   search: {
     agents: SettingFieldCopy
     defaultAgent: SettingFieldCopy
+    statusHooks: SettingFieldCopy
     awake: SettingFieldCopy & {
       description: string
       windowsDescription: string
@@ -19,6 +20,10 @@ export type AgentsMessages = {
     title: string
     description: string
     windowsDescription: string
+  }
+  statusHooks: {
+    title: string
+    description: string
   }
   row: {
     command: string

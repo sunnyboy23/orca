@@ -228,6 +228,7 @@ export type WorkspaceMessages = {
     noDeletableWorkspacesSelected: string
     staleWorkspaceList: string
     deleteChangedFilesHint: string
+    deleteOrphanedDirectoryHint: string
     openIn: string
     openInBrowser: string
     copyAddress: (address: string) => string

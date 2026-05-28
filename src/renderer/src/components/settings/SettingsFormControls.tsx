@@ -264,6 +264,11 @@ type FontAutocompleteProps = {
   onChange: (value: string) => void
   placeholder?: string
   copy?: SettingsTerminalMessages['formControls']
+  /** Fires with whichever option the user is currently highlighting in the
+   *  dropdown (via mouse hover or keyboard arrow), or null when nothing is
+   *  highlighted / the dropdown is closed. Lets a consumer show a live
+   *  preview of the font without committing the selection. */
+  onPreviewFontFamily?: (font: string | null) => void
 }
 
 export function ThemePicker({
@@ -442,7 +447,8 @@ export function FontAutocomplete({
   suggestions,
   onChange,
   placeholder = 'SF Mono',
-  copy = terminalEn.formControls
+  copy = terminalEn.formControls,
+  onPreviewFontFamily
 }: FontAutocompleteProps): React.JSX.Element {
   const [query, setQuery] = useState(value)
   const [prevValue, setPrevValue] = useState(value)
@@ -518,6 +524,31 @@ export function FontAutocomplete({
 
     optionRefs.current.get(highlightedFont)?.scrollIntoView({ block: 'nearest' })
   }, [filteredSuggestions, highlightedIndex, open])
+
+  // Why: notify the consumer of the currently-highlighted font so it can
+  // render a live preview. Closing the dropdown or moving past all options
+  // clears the preview back to the committed value.
+  useEffect(() => {
+    if (!onPreviewFontFamily) {
+      return
+    }
+    if (!open || highlightedIndex < 0) {
+      onPreviewFontFamily(null)
+      return
+    }
+    onPreviewFontFamily(filteredSuggestions[highlightedIndex] ?? null)
+  }, [filteredSuggestions, highlightedIndex, onPreviewFontFamily, open])
+
+  // Why: clear the live preview if this autocomplete is unmounted while a
+  // hovered preview is still active (e.g. the section is filtered out by
+  // settings search) — otherwise the consumer keeps showing a stale font.
+  useEffect(
+    () => () => {
+      onPreviewFontFamily?.(null)
+    },
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+    []
+  )
 
   const commitValue = (nextValue: string): void => {
     setQuery(nextValue)

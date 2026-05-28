@@ -9,7 +9,7 @@ import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { cn } from '@/lib/utils'
 import { AgentAwakeSetting } from './AgentAwakeSetting'
-import { SettingsBadge, SettingsSubsectionHeader } from './SettingsFormControls'
+import { SettingsBadge, SettingsSubsectionHeader, SettingsSwitchRow } from './SettingsFormControls'
 
 export { AGENTS_PANE_SEARCH_ENTRIES } from './agents-search'
 
@@ -323,6 +323,8 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
         </div>
       </section>
 
+      <AgentStatusHooksSetting settings={settings} updateSettings={updateSettings} />
+
       <AgentAwakeSetting settings={settings} updateSettings={updateSettings} />
 
       {detectedAgents.length > 0 && (
@@ -411,5 +413,29 @@ export function AgentsPane({ settings, updateSettings }: AgentsPaneProps): React
         </div>
       )}
     </div>
+  )
+}
+
+export function AgentStatusHooksSetting({
+  settings,
+  updateSettings
+}: AgentsPaneProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.agents.statusHooks
+  const enabled = settings.agentStatusHooksEnabled !== false
+  return (
+    <section className="space-y-3">
+      <SettingsSwitchRow
+        label={copy.title}
+        description={copy.description}
+        checked={enabled}
+        onChange={() =>
+          updateSettings({
+            agentStatusHooksEnabled: !enabled
+          })
+        }
+        ariaLabel={copy.title}
+      />
+    </section>
   )
 }

@@ -80,6 +80,28 @@ export const agentsZhCN: AgentsMessages = {
         '新建工作区'
       ]
     },
+    statusHooks: {
+      title: 'Agent 状态 Hook',
+      description:
+        '在 Orca 中显示 Agent 的工作中、等待中和已完成状态。关闭后会移除 Orca 管理的 Hook，并停止自动重新安装。',
+      keywords: [
+        'hooks',
+        'hook',
+        'status',
+        'working',
+        'waiting',
+        'done',
+        'claude',
+        'codex',
+        '状态',
+        '工作中',
+        '等待',
+        '完成',
+        '配置',
+        '移除',
+        '恢复'
+      ]
+    },
     awake: {
       title: 'Agent 工作时保持电脑唤醒',
       description:
@@ -99,6 +121,11 @@ export const agentsZhCN: AgentsMessages = {
     description:
       'Agent 工作时保持电脑和屏幕唤醒。Orca 也会请求设备在合盖时保持唤醒，但最终仍受系统电源策略限制。',
     windowsDescription: 'Agent 工作时保持电脑和屏幕唤醒。合盖行为遵循这台设备的电源设置。'
+  },
+  statusHooks: {
+    title: 'Agent 状态 Hook',
+    description:
+      '在 Orca 中显示 Agent 的工作中、等待中和已完成状态。关闭后会移除 Orca 管理的 Hook，并停止自动重新安装。'
   },
   row: {
     command: '命令',

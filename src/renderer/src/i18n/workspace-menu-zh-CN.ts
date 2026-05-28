@@ -59,6 +59,8 @@ export const zhCNWorkspaceMenuMessages = {
       noDeletableWorkspacesSelected: '没有可删除的工作区',
       staleWorkspaceList: '如果工作区列表看起来不是最新的，请刷新 Space 后重试。',
       deleteChangedFilesHint: '这个工作区有文件改动。如确认要删除，请使用强制删除。',
+      deleteOrphanedDirectoryHint:
+        'Git 已不再记录这个工作区，但目录还留在磁盘上。请使用强制删除移除这个孤儿目录。',
       openIn: '打开方式',
       openInBrowser: '在浏览器中打开',
       copyAddress: (address: string) => `复制 ${address}`,

@@ -140,11 +140,23 @@ const AskParams = z.object({
   from: OptionalString
 })
 
-const ResetParams = z.object({
-  all: OptionalBoolean,
-  tasks: OptionalBoolean,
-  messages: OptionalBoolean
-})
+const ResetParams = z
+  .object({
+    all: OptionalBoolean,
+    tasks: OptionalBoolean,
+    messages: OptionalBoolean
+  })
+  .superRefine((params, ctx) => {
+    const selectedScopeCount = [params.all, params.tasks, params.messages].filter(
+      (scope) => scope === true
+    ).length
+    if (selectedScopeCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Choose exactly one reset scope: --all, --tasks, or --messages.'
+      })
+    }
+  })
 
 const RunListParams = z.object({
   limit: OptionalFiniteNumber
@@ -625,8 +637,7 @@ export const ORCHESTRATION_METHODS: RpcMethod[] = [
         db.resetMessages()
         return { reset: 'messages' }
       }
-      db.resetAll()
-      return { reset: 'all' }
+      throw new Error('Invalid reset scope')
     }
   })
 ]

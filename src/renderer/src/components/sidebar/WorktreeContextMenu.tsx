@@ -17,6 +17,7 @@ import {
   Copy,
   Bell,
   BellOff,
+  CircleX,
   Moon,
   Pencil,
   Pin,
@@ -24,7 +25,9 @@ import {
   Kanban,
   Trash2,
   Unlink,
-  Workflow
+  Workflow,
+  FolderInput,
+  FolderPlus
 } from 'lucide-react'
 import { useAppStore } from '@/store'
 import { useRepoById, useRepoMap, useWorktreeMap } from '@/store/selectors'
@@ -40,6 +43,7 @@ import { getLineageRenderInfo } from './worktree-list-groups'
 import { getWorkspaceStatus, getWorkspaceStatusVisualMeta } from './workspace-status'
 import { WorktreeOpenInSubMenu } from './WorktreeOpenInMenu'
 import { useI18n } from '@/i18n'
+import { ProjectGroupNameDialog } from './ProjectGroupNameDialog'
 
 type Props = {
   worktree: Worktree
@@ -191,11 +195,15 @@ const WorktreeContextMenu = React.memo(function WorktreeContextMenu({
   const copy = messages.workspace.menu
   const workspaceStatuses = useAppStore((s) => s.workspaceStatuses)
   const openModal = useAppStore((s) => s.openModal)
+  const projectGroups = useAppStore((s) => s.projectGroups)
+  const createProjectGroup = useAppStore((s) => s.createProjectGroup)
+  const moveProjectToGroup = useAppStore((s) => s.moveProjectToGroup)
   const repo = useRepoById(worktree.repoId)
   const deleteState = useAppStore((s) => s.deleteStateByWorktreeId[worktree.id])
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuPoint, setMenuPoint] = useState({ x: 0, y: 0 })
   const [contextWorktrees, setContextWorktrees] = useState<readonly Worktree[]>(selectedWorktrees)
+  const [createGroupDialogOpen, setCreateGroupDialogOpen] = useState(false)
   const isDeleting = deleteState?.isDeleting ?? false
   const isFolder = repo ? isFolderRepo(repo) : false
   const repoMap = useRepoMap()
@@ -283,6 +291,43 @@ const WorktreeContextMenu = React.memo(function WorktreeContextMenu({
   const handleTogglePin = useCallback(() => {
     updateWorktreeMeta(worktree.id, { isPinned: !worktree.isPinned })
   }, [worktree.id, worktree.isPinned, updateWorktreeMeta])
+
+  const handleCreateGroupFromRepo = useCallback(() => {
+    if (!repo) {
+      return
+    }
+    setCreateGroupDialogOpen(true)
+  }, [repo])
+
+  const handleSubmitNewProjectGroup = useCallback(
+    async (name: string) => {
+      if (!repo) {
+        return
+      }
+      const group = await createProjectGroup(name)
+      if (group) {
+        await moveProjectToGroup(repo.id, group.id)
+      }
+    },
+    [createProjectGroup, moveProjectToGroup, repo]
+  )
+
+  const handleMoveProjectToGroup = useCallback(
+    (groupId: string) => {
+      if (!repo || repo.projectGroupId === groupId) {
+        return
+      }
+      void moveProjectToGroup(repo.id, groupId)
+    },
+    [moveProjectToGroup, repo]
+  )
+
+  const handleRemoveProjectFromGroup = useCallback(() => {
+    if (!repo) {
+      return
+    }
+    void moveProjectToGroup(repo.id, null)
+  }, [moveProjectToGroup, repo])
 
   const handleAssignWorkspaceStatus = useCallback(
     (status: string) => {
@@ -483,6 +528,40 @@ const WorktreeContextMenu = React.memo(function WorktreeContextMenu({
                 )}
                 {worktree.isUnread ? copy.markRead : copy.markUnread}
               </DropdownMenuItem>
+              {repo ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={handleCreateGroupFromRepo} disabled={isDeleting}>
+                    <FolderPlus className="size-3.5" />
+                    New group from project
+                  </DropdownMenuItem>
+                  {projectGroups.length > 0 ? (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger disabled={isDeleting}>
+                        <FolderInput className="size-3.5" />
+                        Move to group
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {projectGroups.map((group) => (
+                          <DropdownMenuItem
+                            key={group.id}
+                            disabled={repo.projectGroupId === group.id}
+                            onSelect={() => handleMoveProjectToGroup(group.id)}
+                          >
+                            <span className="max-w-48 truncate">{group.name}</span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  ) : null}
+                  {repo.projectGroupId ? (
+                    <DropdownMenuItem onSelect={handleRemoveProjectFromGroup} disabled={isDeleting}>
+                      <CircleX className="size-3.5" />
+                      Remove from group
+                    </DropdownMenuItem>
+                  ) : null}
+                </>
+              ) : null}
               <DropdownMenuSeparator />
               {(validParentWorktreeId || lineage) && (
                 <>
@@ -589,6 +668,15 @@ const WorktreeContextMenu = React.memo(function WorktreeContextMenu({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <ProjectGroupNameDialog
+        open={createGroupDialogOpen}
+        title="New Project Group"
+        description="Create a group and move this project into it."
+        initialName={repo ? `${repo.displayName} group` : ''}
+        confirmLabel="Create"
+        onOpenChange={setCreateGroupDialogOpen}
+        onSubmit={handleSubmitNewProjectGroup}
+      />
     </div>
   )
 })

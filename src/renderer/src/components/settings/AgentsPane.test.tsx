@@ -5,7 +5,8 @@ import { getDefaultSettings } from '../../../../shared/constants'
 import type { GlobalSettings } from '../../../../shared/types'
 import { useAppStore } from '../../store'
 import { getAgentAwakeDescription } from './agent-awake-copy'
-import { AgentsPane, AGENTS_PANE_SEARCH_ENTRIES } from './AgentsPane'
+import { AgentAwakeSetting } from './AgentAwakeSetting'
+import { AgentStatusHooksSetting, AgentsPane, AGENTS_PANE_SEARCH_ENTRIES } from './AgentsPane'
 import { getAgentsPaneSearchEntries } from './agents-search'
 import { matchesSettingsSearch } from './settings-search'
 import { agentsZhCN } from '@/i18n/settings-agents-zh-CN'
@@ -45,21 +46,38 @@ describe('AgentsPane', () => {
     )
   })
 
-  it('reflects the keep-awake switch state and label', () => {
+  it('toggles the keep-awake setting with the next value', () => {
     const updateSettings = vi.fn()
-    const markup = renderToStaticMarkup(
-      <AgentsPane
-        settings={{
-          ...getDefaultSettings('/tmp'),
-          keepComputerAwakeWhileAgentsRun: true
-        }}
-        updateSettings={updateSettings}
-      />
+    const settings = {
+      ...getDefaultSettings('/tmp'),
+      keepComputerAwakeWhileAgentsRun: false
+    }
+    const element = renderToStaticMarkup(
+      React.createElement(AgentAwakeSetting, {
+        settings,
+        updateSettings
+      })
     )
 
-    expect(markup).toContain('aria-label="Keep computer awake while agents are working"')
+    expect(element).toContain('role="switch"')
+    expect(element).toContain('aria-label="Keep computer awake while agents are working"')
+    expect(element).toContain('aria-checked="false"')
+  })
+
+  it('renders the agent status hook setting from settings', () => {
+    const updateSettings = vi.fn()
+    const markup = renderToStaticMarkup(
+      React.createElement(AgentStatusHooksSetting, {
+        settings: {
+          ...getDefaultSettings('/tmp'),
+          agentStatusHooksEnabled: true
+        },
+        updateSettings
+      })
+    )
+
+    expect(markup).toContain('Agent status hooks')
     expect(markup).toContain('aria-checked="true"')
-    expect(updateSettings).not.toHaveBeenCalled()
   })
 
   it('includes awake and sleep search metadata for the setting', () => {
@@ -73,5 +91,11 @@ describe('AgentsPane', () => {
 
     expect(entries.some((entry) => entry.title === '默认 Agent')).toBe(true)
     expect(matchesSettingsSearch('保持电脑唤醒', entries)).toBe(true)
+  })
+
+  it('includes hook search metadata for the status setting', () => {
+    expect(matchesSettingsSearch('hooks', AGENTS_PANE_SEARCH_ENTRIES)).toBe(true)
+    expect(matchesSettingsSearch('waiting', AGENTS_PANE_SEARCH_ENTRIES)).toBe(true)
+    expect(matchesSettingsSearch('codex', AGENTS_PANE_SEARCH_ENTRIES)).toBe(true)
   })
 })

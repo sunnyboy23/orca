@@ -48,7 +48,7 @@ describe('CommitMessageAiPane', () => {
     expect(markup).toContain('AI Commit Messages')
     expect(markup).toContain('Enable AI commit messages')
     expect(markup).toContain('aria-checked="false"')
-    expect(markup).not.toContain('Which agent drafts your commit messages')
+    expect(markup).not.toContain('Orca invokes its CLI')
     expect(markup).not.toContain('Thinking effort')
   })
 
@@ -67,7 +67,7 @@ describe('CommitMessageAiPane', () => {
     )
 
     expect(markup).toContain('aria-checked="true"')
-    expect(markup).toContain('Which agent drafts your commit messages')
+    expect(markup).toContain('Orca invokes its CLI')
     expect(markup).toContain('Model')
     expect(markup).toContain('Thinking effort')
     expect(markup).toContain('Higher effort produces more careful messages')
