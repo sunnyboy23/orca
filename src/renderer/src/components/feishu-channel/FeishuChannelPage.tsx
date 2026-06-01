@@ -7,12 +7,14 @@ import type {
   FeishuChannelConversation,
   FeishuChannelMessage
 } from '../../../../shared/feishu-collaboration-types'
+import { canReplyToFeishuConversation } from './feishu-conversation-target'
 
 export default function FeishuChannelPage(): React.JSX.Element {
   const { messages } = useI18n()
   const copy = messages.feishuChannel
   const channel = useFeishuChannel()
   const [draft, setDraft] = useState('')
+  const canReply = canReplyToFeishuConversation(channel.selectedChatId)
 
   const handleSend = async (): Promise<void> => {
     await channel.send(draft)
@@ -93,13 +95,14 @@ export default function FeishuChannelPage(): React.JSX.Element {
             <div className="flex gap-2">
               <textarea
                 className="min-h-16 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder={copy.labels.replyPlaceholder}
+                placeholder={canReply ? copy.labels.replyPlaceholder : copy.labels.waitingForConversation}
                 value={draft}
+                disabled={!canReply}
                 onChange={(event) => setDraft(event.target.value)}
               />
               <Button
                 className="self-end"
-                disabled={!draft.trim() || !channel.selectedChatId || channel.sending}
+                disabled={!draft.trim() || !canReply || channel.sending}
                 onClick={() => void handleSend()}
               >
                 {channel.sending ? (

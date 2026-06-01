@@ -5,6 +5,10 @@ import type {
   FeishuChannelMessage,
   FeishuChannelStatus
 } from '../../../../shared/feishu-collaboration-types'
+import {
+  canReplyToFeishuConversation,
+  firstReplyableConversation
+} from './feishu-conversation-target'
 
 export type FeishuChannelState = {
   conversations: FeishuChannelConversation[]
@@ -48,7 +52,10 @@ export function useFeishuChannel(): FeishuChannelState {
       ])
       setConversations(nextConversations)
       setStatus(nextStatus)
-      const nextChatId = selectedChatId ?? nextConversations[0]?.chatId ?? null
+      const nextChatId =
+        selectedChatId && canReplyToFeishuConversation(selectedChatId)
+          ? selectedChatId
+          : firstReplyableConversation(nextConversations)?.chatId ?? nextConversations[0]?.chatId ?? null
       setSelectedChatId(nextChatId)
       if (nextChatId) {
         const nextMessages = await window.api.feishuChannel.listMessages({ chatId: nextChatId })

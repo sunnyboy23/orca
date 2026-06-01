@@ -30,6 +30,7 @@ export const feishuChannelZhCN: FeishuChannelMessages = {
   labels: {
     conversations: '会话',
     replyPlaceholder: '回复飞书...',
+    waitingForConversation: '等待真实飞书消息...',
     incoming: '飞书',
     outgoing: 'Orca',
     system: '状态',

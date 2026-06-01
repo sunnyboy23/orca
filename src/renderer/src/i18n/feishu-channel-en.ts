@@ -30,6 +30,7 @@ export const feishuChannelEn: FeishuChannelMessages = {
   labels: {
     conversations: 'Conversations',
     replyPlaceholder: 'Reply to Feishu...',
+    waitingForConversation: 'Waiting for a real Feishu message...',
     incoming: 'Feishu',
     outgoing: 'Orca',
     system: 'Status',

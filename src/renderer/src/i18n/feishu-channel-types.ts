@@ -28,6 +28,7 @@ export type FeishuChannelMessages = {
   labels: {
     conversations: string
     replyPlaceholder: string
+    waitingForConversation: string
     incoming: string
     outgoing: string
     system: string
