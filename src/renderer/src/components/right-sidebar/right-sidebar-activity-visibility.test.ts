@@ -6,7 +6,8 @@ import { getVisibleRightSidebarActivityItems } from './right-sidebar-activity-vi
 const items: ActivityBarItem[] = [
   { id: 'explorer', icon: Files, title: 'Explorer', shortcut: '' },
   { id: 'source-control', icon: Files, title: 'Source Control', shortcut: '', gitOnly: true },
-  { id: 'ports', icon: Files, title: 'Ports', shortcut: '', sshOnly: true }
+  { id: 'ports', icon: Files, title: 'Ports', shortcut: '', sshOnly: true },
+  { id: 'feishu', icon: Files, title: 'Feishu', shortcut: '' }
 ]
 
 describe('getVisibleRightSidebarActivityItems', () => {
@@ -15,13 +16,13 @@ describe('getVisibleRightSidebarActivityItems', () => {
       getVisibleRightSidebarActivityItems(items, { isFolder: false, isSshRepo: false }).map(
         (item) => item.id
       )
-    ).toEqual(['explorer', 'source-control'])
+    ).toEqual(['explorer', 'source-control', 'feishu'])
 
     expect(
       getVisibleRightSidebarActivityItems(items, { isFolder: false, isSshRepo: true }).map(
         (item) => item.id
       )
-    ).toEqual(['explorer', 'source-control', 'ports'])
+    ).toEqual(['explorer', 'source-control', 'ports', 'feishu'])
   })
 
   it('still hides git-only tabs for folder repos', () => {
@@ -29,6 +30,6 @@ describe('getVisibleRightSidebarActivityItems', () => {
       getVisibleRightSidebarActivityItems(items, { isFolder: true, isSshRepo: true }).map(
         (item) => item.id
       )
-    ).toEqual(['explorer', 'ports'])
+    ).toEqual(['explorer', 'ports', 'feishu'])
   })
 })

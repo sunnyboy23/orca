@@ -96,6 +96,7 @@ import {
 import { shouldSendSyntheticTitleFrame } from './synthetic-title-visibility'
 import { isCrashReportReason } from '../shared/crash-reporting'
 import { KeybindingService } from './keybindings/keybinding-service'
+import { startFeishuBotWhenConfigured } from './runtime/integrations/feishu/auto-start'
 
 let mainWindow: BrowserWindow | null = null
 /** Whether a manual app.quit() (Cmd+Q, etc.) is in progress. Shared with the
@@ -1284,6 +1285,10 @@ app.whenReady().then(async () => {
       console.error('[runtime] Failed to start local RPC transport:', error)
     })
   ])
+  startFeishuBotWhenConfigured({
+    runtime: runtimeService,
+    getSettings: () => store!.getSettings()
+  })
 
   // Why: the macOS notification permission dialog must fire after the window
   // is visible and focused. If it fires before the window exists, the system

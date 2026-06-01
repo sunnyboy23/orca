@@ -50,6 +50,7 @@ import {
 } from '../../../../shared/workspace-statuses'
 import { normalizeKagiSessionLink } from '../../../../shared/browser-url'
 import type { OrcaHookScriptKind } from '../../lib/orca-hook-trust'
+import { openFeishuChannelPanelState } from '../../lib/open-feishu-channel-panel'
 import { DEFAULT_PET_ID, isBundledPetId } from '../../components/pet/pet-models'
 import { revokeCustomPetBlobUrl } from '../../components/pet/pet-blob-cache'
 import { isGitRepoKind } from '../../../../shared/repo-kind'
@@ -113,7 +114,8 @@ function normalizePersistedRightSidebarTab(
     tab === 'search' ||
     tab === 'source-control' ||
     tab === 'checks' ||
-    tab === 'ports'
+    tab === 'ports' ||
+    tab === 'feishu'
   ) {
     return tab
   }
@@ -303,7 +305,6 @@ export type UISlice = {
     | 'space'
     | 'skills'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeTasks:
     | 'terminal'
     | 'settings'
@@ -313,7 +314,6 @@ export type UISlice = {
     | 'space'
     | 'skills'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeSettings:
     | 'terminal'
     | 'tasks'
@@ -323,7 +323,6 @@ export type UISlice = {
     | 'space'
     | 'skills'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeActivity:
     | 'terminal'
     | 'settings'
@@ -333,7 +332,6 @@ export type UISlice = {
     | 'space'
     | 'skills'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeAutomations:
     | 'terminal'
     | 'settings'
@@ -343,7 +341,6 @@ export type UISlice = {
     | 'space'
     | 'skills'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeOrchestration:
     | 'terminal'
     | 'settings'
@@ -353,7 +350,6 @@ export type UISlice = {
     | 'space'
     | 'skills'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeSpace:
     | 'terminal'
     | 'settings'
@@ -363,7 +359,6 @@ export type UISlice = {
     | 'orchestration'
     | 'skills'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeSkills:
     | 'terminal'
     | 'settings'
@@ -373,7 +368,6 @@ export type UISlice = {
     | 'orchestration'
     | 'space'
     | 'mobile'
-    | 'feishu'
   previousViewBeforeMobile:
     | 'terminal'
     | 'settings'
@@ -383,17 +377,6 @@ export type UISlice = {
     | 'orchestration'
     | 'space'
     | 'skills'
-    | 'feishu'
-  previousViewBeforeFeishu:
-    | 'terminal'
-    | 'settings'
-    | 'tasks'
-    | 'activity'
-    | 'automations'
-    | 'orchestration'
-    | 'space'
-    | 'skills'
-    | 'mobile'
   setActiveView: (view: UISlice['activeView']) => void
   taskPageData: {
     preselectedRepoId?: string
@@ -446,8 +429,7 @@ export type UISlice = {
   closeSkillsPage: () => void
   openMobilePage: () => void
   closeMobilePage: () => void
-  openFeishuChannelPage: () => void
-  closeFeishuChannelPage: () => void
+  openFeishuChannelPanel: () => void
   setNewWorkspaceDraft: (draft: NonNullable<UISlice['newWorkspaceDraft']>) => void
   clearNewWorkspaceDraft: () => void
   openSettingsPage: () => void
@@ -674,7 +656,6 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
   previousViewBeforeSpace: 'terminal',
   previousViewBeforeSkills: 'terminal',
   previousViewBeforeMobile: 'terminal',
-  previousViewBeforeFeishu: 'terminal',
   setActiveView: (view) => set({ activeView: view }),
   taskPageData: {},
   taskResumeState: undefined,
@@ -905,16 +886,7 @@ export const createUISlice: StateCreator<AppState, [], [], UISlice> = (set, get)
     set((state) => ({
       activeView: state.previousViewBeforeMobile
     })),
-  openFeishuChannelPage: () =>
-    set((state) => ({
-      activeView: 'feishu',
-      previousViewBeforeFeishu:
-        state.activeView === 'feishu' ? state.previousViewBeforeFeishu : state.activeView
-    })),
-  closeFeishuChannelPage: () =>
-    set((state) => ({
-      activeView: state.previousViewBeforeFeishu
-    })),
+  openFeishuChannelPanel: () => set(openFeishuChannelPanelState()),
   setNewWorkspaceDraft: (draft) => set({ newWorkspaceDraft: draft }),
   clearNewWorkspaceDraft: () => set({ newWorkspaceDraft: null }),
   openSettingsPage: () =>

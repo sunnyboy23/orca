@@ -1,6 +1,7 @@
 import { ipcMain, type WebContents } from 'electron'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import type {
+  FeishuChannelEvent,
   FeishuChannelCreateRunFromMessageParams,
   FeishuChannelMarkReadParams,
   FeishuChannelSendMessageParams
@@ -52,11 +53,25 @@ function subscribeFeishuChannel(
 ): {
   subscriptionId: string
 } {
-  const subscriptionId = runtime.subscribeFeishuChannel((event) => {
-    if (!webContents.isDestroyed()) {
-      webContents.send(CHANNEL_EVENT, { subscriptionId, event })
+  let subscriptionId = ''
+  const pendingEvents: FeishuChannelEvent[] = []
+  const emitEvent = (event: FeishuChannelEvent): void => {
+    if (webContents.isDestroyed()) {
+      return
     }
+    if (!subscriptionId) {
+      pendingEvents.push(event)
+      return
+    }
+    webContents.send(CHANNEL_EVENT, { subscriptionId, event })
+  }
+  const nextSubscriptionId = runtime.subscribeFeishuChannel((event) => {
+    emitEvent(event)
   })
+  subscriptionId = nextSubscriptionId
+  for (const event of pendingEvents) {
+    emitEvent(event)
+  }
   webContents.once('destroyed', () => {
     runtime.unsubscribeFeishuChannel(subscriptionId)
   })

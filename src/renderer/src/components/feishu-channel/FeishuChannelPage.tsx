@@ -20,15 +20,15 @@ export default function FeishuChannelPage(): React.JSX.Element {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <header className="border-b border-border/70 px-6 py-4">
-        <div className="flex items-start justify-between gap-4">
+    <div className="flex h-full min-h-0 flex-col bg-sidebar">
+      <header className="border-b border-border/70 px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold tracking-normal">{copy.title}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{copy.description}</p>
+            <h1 className="text-base font-semibold tracking-normal">{copy.title}</h1>
+            <p className="mt-1 text-xs text-muted-foreground">{copy.description}</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => void channel.refresh()}>
-            <RefreshCw className="mr-2 size-4" />
+            <RefreshCw className="mr-1.5 size-3.5" />
             {copy.actions.refresh}
           </Button>
         </div>
@@ -36,27 +36,27 @@ export default function FeishuChannelPage(): React.JSX.Element {
       </header>
 
       {channel.error ? (
-        <div className="border-b border-destructive/30 bg-destructive/10 px-6 py-2 text-sm text-destructive">
+        <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive">
           {channel.error}
         </div>
       ) : null}
 
-      <main className="grid min-h-0 flex-1 grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="min-h-0 border-r border-border/70">
-          <div className="border-b border-border/60 px-4 py-3 text-sm font-medium">
+      <main className="flex min-h-0 flex-1 flex-col">
+        <aside className="min-h-0 border-b border-border/70">
+          <div className="border-b border-border/60 px-4 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {copy.labels.conversations}
           </div>
           {channel.loading ? (
-            <div className="flex items-center gap-2 px-4 py-4 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
               <LoaderCircle className="size-4 animate-spin" />
               {copy.actions.refresh}
             </div>
           ) : channel.conversations.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-muted-foreground">
+            <div className="px-4 py-4 text-xs text-muted-foreground">
               {copy.empty.conversations}
             </div>
           ) : (
-            <div className="max-h-full overflow-y-auto p-2">
+            <div className="max-h-40 overflow-y-auto p-2">
               {channel.conversations.map((conversation) => (
                 <ConversationButton
                   key={conversation.chatId}
@@ -70,7 +70,7 @@ export default function FeishuChannelPage(): React.JSX.Element {
         </aside>
 
         <section className="flex min-h-0 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
             {!channel.selectedChatId ? (
               <EmptyState text={copy.empty.selectConversation} />
             ) : channel.messages.length === 0 ? (
@@ -89,10 +89,10 @@ export default function FeishuChannelPage(): React.JSX.Element {
             )}
           </div>
 
-          <div className="border-t border-border/70 p-4">
+          <div className="border-t border-border/70 p-3">
             <div className="flex gap-2">
               <textarea
-                className="min-h-20 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-16 flex-1 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                 placeholder={copy.labels.replyPlaceholder}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
@@ -129,7 +129,7 @@ function StatusStrip({
   }
   const connected = status.bot.state === 'connected'
   return (
-    <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+    <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] text-muted-foreground">
       <span className="rounded-full border border-border/70 px-2.5 py-1">
         {copy.connection.eventChannel}:{' '}
         {connected ? copy.connection.connected : copy.connection.disconnected}
@@ -178,7 +178,7 @@ function ConversationButton({
           </span>
         ) : null}
       </div>
-      <div className="mt-1 truncate text-xs text-muted-foreground">
+      <div className="mt-1 truncate text-[11px] text-muted-foreground">
         {conversation.lastMessageText}
       </div>
     </button>
@@ -205,7 +205,7 @@ function MessageBubble({
         : copy.labels.outgoing
   return (
     <div className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}>
-      <div className="max-w-[72%] rounded-md border border-border/70 bg-muted/35 px-3 py-2">
+      <div className="max-w-[88%] rounded-md border border-border/70 bg-muted/35 px-3 py-2">
         <div className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground">
           <BotMessageSquare className="size-3.5" />
           <span>{label}</span>
@@ -239,7 +239,7 @@ function MessageBubble({
 
 function EmptyState({ text }: { text: string }): React.JSX.Element {
   return (
-    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
       {text}
     </div>
   )

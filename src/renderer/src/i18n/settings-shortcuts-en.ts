@@ -223,6 +223,10 @@ export const shortcutsEn: ShortcutsMessages = {
       title: 'New markdown tab',
       keywords: shortcutKeywords('tab', 'markdown', 'file', 'new')
     },
+    'tab.openMarkdown': {
+      title: 'Open markdown file',
+      keywords: shortcutKeywords('tab', 'markdown', 'file', 'open')
+    },
     'tab.close': {
       title: 'Close active tab',
       keywords: shortcutKeywords('close', 'tab', 'pane')
@@ -295,6 +299,14 @@ export const shortcutsEn: ShortcutsMessages = {
       title: 'Copy Context',
       keywords: shortcutKeywords('editor', 'copy', 'context')
     },
+    'fileExplorer.undo': {
+      title: 'Undo file explorer change',
+      keywords: shortcutKeywords('file explorer', 'undo', 'restore', 'rename', 'move')
+    },
+    'fileExplorer.redo': {
+      title: 'Redo file explorer change',
+      keywords: shortcutKeywords('file explorer', 'redo', 'rename', 'move')
+    },
     'fileExplorer.copyPath': {
       title: 'Copy file path',
       keywords: shortcutKeywords('file explorer', 'copy', 'path')
@@ -306,10 +318,6 @@ export const shortcutsEn: ShortcutsMessages = {
     'fileExplorer.delete': {
       title: 'Delete file',
       keywords: shortcutKeywords('file explorer', 'delete', 'remove', 'trash')
-    },
-    'composer.addAttachment': {
-      title: 'Add Attachment',
-      keywords: shortcutKeywords('composer', 'attachment', 'upload')
     },
     'settings.search': {
       title: 'Search Settings',

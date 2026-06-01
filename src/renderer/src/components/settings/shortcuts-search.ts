@@ -26,7 +26,13 @@ export function getShortcutsPaneSearchEntries(
 ): SettingsSearchEntry[] {
   return [
     ...KEYBINDING_DEFINITIONS.map((item) => {
-      const actionCopy = getShortcutActionCopy(messages, item.id)
+      // Why: Settings builds search metadata before any pane renders. Falling
+      // back to the registry copy keeps one missing locale entry from blanking
+      // the whole Settings surface in development or after partial i18n work.
+      const actionCopy = getShortcutActionCopy(messages, item.id) ?? {
+        title: item.title,
+        keywords: [...item.searchKeywords]
+      }
       const group = getShortcutGroupLabel(messages, item.group)
       return {
         title: actionCopy.title,

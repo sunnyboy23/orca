@@ -88,24 +88,24 @@ export function RepositoryPane({
 
   const allEntries = getRepositoryPaneSearchEntries(repo)
   const identityEntries = allEntries.filter((entry) =>
-    ['Display Name', 'Project Icon', 'Default Worktree Base', 'Remove Project'].includes(
+    ['显示名称', '项目图标', '默认 Worktree 基线', '移除项目'].includes(
       entry.title
     )
   )
   const sparsePresetEntries = allEntries.filter((entry) =>
-    ['Sparse Checkout Presets'].includes(entry.title)
+    ['稀疏检出预设'].includes(entry.title)
   )
   const hooksEntries = allEntries.filter((entry) =>
     [
-      'Setup Script',
-      'Archive Script',
-      'Advanced',
-      'When to Run Setup',
-      'Custom GitHub Issue Command'
+      '初始化脚本',
+      '归档脚本',
+      '高级设置',
+      '何时运行初始化',
+      '自定义 GitHub Issue 命令'
     ].includes(entry.title)
   )
-  const mcpEntries = allEntries.filter((entry) => entry.title === 'MCP Configs')
-  const symlinkEntries = allEntries.filter((entry) => entry.title === 'Worktree Symlinks')
+  const mcpEntries = allEntries.filter((entry) => entry.title === 'MCP 配置')
+  const symlinkEntries = allEntries.filter((entry) => entry.title === 'Worktree 符号链接')
   const sourceControlAiEntries = allEntries.filter((entry) => entry.title === 'Source Control AI')
 
   const hooksSection =
@@ -132,23 +132,23 @@ export function RepositoryPane({
       <section key="identity" className="space-y-8">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold">Identity</h3>
+            <h3 className="text-sm font-semibold">项目标识</h3>
             <p className="text-xs text-muted-foreground">
-              Project-specific display details for the sidebar and tabs.
+              控制这个项目在侧边栏和标签页里的显示方式。
             </p>
             <p className="text-xs text-muted-foreground">
-              Type: <span className="text-foreground">{getRepoKindLabel(repo)}</span>
+              类型：<span className="text-foreground">{getRepoKindLabel(repo)}</span>
             </p>
             {isFolder ? (
               <p className="text-xs text-muted-foreground">
-                Opened as folder. Git features are unavailable for this workspace.
+                当前以文件夹方式打开，这个工作区不可使用 Git 相关能力。
               </p>
             ) : null}
           </div>
           <SearchableSetting
-            title="Remove Project"
-            description="Remove this project from Orca."
-            keywords={[repo.displayName, 'delete', 'project', 'repository']}
+            title="移除项目"
+            description="把这个项目从 Orca 中移除。"
+            keywords={[repo.displayName, 'delete', 'project', 'repository', '移除', '删除']}
             forceVisible={forceFullPaneForRepoMatch}
           >
             <Button
@@ -159,19 +159,19 @@ export function RepositoryPane({
               className="gap-2"
             >
               <Trash2 className="size-3.5" />
-              {confirmingRemove === repo.id ? 'Confirm Remove' : 'Remove Project'}
+              {confirmingRemove === repo.id ? '确认移除' : '移除项目'}
             </Button>
           </SearchableSetting>
         </div>
 
         <SearchableSetting
-          title="Display Name"
-          description="Project-specific display details for the sidebar and tabs."
-          keywords={[repo.displayName, repo.path, 'project name', 'repository name']}
+          title="显示名称"
+          description="设置项目在侧边栏和标签页中的显示名称。"
+          keywords={[repo.displayName, repo.path, 'project name', 'repository name', '名称']}
           className="space-y-2"
           forceVisible={forceFullPaneForRepoMatch}
         >
-          <Label className="text-sm font-semibold">Display Name</Label>
+          <Label className="text-sm font-semibold">显示名称</Label>
           <Input
             value={repo.displayName}
             onChange={(e) =>
@@ -184,8 +184,8 @@ export function RepositoryPane({
         </SearchableSetting>
 
         <SearchableSetting
-          title="Project Icon"
-          description="Project icon and color used in the sidebar and tabs."
+          title="项目图标"
+          description="设置项目在侧边栏和标签页中使用的图标和颜色。"
           keywords={[
             repo.displayName,
             repo.path,
@@ -194,7 +194,8 @@ export function RepositoryPane({
             'color',
             'badge',
             'emoji',
-            'favicon'
+            'favicon',
+            '图标'
           ]}
           className="space-y-2"
           id={getRepositoryIconSectionId(repo.id)}
@@ -205,13 +206,13 @@ export function RepositoryPane({
 
         {!isFolder ? (
           <SearchableSetting
-            title="Default Worktree Base"
-            description="Default base branch or ref when creating worktrees."
-            keywords={[repo.displayName, 'base ref', 'branch']}
+            title="默认 Worktree 基线"
+            description="创建 worktree 时默认使用的基线分支或 ref。"
+            keywords={[repo.displayName, 'base ref', 'branch', '基线', '分支']}
             className="space-y-3"
             forceVisible={forceFullPaneForRepoMatch}
           >
-            <Label className="text-sm font-semibold">Default Worktree Base</Label>
+            <Label className="text-sm font-semibold">默认 Worktree 基线</Label>
             <BaseRefPicker
               repoId={repo.id}
               currentBaseRef={repo.worktreeBaseRef}

@@ -33,65 +33,65 @@ type PermissionDefinition = {
 const PERMISSIONS: PermissionDefinition[] = [
   {
     id: 'microphone',
-    label: 'Microphone',
-    description: 'Voice input, transcription, audio recording, sox, ffmpeg, and Whisper CLIs.',
-    actionLabel: 'Request',
+    label: '麦克风',
+    description: '用于语音输入、转写、录音，以及 sox、ffmpeg、Whisper 等命令行工具。',
+    actionLabel: '请求授权',
     icon: <Mic className="size-4" />
   },
   {
     id: 'camera',
-    label: 'Camera',
-    description: 'Webcam capture and camera-driven local test apps.',
-    actionLabel: 'Request',
+    label: '摄像头',
+    description: '用于摄像头采集和依赖相机的本地测试应用。',
+    actionLabel: '请求授权',
     icon: <Camera className="size-4" />
   },
   {
     id: 'screen',
-    label: 'Screen Recording',
-    description: 'Screenshot, visual automation, and UI inspection tools.',
-    actionLabel: 'Open Settings',
+    label: '屏幕录制',
+    description: '用于截图、视觉自动化和界面检查工具。',
+    actionLabel: '打开系统设置',
     icon: <MonitorUp className="size-4" />
   },
   {
     id: 'accessibility',
-    label: 'Accessibility',
-    description: 'Keystroke injection, window control, and UI automation tools.',
-    actionLabel: 'Request',
+    label: '辅助功能',
+    description: '用于按键注入、窗口控制和 UI 自动化工具。',
+    actionLabel: '请求授权',
     icon: <Accessibility className="size-4" />
   },
   {
     id: 'full-disk-access',
-    label: 'Full Disk Access',
-    description: 'Persistent access to protected folders from terminal sessions.',
-    actionLabel: 'Open Settings',
+    label: '完全磁盘访问权限',
+    description: '让终端会话持续访问受保护目录。',
+    actionLabel: '打开系统设置',
     icon: <HardDrive className="size-4" />
   },
   {
     id: 'automation',
-    label: 'Automation',
-    description: 'Apple Events for scripts that control other local apps.',
-    actionLabel: 'Trigger Prompt',
+    label: '自动化',
+    description: '用于控制其他本地应用的 Apple Events 脚本。',
+    actionLabel: '触发系统提示',
     icon: <Workflow className="size-4" />
   },
   {
     id: 'local-network',
-    label: 'Local Network',
-    description: 'Discovery and access for development servers on your network.',
-    actionLabel: 'Trigger Prompt',
+    label: '本地网络',
+    description: '用于发现并访问你局域网里的开发服务。',
+    actionLabel: '触发系统提示',
     icon: <Network className="size-4" />
   },
   {
     id: 'usb',
-    label: 'USB Devices',
-    description: 'Hardware debugging and device tools that talk to USB devices.',
-    actionLabel: 'Open Settings',
+    label: 'USB 设备',
+    description: '用于硬件调试和访问 USB 设备的工具。',
+    actionLabel: '打开系统设置',
     icon: <Usb className="size-4" />
   },
   {
     id: 'bluetooth',
-    label: 'Bluetooth',
-    description: 'Bluetooth device tools and local hardware experiments.',
-    actionLabel: 'Open Settings',
+    label: '蓝牙',
+    description: '用于蓝牙设备工具和本地硬件实验。',
+    actionLabel: '打开系统设置',
     icon: <Bluetooth className="size-4" />
   }
 ]
@@ -99,20 +99,20 @@ const PERMISSIONS: PermissionDefinition[] = [
 function statusLabel(status: DeveloperPermissionStatus | undefined): string {
   switch (status) {
     case 'granted':
-      return 'Granted'
+      return '已授权'
     case 'denied':
-      return 'Denied'
+      return '已拒绝'
     case 'not-determined':
-      return 'Not requested'
+      return '未请求'
     case 'restricted':
-      return 'Restricted'
+      return '受限制'
     case 'unsupported':
-      return 'macOS only'
+      return '仅 macOS'
     case 'ready':
-      return 'Entitled'
+      return '已具备'
     case 'unknown':
     default:
-      return 'Check manually'
+      return '请手动检查'
   }
 }
 
@@ -141,7 +141,7 @@ export function DeveloperPermissionsPane(): React.JSX.Element {
     try {
       setStates(await window.api.developerPermissions.getStatus())
     } catch {
-      toast.error('Could not load developer permissions')
+      toast.error('无法加载开发者权限状态')
     } finally {
       setLoading(false)
     }
@@ -169,14 +169,14 @@ export function DeveloperPermissionsPane(): React.JSX.Element {
       const result = await window.api.developerPermissions.request({ id })
       await refresh()
       if (result.status === 'granted') {
-        toast.success('Permission granted')
+        toast.success('权限已授权')
       } else if (result.openedSystemSettings) {
-        toast.message('Opened macOS Privacy & Security')
+        toast.message('已打开 macOS 隐私与安全性')
       } else {
-        toast.message('Permission request sent')
+        toast.message('已发送权限请求')
       }
     } catch {
-      toast.error('Could not request permission')
+      toast.error('无法请求权限')
     } finally {
       setPendingId(null)
     }
@@ -185,19 +185,18 @@ export function DeveloperPermissionsPane(): React.JSX.Element {
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 bg-muted/25 px-4 py-3">
-        <div className="space-y-1">
+          <div className="space-y-1">
           <div className="flex items-center gap-2 text-sm font-medium">
             <ShieldCheck className="size-4" />
-            Terminal tools inherit Orca&apos;s macOS privacy envelope.
+            终端里运行的开发工具会继承 Orca 的 macOS 权限边界。
           </div>
           <p className="text-xs text-muted-foreground">
-            Use these controls when a CLI, local app, or automation tool needs macOS privacy access.
-            Orca does not ask at startup.
+            当 CLI、本地应用或自动化工具需要 macOS 隐私权限时，在这里处理。Orca 不会在启动时一次性申请全部权限。
           </p>
         </div>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void refresh()}>
           <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
+          刷新
         </Button>
       </div>
 
@@ -232,7 +231,7 @@ export function DeveloperPermissionsPane(): React.JSX.Element {
                 className="shrink-0 gap-1.5"
               >
                 <ExternalLink className="size-3.5" />
-                {pending ? 'Working...' : permission.actionLabel}
+                {pending ? '处理中...' : permission.actionLabel}
               </Button>
             </div>
           )

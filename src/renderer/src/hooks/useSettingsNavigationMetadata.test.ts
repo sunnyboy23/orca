@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { buildSettingsNavigationMetadata } from './useSettingsNavigationMetadata'
 import type { Repo } from '../../../shared/types'
+import { KEYBINDING_DEFINITIONS } from '../../../shared/keybindings'
 import { accountsZhCN } from '@/i18n/settings-accounts-zh-CN'
 import { agentsZhCN } from '@/i18n/settings-agents-zh-CN'
 import { zhCNSettingsMessages } from '@/i18n/settings'
@@ -19,6 +20,7 @@ import { gitZhCN } from '@/i18n/settings-git-zh-CN'
 import { integrationsZhCN } from '@/i18n/settings-integrations-zh-CN'
 import { notificationsZhCN, quickCommandsZhCN, runtimeZhCN } from '@/i18n/settings-panes-zh-CN'
 import { shortcutsZhCN } from '@/i18n/settings-shortcuts-zh-CN'
+import { shortcutsEn } from '@/i18n/settings-shortcuts-en'
 import { sshZhCN } from '@/i18n/settings-ssh-zh-CN'
 import { terminalZhCN } from '@/i18n/settings-terminal-zh-CN'
 
@@ -164,5 +166,12 @@ describe('settings navigation metadata', () => {
     expect(importLines).not.toMatch(/components\/settings\/Settings(?:'|")/)
     expect(importLines).not.toMatch(/components\/settings\/[A-Z][A-Za-z]+Pane(?:'|")/)
     expect(importLines).not.toMatch(/components\/stats\/StatsPane(?:'|")/)
+  })
+
+  it('keeps shortcut i18n action maps in sync with the keybinding registry', () => {
+    const actionIds = KEYBINDING_DEFINITIONS.map((definition) => definition.id)
+
+    expect(actionIds.filter((id) => shortcutsEn.actions[id] === undefined)).toEqual([])
+    expect(actionIds.filter((id) => shortcutsZhCN.actions[id] === undefined)).toEqual([])
   })
 })

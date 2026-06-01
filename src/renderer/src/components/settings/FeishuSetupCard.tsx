@@ -76,7 +76,7 @@ export function FeishuSetupCard({
   onChange: (updates: Partial<FeishuIntegrationSettings>) => void
 }): React.JSX.Element {
   const { messages } = useI18n()
-  const openFeishuChannelPage = useAppStore((state) => state.openFeishuChannelPage)
+  const openFeishuChannelPanel = useAppStore((state) => state.openFeishuChannelPanel)
   const stepLabels = getStepLabels(messages)
   const status = useMemo(() => getFeishuSetupStatus(settings), [settings])
   const missing = new Set(status.missingSteps)
@@ -176,7 +176,7 @@ export function FeishuSetupCard({
         onStop={() => void stopBot()}
         messages={messages}
       />
-      <Button type="button" variant="outline" size="sm" onClick={openFeishuChannelPage}>
+      <Button type="button" variant="outline" size="sm" onClick={openFeishuChannelPanel}>
         <MessageSquareText className="size-4" />
         {messages.feishuChannel.actions.openChannel}
       </Button>

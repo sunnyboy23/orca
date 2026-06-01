@@ -106,6 +106,14 @@ describe('createUISlice hydratePersistedUI', () => {
     expect(store.getState().rightSidebarTab).toBe('checks')
   })
 
+  it('hydrates the feishu right sidebar tab preference', () => {
+    const store = createUIStore()
+
+    store.getState().hydratePersistedUI(makePersistedUI({ rightSidebarTab: 'feishu' }))
+
+    expect(store.getState().rightSidebarTab).toBe('feishu')
+  })
+
   it('falls back to explorer for invalid persisted right sidebar tabs', () => {
     const store = createUIStore()
 
@@ -116,6 +124,22 @@ describe('createUISlice hydratePersistedUI', () => {
       )
 
     expect(store.getState().rightSidebarTab).toBe('explorer')
+  })
+
+  it('opens the Feishu channel panel from full-page views', () => {
+    const store = createUIStore()
+
+    store.setState({
+      activeView: 'settings',
+      rightSidebarOpen: false,
+      rightSidebarTab: 'explorer'
+    })
+
+    store.getState().openFeishuChannelPanel()
+
+    expect(store.getState().activeView).toBe('terminal')
+    expect(store.getState().rightSidebarOpen).toBe(true)
+    expect(store.getState().rightSidebarTab).toBe('feishu')
   })
 
   it('clamps persisted sidebar widths into the supported range', () => {

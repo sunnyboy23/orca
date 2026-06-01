@@ -1,5 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Plug, Files, Search, GitBranch, ListChecks, PanelRight } from 'lucide-react'
+import {
+  Plug,
+  Files,
+  Search,
+  GitBranch,
+  ListChecks,
+  MessageSquareText,
+  PanelRight
+} from 'lucide-react'
 import { useAppStore } from '@/store'
 import { useActiveWorktree, useRepoById } from '@/store/selectors'
 import { cn } from '@/lib/utils'
@@ -20,6 +28,7 @@ import SourceControl from './SourceControl'
 import SearchPanel from './Search'
 import ChecksPanel from './ChecksPanel'
 import PortsPanel from './PortsPanel'
+import FeishuChannelPage from '@/components/feishu-channel/FeishuChannelPage'
 import { getTopActivityBarLayout } from './activity-bar-overflow'
 import {
   ActivityBarButton,
@@ -100,6 +109,12 @@ function RightSidebarInner(): React.JSX.Element {
         title: 'Ports',
         shortcut: portsShortcut === 'Unassigned' ? '' : portsShortcut,
         sshOnly: true
+      },
+      {
+        id: 'feishu',
+        icon: MessageSquareText,
+        title: 'Feishu',
+        shortcut: ''
       }
     ],
     [checksShortcut, explorerShortcut, portsShortcut, searchShortcut, sourceControlShortcut]
@@ -153,6 +168,7 @@ function RightSidebarInner(): React.JSX.Element {
         {effectiveTab === 'ports' && (
           <PortsPanel isVisible={rightSidebarOpen && effectiveTab === 'ports'} />
         )}
+        {effectiveTab === 'feishu' && <FeishuChannelPage />}
       </div>
     </div>
   )

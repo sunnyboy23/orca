@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertTriangle, ExternalLink, FolderPlus, GitBranchPlus, Star } from 'lucide-react'
+import {
+  AlertTriangle,
+  ExternalLink,
+  FolderPlus,
+  GitBranchPlus,
+  MessageSquareText,
+  Star
+} from 'lucide-react'
 import { cn } from '../lib/utils'
 import { useAppStore } from '../store'
 import { isGitRepoKind } from '../../../shared/repo-kind'
@@ -192,6 +199,7 @@ function PreflightBanner({ issues }: { issues: PreflightIssue[] }): React.JSX.El
 export default function Landing(): React.JSX.Element {
   const repos = useAppStore((s) => s.repos)
   const openModal = useAppStore((s) => s.openModal)
+  const openFeishuChannelPanel = useAppStore((s) => s.openFeishuChannelPanel)
 
   const canCreateWorktree = repos.length > 0
   const createTargetLabel =
@@ -298,6 +306,14 @@ export default function Landing(): React.JSX.Element {
             >
               <GitBranchPlus className="size-3.5" />
               Create {createTargetLabel}
+            </button>
+
+            <button
+              className="inline-flex items-center gap-1.5 bg-secondary/70 border border-border/80 text-foreground font-medium text-sm px-4 py-2 rounded-md cursor-pointer hover:bg-accent transition-colors"
+              onClick={openFeishuChannelPanel}
+            >
+              <MessageSquareText className="size-3.5" />
+              飞书通道
             </button>
           </div>
 

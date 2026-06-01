@@ -237,6 +237,10 @@ export const shortcutsZhCN: ShortcutsMessages = {
       title: '新建 Markdown 标签页',
       keywords: shortcutKeywords('tab', 'markdown', 'file', 'new', '标签页', '笔记', '新建')
     },
+    'tab.openMarkdown': {
+      title: '打开 Markdown 文件',
+      keywords: shortcutKeywords('tab', 'markdown', 'file', 'open', '标签页', '笔记', '打开')
+    },
     'tab.close': {
       title: '关闭当前标签页',
       keywords: shortcutKeywords('close', 'tab', 'pane', '关闭', '标签页')
@@ -326,6 +330,30 @@ export const shortcutsZhCN: ShortcutsMessages = {
       title: '复制上下文',
       keywords: shortcutKeywords('editor', 'copy', 'context', '上下文')
     },
+    'fileExplorer.undo': {
+      title: '撤销文件资源管理器更改',
+      keywords: shortcutKeywords(
+        'file explorer',
+        'undo',
+        'restore',
+        'rename',
+        'move',
+        '文件',
+        '撤销',
+        '恢复'
+      )
+    },
+    'fileExplorer.redo': {
+      title: '重做文件资源管理器更改',
+      keywords: shortcutKeywords(
+        'file explorer',
+        'redo',
+        'rename',
+        'move',
+        '文件',
+        '重做'
+      )
+    },
     'fileExplorer.copyPath': {
       title: '复制文件路径',
       keywords: shortcutKeywords('file explorer', 'copy', 'path', '文件', '路径')
@@ -337,10 +365,6 @@ export const shortcutsZhCN: ShortcutsMessages = {
     'fileExplorer.delete': {
       title: '删除文件',
       keywords: shortcutKeywords('file explorer', 'delete', 'remove', 'trash', '删除')
-    },
-    'composer.addAttachment': {
-      title: '添加附件',
-      keywords: shortcutKeywords('composer', 'attachment', 'upload', '附件', '上传')
     },
     'settings.search': {
       title: '搜索设置',
