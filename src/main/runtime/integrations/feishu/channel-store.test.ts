@@ -49,6 +49,36 @@ describe('FeishuChannelStore', () => {
     expect(store.markRead('chat-1')).toMatchObject({ unreadCount: 0 })
   })
 
+  it('uses sender open_id as the private conversation target when chat_id is missing', () => {
+    const store = new FeishuChannelStore()
+
+    const message = store.upsertIncoming({
+      eventType: 'im.message.receive_v1',
+      messageId: 'msg-private-1',
+      senderOpenId: 'ou_user',
+      text: 'private hello'
+    })
+
+    expect(message.chatId).toBe('open_id:ou_user')
+    expect(store.listConversations()[0]).toMatchObject({
+      chatId: 'open_id:ou_user',
+      title: '飞书用户 ou_user'
+    })
+  })
+
+  it('keeps unknown only when no chat or sender id is available', () => {
+    const store = new FeishuChannelStore()
+
+    const message = store.upsertIncoming({
+      eventType: 'im.message.receive_v1',
+      messageId: 'msg-unknown-1',
+      text: 'hello'
+    })
+
+    expect(message.chatId).toBe('unknown')
+    expect(store.listConversations()[0]).toMatchObject({ title: '未知飞书会话' })
+  })
+
   it('prunes old messages by capacity', () => {
     const store = new FeishuChannelStore({ maxMessages: 2 })
 

@@ -65,4 +65,34 @@ describe('FeishuChannelService', () => {
       })
     )
   })
+
+  it('sends replies to private-message conversations with open_id receive type', async () => {
+    const create = vi.fn().mockResolvedValue({
+      code: 0,
+      data: { message_id: 'om_private' }
+    })
+    const service = new FeishuChannelService({
+      getBotStatus: () => ({ state: 'connected', configured: true }),
+      getMessageClient: () =>
+        ({
+          im: { message: { create } }
+        }) as unknown as FeishuMessageClient
+    })
+
+    service.receiveIncoming({
+      eventType: 'im.message.receive_v1',
+      senderOpenId: 'ou_user',
+      messageId: 'msg-private',
+      text: 'hello'
+    })
+    const message = await service.sendMessage({ chatId: 'open_id:ou_user', text: 'reply' })
+
+    expect(message).toMatchObject({ status: 'sent', messageId: 'om_private' })
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        params: { receive_id_type: 'open_id' },
+        data: expect.objectContaining({ receive_id: 'ou_user' })
+      })
+    )
+  })
 })

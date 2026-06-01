@@ -52,6 +52,58 @@ describe('Feishu IM client', () => {
     expect(payload?.data.content).not.toContain('/Users/alice')
   })
 
+  it('sends private conversation replies by open_id', async () => {
+    const client = mockClient({ code: 0, data: { message_id: 'om_private' } })
+
+    const result = await sendFeishuTextMessage({
+      client,
+      chatId: 'open_id:ou_user',
+      text: 'private reply'
+    })
+
+    expect(result).toEqual({ ok: true, messageId: 'om_private' })
+    expect(client.im.message.create).toHaveBeenCalledWith({
+      params: { receive_id_type: 'open_id' },
+      data: {
+        receive_id: 'ou_user',
+        msg_type: 'text',
+        content: JSON.stringify({ text: 'private reply' }),
+        uuid: undefined
+      }
+    })
+  })
+
+  it('surfaces Feishu API response details from rejected SDK calls', async () => {
+    const create = vi.fn(async () => {
+      throw {
+        response: {
+          data: {
+            code: 230001,
+            msg: 'invalid receive_id'
+          }
+        }
+      }
+    })
+    const client = {
+      im: {
+        message: { create }
+      }
+    } as unknown as FeishuMessageClient
+
+    await expect(
+      sendFeishuTextMessage({ client, chatId: 'unknown', text: 'hello' })
+    ).resolves.toMatchObject({
+      ok: false,
+      reason: 'missing_chat'
+    })
+    await expect(
+      sendFeishuTextMessage({ client, chatId: 'oc_chat', text: 'hello' })
+    ).resolves.toMatchObject({
+      ok: false,
+      message: 'invalid receive_id (230001)'
+    })
+  })
+
   it('reports missing chats and Feishu API errors', async () => {
     await expect(
       sendFeishuTextMessage({ client: mockClient({ code: 0 }), chatId: '', text: 'hello' })

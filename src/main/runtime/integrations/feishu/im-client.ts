@@ -1,5 +1,6 @@
 import * as Lark from '@larksuiteoapi/node-sdk'
 import type { FeishuInteractiveCard } from './cards'
+import { resolveFeishuRecipient } from './recipient'
 import { sanitizeFeishuText, sanitizeFeishuValue } from './sanitizer'
 
 export type FeishuMessageClient = Pick<
@@ -78,16 +79,16 @@ async function sendFeishuMessage({
   content: string
   uuid?: string
 }): Promise<FeishuMessageSendResult> {
-  const trimmedChatId = chatId?.trim()
-  if (!trimmedChatId) {
+  const recipient = resolveFeishuRecipient(chatId)
+  if (!recipient) {
     return { ok: false, reason: 'missing_chat', message: 'Missing Feishu chat ID.' }
   }
 
   try {
     const response = await client.im.message.create({
-      params: { receive_id_type: 'chat_id' },
+      params: { receive_id_type: recipient.receiveIdType },
       data: {
-        receive_id: trimmedChatId,
+        receive_id: recipient.receiveId,
         msg_type: msgType,
         content,
         uuid
@@ -106,7 +107,37 @@ async function sendFeishuMessage({
     return {
       ok: false,
       reason: 'network_error',
-      message: err instanceof Error ? err.message : 'Failed to send Feishu message.'
+      message: describeFeishuSendError(err)
     }
   }
+}
+
+function describeFeishuSendError(err: unknown): string {
+  const responseData = readObject(readObject(err, 'response'), 'data')
+  const msg = readString(responseData, 'msg')
+  const code = readNumber(responseData, 'code')
+  if (msg) {
+    return code ? `${msg} (${code})` : msg
+  }
+  return err instanceof Error ? err.message : 'Failed to send Feishu message.'
+}
+
+function readObject(value: unknown, key: string): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return {}
+  }
+  const child = (value as Record<string, unknown>)[key]
+  return child && typeof child === 'object' && !Array.isArray(child)
+    ? (child as Record<string, unknown>)
+    : {}
+}
+
+function readString(value: Record<string, unknown>, key: string): string | undefined {
+  const child = value[key]
+  return typeof child === 'string' ? child : undefined
+}
+
+function readNumber(value: Record<string, unknown>, key: string): number | undefined {
+  const child = value[key]
+  return typeof child === 'number' ? child : undefined
 }

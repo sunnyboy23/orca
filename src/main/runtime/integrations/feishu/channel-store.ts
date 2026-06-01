@@ -6,6 +6,7 @@ import type {
   FeishuChannelMessageStatus
 } from '../../../../shared/feishu-collaboration-types'
 import type { FeishuReceivedMessage } from './message'
+import { createOpenIdConversationId, describeFeishuConversation } from './recipient'
 
 const DEFAULT_MAX_MESSAGES = 500
 
@@ -45,7 +46,7 @@ export class FeishuChannelStore {
     return this.addMessage({
       direction: 'incoming',
       kind: 'text',
-      chatId: message.chatId ?? 'unknown',
+      chatId: resolveIncomingConversationId(message),
       messageId: message.messageId,
       senderOpenId: message.senderOpenId,
       text: message.text,
@@ -149,7 +150,7 @@ export class FeishuChannelStore {
     const lastError = [...sorted].reverse().find((message) => message.error)?.error
     return {
       chatId,
-      title: chatId === 'unknown' ? '未知飞书会话' : `飞书会话 ${chatId}`,
+      title: describeFeishuConversation(chatId),
       lastMessageText: last.text,
       lastMessageAt: last.createdAt,
       unreadCount,
@@ -168,4 +169,14 @@ export class FeishuChannelStore {
 
 function cloneMessage(message: FeishuChannelMessage): FeishuChannelMessage {
   return { ...message }
+}
+
+function resolveIncomingConversationId(message: FeishuReceivedMessage): string {
+  if (message.chatId?.trim()) {
+    return message.chatId
+  }
+  if (message.senderOpenId?.trim()) {
+    return createOpenIdConversationId(message.senderOpenId)
+  }
+  return 'unknown'
 }
