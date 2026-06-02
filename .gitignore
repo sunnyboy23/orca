@@ -101,3 +101,6 @@ playwright-report/
 
 # Agent hook runtime endpoints (machine-local secrets)
 /agent-hooks/
+
+# HelloAGENTS runtime session state (machine-local)
+.helloagents/sessions/
