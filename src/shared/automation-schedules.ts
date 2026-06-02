@@ -32,6 +32,7 @@ type ParsedSchedule = ParsedRrule | ParsedCron
 
 const DAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'] as const
 const WEEKDAY_CODES = ['MO', 'TU', 'WE', 'TH', 'FR'] as const
+const DAY_LABELS_ZH = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
 const MONTH_NAMES = new Map([
   ['JAN', 1],
   ['FEB', 2],
@@ -267,22 +268,19 @@ function formatTime(hour: number, minute: number): string {
 export function formatAutomationSchedule(rrule: string): string {
   const schedule = tryParseAutomationRrule(rrule)
   if (!schedule) {
-    return isValidAutomationSchedule(rrule) ? `Custom cron: ${rrule.trim()}` : 'Invalid schedule'
+    return isValidAutomationSchedule(rrule) ? `自定义 cron：${rrule.trim()}` : '无效调度'
   }
   if (schedule.preset === 'hourly') {
-    return `Hourly at :${String(schedule.minute).padStart(2, '0')}`
+    return `每小时 :${String(schedule.minute).padStart(2, '0')} 运行`
   }
   const time = formatTime(schedule.hour, schedule.minute)
   if (schedule.preset === 'daily') {
-    return `Daily at ${time}`
+    return `每天 ${time} 运行`
   }
   if (schedule.preset === 'weekdays') {
-    return `Weekdays at ${time}`
+    return `工作日 ${time} 运行`
   }
-  const day = new Intl.DateTimeFormat(undefined, { weekday: 'long' }).format(
-    new Date(2026, 0, 4 + schedule.dayOfWeek)
-  )
-  return `${day}s at ${time}`
+  return `每${DAY_LABELS_ZH[schedule.dayOfWeek]} ${time} 运行`
 }
 
 function atLocalTime(dayMs: number, hour: number, minute: number): number {

@@ -50,8 +50,8 @@ export function getAutomationRunViewState({
   if (run.workspaceId && workspaceExists && run.terminalSessionId && terminalTabExists) {
     return {
       availability: 'terminal',
-      actionLabel: 'View run',
-      statusLabel: 'Run is open',
+      actionLabel: '查看运行',
+      statusLabel: '运行已打开',
       canOpen: true
     }
   }
@@ -59,10 +59,8 @@ export function getAutomationRunViewState({
   if (run.workspaceId && workspaceExists) {
     return {
       availability: 'workspace',
-      actionLabel: 'Open workspace',
-      statusLabel: run.terminalSessionId
-        ? 'Opened workspace; original terminal is closed.'
-        : 'Opened workspace.',
+      actionLabel: '打开工作区',
+      statusLabel: run.terminalSessionId ? '已打开工作区；原终端已关闭。' : '已打开工作区。',
       canOpen: true
     }
   }
@@ -70,20 +68,20 @@ export function getAutomationRunViewState({
   if (run.outputSnapshot?.content.trim()) {
     return {
       availability: 'snapshot',
-      actionLabel: 'Snapshot saved',
-      statusLabel: 'Showing saved run snapshot.',
+      actionLabel: '已保存快照',
+      statusLabel: '正在显示已保存的运行快照。',
       canOpen: false
     }
   }
 
   return {
     availability: 'metadata',
-    actionLabel: 'View run',
+    actionLabel: '查看运行',
     statusLabel: run.workspaceId
       ? run.workspaceDisplayName?.trim()
-        ? `${run.workspaceDisplayName.trim()} no longer available`
-        : 'Workspace no longer available'
-      : 'No workspace launched',
+        ? `${run.workspaceDisplayName.trim()} 已不可用`
+        : '工作区已不可用'
+      : '未启动工作区',
     canOpen: false
   }
 }

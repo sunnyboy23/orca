@@ -20,20 +20,20 @@ export function AutomationSessionField({
     <Field
       label={
         <span className="inline-flex items-center gap-1">
-          Session
+          会话
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label="Session reuse help"
+                aria-label="会话复用说明"
                 className="rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
               >
                 <Info className="size-3.5" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={6} className="max-w-72">
-              Reuse sends future runs to the previous live automation session. If that session is
-              gone, Orca starts a fresh one.
+              复用会把后续运行发送到上一次仍在线的自动化会话；如果该会话已不存在，Orca
+              会启动一个新会话。
             </TooltipContent>
           </Tooltip>
         </span>
@@ -57,10 +57,10 @@ export function AutomationSessionField({
         className="grid w-full grid-cols-2"
       >
         <ToggleGroupItem value="fresh" className={toggleItemClassName}>
-          Fresh
+          新建
         </ToggleGroupItem>
         <ToggleGroupItem value="reuse" className={toggleItemClassName}>
-          Reuse
+          复用
         </ToggleGroupItem>
       </ToggleGroup>
     </Field>

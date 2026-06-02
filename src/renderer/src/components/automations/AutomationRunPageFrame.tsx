@@ -33,7 +33,7 @@ export function AutomationRunPageFrame({
               type="button"
               variant="ghost"
               size="icon-xs"
-              aria-label="Back to runs"
+              aria-label="返回运行记录"
               onClick={onBack}
             >
               <ArrowLeft className="size-3.5" />
@@ -45,7 +45,7 @@ export function AutomationRunPageFrame({
             </div>
             {breadcrumbs.length > 0 ? (
               <ol
-                aria-label="Run context"
+                aria-label="运行上下文"
                 className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground"
               >
                 {breadcrumbs.map((breadcrumb, index) => (

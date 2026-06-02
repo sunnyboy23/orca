@@ -5,7 +5,7 @@ import type { AutomationRun } from '../../../../shared/automations-types'
 
 export function formatAutomationDateTime(value: number | null | undefined): string {
   if (!value) {
-    return 'Never'
+    return '从未'
   }
   return new Intl.DateTimeFormat(undefined, {
     month: 'short',
@@ -30,18 +30,18 @@ export function formatAutomationRelativeTime(
   const format = (amount: number, unit: string): string => `${amount}${unit}`
   let text: string
   if (absMs < minuteMs) {
-    text = 'now'
+    text = '现在'
   } else if (absMs < hourMs) {
-    text = format(Math.round(absMs / minuteMs), 'm')
+    text = format(Math.round(absMs / minuteMs), '分钟')
   } else if (absMs < dayMs) {
-    text = format(Math.round(absMs / hourMs), 'h')
+    text = format(Math.round(absMs / hourMs), '小时')
   } else {
-    text = format(Math.round(absMs / dayMs), 'd')
+    text = format(Math.round(absMs / dayMs), '天')
   }
-  if (text === 'now') {
+  if (text === '现在') {
     return text
   }
-  return diffMs >= 0 ? `in ${text}` : `${text} ago`
+  return diffMs >= 0 ? `${text}后` : `${text}前`
 }
 
 export function formatAutomationDateTimeWithRelative(
@@ -71,21 +71,21 @@ export function getAutomationRunStatusVariant(
 export function getAutomationRunStatusLabel(status: AutomationRun['status']): string {
   switch (status) {
     case 'pending':
-      return 'Queued'
+      return '已排队'
     case 'dispatching':
-      return 'Starting'
+      return '启动中'
     case 'dispatched':
-      return 'Launched'
+      return '已启动'
     case 'completed':
-      return 'Done'
+      return '已完成'
     case 'skipped_missed':
-      return 'Skipped'
+      return '已跳过'
     case 'skipped_unavailable':
-      return 'Unavailable'
+      return '不可用'
     case 'skipped_needs_interactive_auth':
-      return 'Needs credentials'
+      return '需要凭据'
     case 'dispatch_failed':
-      return 'Failed'
+      return '失败'
   }
 }
 

@@ -89,7 +89,7 @@ describe('automation usage model', () => {
   it('formats compact token and cost labels', () => {
     expect(formatAutomationTokens(1250)).toBe('1.3k')
     expect(formatAutomationTokens(1_250_000)).toBe('1.3M')
-    expect(formatAutomationCost(null)).toBe('n/a')
+    expect(formatAutomationCost(null)).toBe('暂无')
     expect(formatAutomationCost(0.0042)).toBe('$0.0042')
     expect(formatAutomationCost(1.234)).toBe('$1.23')
   })

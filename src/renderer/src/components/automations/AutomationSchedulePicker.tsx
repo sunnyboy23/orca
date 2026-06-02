@@ -23,13 +23,13 @@ import { Field } from './automation-page-parts'
 const FIELD_CONTROL_CLASS = 'border-input bg-input/30 shadow-xs dark:bg-input/30'
 
 const DAY_OPTIONS = [
-  ['0', 'Sunday'],
-  ['1', 'Monday'],
-  ['2', 'Tuesday'],
-  ['3', 'Wednesday'],
-  ['4', 'Thursday'],
-  ['5', 'Friday'],
-  ['6', 'Saturday']
+  ['0', '周日'],
+  ['1', '周一'],
+  ['2', '周二'],
+  ['3', '周三'],
+  ['4', '周四'],
+  ['5', '周五'],
+  ['6', '周六']
 ] as const
 
 function parseTime(value: string): { hour: number; minute: number } {
@@ -44,7 +44,7 @@ function getDraftScheduleLabel(draft: AutomationDraft): string {
   if (draft.preset === 'custom') {
     return draft.customSchedule.trim()
       ? formatAutomationSchedule(draft.customSchedule)
-      : 'Custom cron'
+      : '自定义 cron'
   }
   const { hour, minute } = parseTime(draft.time)
   return formatAutomationSchedule(
@@ -110,7 +110,7 @@ export function AutomationSchedulePicker({
         className="w-[var(--radix-popover-trigger-width)] min-w-[19rem] p-3"
       >
         <div className="grid gap-3">
-          <Field label="Schedule">
+          <Field label="调度">
             <Select
               value={draft.preset}
               onValueChange={(preset) =>
@@ -129,11 +129,11 @@ export function AutomationSchedulePicker({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="hourly">Hourly</SelectItem>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekdays">Weekdays</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="custom">Custom cron</SelectItem>
+                <SelectItem value="hourly">每小时</SelectItem>
+                <SelectItem value="daily">每天</SelectItem>
+                <SelectItem value="weekdays">工作日</SelectItem>
+                <SelectItem value="weekly">每周</SelectItem>
+                <SelectItem value="custom">自定义 cron</SelectItem>
               </SelectContent>
             </Select>
           </Field>
@@ -153,11 +153,11 @@ export function AutomationSchedulePicker({
                 }))
               }
             >
-              Use custom cron
+              使用自定义 cron
             </Button>
           ) : null}
           {draft.preset === 'custom' ? (
-            <Field label="Cron string">
+            <Field label="Cron 表达式">
               <Input
                 value={draft.customSchedule}
                 placeholder="0 9 * * 1-5"
@@ -173,17 +173,17 @@ export function AutomationSchedulePicker({
                 }
               />
               <div className="mt-1 text-[11px] text-muted-foreground">
-                Five fields: minute hour day month weekday.
+                五个字段：分钟 小时 日期 月份 星期。
               </div>
               {customScheduleInvalid ? (
                 <div className="mt-1 text-[11px] text-destructive">
-                  Enter a valid 5-field cron expression.
+                  请输入有效的 5 字段 cron 表达式。
                 </div>
               ) : null}
             </Field>
           ) : null}
           {draft.preset === 'weekly' ? (
-            <Field label="Day">
+            <Field label="星期">
               <Select
                 value={draft.dayOfWeek}
                 onValueChange={(dayOfWeek) =>
@@ -204,7 +204,7 @@ export function AutomationSchedulePicker({
             </Field>
           ) : null}
           {draft.preset !== 'custom' ? (
-            <Field label={draft.preset === 'hourly' ? 'Minute' : 'Time'}>
+            <Field label={draft.preset === 'hourly' ? '分钟' : '时间'}>
               <Input
                 type="time"
                 value={draft.time}

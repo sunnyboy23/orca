@@ -18,24 +18,24 @@ export type AutomationTemplate = {
 export const AUTOMATION_TEMPLATES: AutomationTemplate[] = [
   {
     id: 'repo-health-weekday',
-    category: 'Repo health',
-    label: 'Weekday repo audit',
-    description: 'Check dependencies, failing tests, and risky open changes each weekday.',
-    name: 'Weekday repo audit',
+    category: '仓库健康',
+    label: '工作日仓库巡检',
+    description: '每个工作日检查依赖、失败测试和有风险的未合入变更。',
+    name: '工作日仓库巡检',
     prompt:
-      'Review the repository health. Check dependency updates, failing tests, lint/typecheck status, and risky open changes. Summarize findings and suggest the next action.',
+      '检查仓库健康状况，包括依赖更新、失败测试、lint/typecheck 状态和有风险的未合入变更。总结发现并建议下一步行动。',
     preset: 'weekdays',
     time: '09:00',
     missedRunGraceMinutes: '720'
   },
   {
     id: 'release-prep-weekly',
-    category: 'Release prep',
-    label: 'Release readiness',
-    description: 'Prepare a weekly release risk summary from the current project state.',
-    name: 'Release readiness review',
+    category: '发布准备',
+    label: '发布就绪检查',
+    description: '根据当前项目状态生成每周发布风险摘要。',
+    name: '发布就绪检查',
     prompt:
-      'Prepare a release readiness summary. Look for blockers, unmerged risky changes, missing validation, and documentation gaps. End with a concise release/no-release recommendation.',
+      '准备一份发布就绪摘要，检查阻塞项、未合入的高风险变更、缺失验证和文档缺口。最后给出简短的发布/暂不发布建议。',
     preset: 'weekly',
     time: '14:00',
     dayOfWeek: '4',
@@ -43,24 +43,24 @@ export const AUTOMATION_TEMPLATES: AutomationTemplate[] = [
   },
   {
     id: 'recurring-review-daily',
-    category: 'Recurring review',
-    label: 'Daily change review',
-    description: 'Scan recent work and call out correctness, UX, and test coverage risks.',
-    name: 'Daily change review',
+    category: '定期审阅',
+    label: '每日变更审阅',
+    description: '扫描近期工作，指出正确性、体验和测试覆盖风险。',
+    name: '每日变更审阅',
     prompt:
-      'Review recent changes in this workspace. Focus on correctness risks, UX regressions, missing tests, and follow-up tasks. Keep the report short and actionable.',
+      '审阅当前工作区的近期变更，重点关注正确性风险、体验回归、缺失测试和后续任务。报告保持简短并可执行。',
     preset: 'daily',
     time: '16:30',
     missedRunGraceMinutes: '180'
   },
   {
     id: 'maintenance-hourly',
-    category: 'Maintenance',
-    label: 'Hourly queue check',
-    description: 'Look for stuck work, stale generated files, and failed local validation.',
-    name: 'Hourly maintenance check',
+    category: '维护',
+    label: '每小时队列检查',
+    description: '检查卡住的工作、过期生成文件和失败的本地验证。',
+    name: '每小时维护检查',
     prompt:
-      'Check for stuck work, stale generated files, failing validation, and anything that needs human attention. Report only actionable issues.',
+      '检查卡住的工作、过期生成文件、失败验证以及需要人工关注的问题。只报告可执行的问题。',
     preset: 'hourly',
     time: '00:15',
     missedRunGraceMinutes: '30'

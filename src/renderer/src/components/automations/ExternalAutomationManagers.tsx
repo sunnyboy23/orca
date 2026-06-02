@@ -35,7 +35,7 @@ type ExternalAutomationManagersProps = {
 
 function formatExternalDate(value: string | null, now: number): string {
   if (!value) {
-    return 'Never'
+    return '从未'
   }
   const parsed = Date.parse(value)
   if (!Number.isFinite(parsed)) {
@@ -57,7 +57,7 @@ function getProviderLabel(manager: ExternalAutomationManager): string {
 }
 
 function getTargetKindLabel(manager: ExternalAutomationManager): string {
-  return manager.target.type === 'ssh' ? 'Remote SSH' : 'Local'
+  return manager.target.type === 'ssh' ? '远程 SSH' : '本地'
 }
 
 function ExternalActionButton({
@@ -109,11 +109,9 @@ export function ExternalAutomationManagers({
     <div className="rounded-md border border-border/50 bg-muted/20 shadow-sm">
       <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
         <div>
-          <div className="text-sm font-medium">External automations</div>
+          <div className="text-sm font-medium">外部自动化</div>
         </div>
-        <Badge variant="outline">
-          {automationCount} {automationCount === 1 ? 'automation' : 'automations'}
-        </Badge>
+        <Badge variant="outline">{automationCount} 个自动化</Badge>
       </div>
       <div className="divide-y divide-border/50">
         {managers.map((manager) => (
@@ -125,9 +123,9 @@ export function ExternalAutomationManagers({
                   {getProviderLabel(manager)} / {getTargetKindLabel(manager)} ·{' '}
                   {manager.status === 'available'
                     ? manager.canManage
-                      ? 'Manageable'
-                      : 'Read-only'
-                    : 'Unavailable'}
+                      ? '可管理'
+                      : '只读'
+                    : '不可用'}
                   {manager.error ? ` - ${manager.error}` : null}
                 </div>
               </div>
@@ -145,15 +143,15 @@ export function ExternalAutomationManagers({
                     <div className="flex min-w-0 items-center gap-2">
                       <span className="truncate font-medium">{job.name}</span>
                       <Badge variant={job.enabled ? 'secondary' : 'outline'}>
-                        {job.enabled ? 'Active' : 'Paused'}
+                        {job.enabled ? '运行中' : '已暂停'}
                       </Badge>
                     </div>
                     <div className="mt-1 truncate text-xs text-muted-foreground">
-                      {job.schedule} · next {formatExternalDate(job.nextRunAt, now)}
+                      {job.schedule} · 下次 {formatExternalDate(job.nextRunAt, now)}
                     </div>
                     {manager.provider === 'hermes' ? (
                       <div className="mt-1 truncate text-xs text-muted-foreground">
-                        {job.runCount} {job.runCount === 1 ? 'run' : 'runs'} found
+                        找到 {job.runCount} 次运行
                       </div>
                     ) : null}
                     {job.promptPreview || job.lastError ? (
@@ -163,12 +161,12 @@ export function ExternalAutomationManagers({
                     ) : null}
                   </div>
                   <div className="hidden min-w-0 text-xs text-muted-foreground md:block">
-                    Last {formatExternalDate(job.lastRunAt, now)}
+                    上次 {formatExternalDate(job.lastRunAt, now)}
                     {job.lastStatus ? ` · ${job.lastStatus}` : null}
                   </div>
                   <div className="flex items-center justify-end gap-1">
                     <ExternalActionButton
-                      label="Run external automation"
+                      label="运行外部自动化"
                       disabled={!manager.canManage || runningActionKey !== null}
                       onClick={() => onAction(manager, job, 'run')}
                     >
@@ -180,7 +178,7 @@ export function ExternalAutomationManagers({
                     </ExternalActionButton>
                     {manager.provider === 'hermes' ? (
                       <ExternalActionButton
-                        label="Edit external automation"
+                        label="编辑外部自动化"
                         disabled={!manager.canManage || runningActionKey !== null}
                         onClick={() => onEdit?.(manager, job)}
                       >
@@ -188,9 +186,7 @@ export function ExternalAutomationManagers({
                       </ExternalActionButton>
                     ) : null}
                     <ExternalActionButton
-                      label={
-                        job.enabled ? 'Pause external automation' : 'Resume external automation'
-                      }
+                      label={job.enabled ? '暂停外部自动化' : '恢复外部自动化'}
                       disabled={!manager.canManage || runningActionKey !== null}
                       onClick={() => onAction(manager, job, job.enabled ? 'pause' : 'resume')}
                     >
@@ -204,7 +200,7 @@ export function ExternalAutomationManagers({
                       )}
                     </ExternalActionButton>
                     <ExternalActionButton
-                      label="Delete external automation"
+                      label="删除外部自动化"
                       className="text-destructive hover:text-destructive"
                       disabled={!manager.canManage || runningActionKey !== null}
                       onClick={() => onAction(manager, job, 'delete')}
@@ -231,7 +227,7 @@ export function ExternalAutomationManagers({
               ))}
               {manager.jobs.length === 0 ? (
                 <div className="px-3 py-4 text-sm text-muted-foreground">
-                  No {manager.provider === 'hermes' ? 'Hermes' : 'OpenClaw'} jobs found.
+                  没有找到 {manager.provider === 'hermes' ? 'Hermes' : 'OpenClaw'} 任务。
                 </div>
               ) : null}
             </div>
@@ -239,7 +235,7 @@ export function ExternalAutomationManagers({
         ))}
         {managers.length === 0 ? (
           <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-            No external automation managers found.
+            没有找到外部自动化管理器。
           </div>
         ) : null}
       </div>

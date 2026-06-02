@@ -35,7 +35,7 @@ type ExternalAutomationRunTableProps = {
 
 function formatExternalDate(value: string | null, now: number): string {
   if (!value) {
-    return 'Never'
+    return '从未'
   }
   const parsed = Date.parse(value)
   if (!Number.isFinite(parsed)) {
@@ -47,11 +47,11 @@ function formatExternalDate(value: string | null, now: number): string {
 function getRunStatusLabel(run: ExternalAutomationRun): string {
   switch (run.status) {
     case 'completed':
-      return 'Completed'
+      return '已完成'
     case 'failed':
-      return 'Failed'
+      return '失败'
     case 'unknown':
-      return 'Unknown'
+      return '未知'
   }
 }
 
@@ -69,7 +69,7 @@ function getRunStatusVariant(
 }
 
 function getRunSummary(run: ExternalAutomationRun): string {
-  return run.error ?? run.outputPreview ?? 'No output preview'
+  return run.error ?? run.outputPreview ?? '暂无输出预览'
 }
 
 function normalizeRunPage(
@@ -139,7 +139,7 @@ export function ExternalAutomationRunTable({
         if (!cancelled) {
           setFetchedRuns(null)
           setFetchedTotalCount(null)
-          setFetchError(error instanceof Error ? error.message : 'Failed to load runs.')
+          setFetchError(error instanceof Error ? error.message : '加载运行记录失败。')
         }
       })
       .finally(() => {
@@ -181,7 +181,7 @@ export function ExternalAutomationRunTable({
     <div className="mt-2 rounded-md border border-border/50 bg-background/50">
       <div className="flex items-center justify-between border-b border-border/50 px-3 py-2">
         <div className="flex min-w-0 items-center gap-2">
-          <div className="text-xs font-medium">Runs</div>
+          <div className="text-xs font-medium">运行</div>
           {isLoading ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
           {fetchError ? (
             <Tooltip>
@@ -194,18 +194,16 @@ export function ExternalAutomationRunTable({
             </Tooltip>
           ) : null}
         </div>
-        <div className="text-xs text-muted-foreground">
-          {totalCount} {totalCount === 1 ? 'run' : 'runs'}
-        </div>
+        <div className="text-xs text-muted-foreground">{totalCount} 次运行</div>
       </div>
 
       {hasVisibleRuns ? (
         <div>
           <div className="min-w-0 border-b border-border/50">
             <div className="grid grid-cols-[minmax(7.5rem,.45fr)_minmax(0,1fr)_auto] gap-3 border-b border-border/50 px-3 py-1.5 text-[11px] font-medium uppercase text-muted-foreground">
-              <span>Run time</span>
-              <span>Preview</span>
-              <span>Status</span>
+              <span>运行时间</span>
+              <span>预览</span>
+              <span>状态</span>
             </div>
             <div className="divide-y divide-border/50">
               {visibleRuns.map((run) => (
@@ -243,7 +241,7 @@ export function ExternalAutomationRunTable({
         </div>
       ) : (
         <div className="px-3 py-4 text-sm text-muted-foreground">
-          {isLoading ? 'Loading runs...' : 'No Hermes runs found yet.'}
+          {isLoading ? '正在加载运行记录...' : '还没有找到 Hermes 运行记录。'}
         </div>
       )}
 
@@ -251,7 +249,7 @@ export function ExternalAutomationRunTable({
         <div className="flex min-w-0 items-center gap-2 text-xs text-muted-foreground">
           <FileText className="size-3.5" />
           <span>
-            {pageStart}-{pageEnd} of {totalCount}
+            {pageStart}-{pageEnd} / {totalCount}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -259,7 +257,7 @@ export function ExternalAutomationRunTable({
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label="Previous run page"
+            aria-label="上一页运行记录"
             disabled={page === 0 || isLoading}
             onClick={() => setPage((current) => Math.max(0, current - 1))}
           >
@@ -272,7 +270,7 @@ export function ExternalAutomationRunTable({
             type="button"
             variant="ghost"
             size="icon-xs"
-            aria-label="Next run page"
+            aria-label="下一页运行记录"
             disabled={page >= totalPages - 1 || isLoading}
             onClick={() => setPage((current) => Math.min(totalPages - 1, current + 1))}
           >

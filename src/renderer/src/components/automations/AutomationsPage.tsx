@@ -162,7 +162,7 @@ function getExternalAutomationSourceKey(manager: ExternalAutomationManager): str
 
 function formatExternalDate(value: string | null, now: number): string {
   if (!value) {
-    return 'Never'
+    return '从未'
   }
   const parsed = Date.parse(value)
   if (!Number.isFinite(parsed)) {
@@ -176,7 +176,7 @@ function getExternalProviderLabel(manager: ExternalAutomationManager): string {
 }
 
 function getExternalTargetKindLabel(manager: ExternalAutomationManager): string {
-  return manager.target.type === 'ssh' ? 'Remote SSH' : 'Local'
+  return manager.target.type === 'ssh' ? '远程 SSH' : '本地'
 }
 
 function isSshConnectionBusy(status: SshConnectionStatus | undefined): boolean {
@@ -186,11 +186,11 @@ function isSshConnectionBusy(status: SshConnectionStatus | undefined): boolean {
 function getExternalRunStatusLabel(run: ExternalAutomationRun): string {
   switch (run.status) {
     case 'completed':
-      return 'Completed'
+      return '已完成'
     case 'failed':
-      return 'Failed'
+      return '失败'
     case 'unknown':
-      return 'Unknown'
+      return '未知'
   }
 }
 
@@ -208,7 +208,7 @@ function getExternalRunStatusVariant(
 }
 
 function getExternalRunContent(run: ExternalAutomationRun): string {
-  return run.outputContent ?? run.error ?? run.outputPreview ?? 'No output content available.'
+  return run.outputContent ?? run.error ?? run.outputPreview ?? '暂无输出内容。'
 }
 
 function getAutomationRunContent(run: AutomationRun): string {
@@ -216,7 +216,7 @@ function getAutomationRunContent(run: AutomationRun): string {
   if (savedOutput) {
     return run.outputSnapshot?.content ?? savedOutput
   }
-  return run.error ?? run.usage?.unavailableMessage ?? 'No output content available.'
+  return run.error ?? run.usage?.unavailableMessage ?? '暂无输出内容。'
 }
 
 function isMissingExternalRunsApiError(error: unknown): boolean {
@@ -754,7 +754,7 @@ export default function AutomationsPage(): React.JSX.Element {
       scheduleWarning:
         schedule || hasCustomSchedule
           ? null
-          : 'This automation has an unsupported saved schedule. Pick a supported schedule before saving changes.'
+          : '这个自动化保存的调度暂不支持。保存变更前请先选择一个受支持的调度。'
     }
     setDraft(nextDraft)
     setDraftAtOpen(nextDraft)
@@ -798,7 +798,7 @@ export default function AutomationsPage(): React.JSX.Element {
       missedRunGraceMinutes: '720',
       scheduleWarning: hasCustomSchedule
         ? null
-        : 'This Hermes cron has an unsupported saved schedule. Pick a supported schedule before saving changes.'
+        : '这个 Hermes cron 保存的调度暂不支持。保存变更前请先选择一个受支持的调度。'
     }
     setEditingAutomationId(null)
     setEditingExternalTarget({ manager, job })
@@ -846,15 +846,15 @@ export default function AutomationsPage(): React.JSX.Element {
       ((draft.workspaceMode === 'existing' || isHermesSave) && !draft.workspaceId) ||
       !draft.prompt.trim()
     ) {
-      toast.error('Choose a run location and enter a prompt before saving.')
+      toast.error('保存前请选择运行位置并填写提示词。')
       return
     }
     if (draft.scheduleWarning) {
-      toast.error('Pick a supported schedule before saving.')
+      toast.error('保存前请选择一个受支持的调度。')
       return
     }
     if (draft.preset === 'custom' && !isValidAutomationSchedule(draft.customSchedule)) {
-      toast.error('Enter a valid 5-field cron expression before saving.')
+      toast.error('保存前请输入有效的 5 字段 cron 表达式。')
       return
     }
     setIsSaving(true)
@@ -863,14 +863,14 @@ export default function AutomationsPage(): React.JSX.Element {
         draft.workspaceMode !== 'existing' ||
         worktrees.some((worktree) => worktree.id === draft.workspaceId)
       if (!selectedWorkspaceExists) {
-        toast.error('Choose an available workspace before saving.')
+        toast.error('保存前请选择一个可用工作区。')
         return
       }
       if (isHermesSave) {
         const repo = repoMap.get(draft.projectId)
         const selectedWorktree = worktreeMap.get(draft.workspaceId) ?? null
         if (!repo || !selectedWorktree) {
-          toast.error('Choose an available workspace before saving.')
+          toast.error('保存前请选择一个可用工作区。')
           return
         }
         const target =
@@ -881,7 +881,7 @@ export default function AutomationsPage(): React.JSX.Element {
         const repoTargetMatches =
           target.type === 'local' ? !repo.connectionId : repo.connectionId === target.connectionId
         if (!repoTargetMatches) {
-          toast.error('Choose a workspace on the same host as this Hermes cron.')
+          toast.error('请选择与这个 Hermes cron 位于同一主机的工作区。')
           return
         }
         const schedule = buildHermesCronSchedule(draft)
@@ -911,7 +911,7 @@ export default function AutomationsPage(): React.JSX.Element {
             ? getExternalAutomationKey(editingExternalTarget.manager, editingExternalTarget.job)
             : null
         )
-        toast.success(editingExternalTarget ? 'Hermes cron updated.' : 'Hermes cron created.')
+        toast.success(editingExternalTarget ? 'Hermes cron 已更新。' : 'Hermes cron 已创建。')
         return
       }
       const now = Date.now()
@@ -986,9 +986,9 @@ export default function AutomationsPage(): React.JSX.Element {
       await refresh()
       setSelectedId(automation.id)
       setCreateOpen(false)
-      toast.success(editingAutomationId ? 'Automation updated.' : 'Automation saved.')
+      toast.success(editingAutomationId ? '自动化已更新。' : '自动化已保存。')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to save automation.')
+      toast.error(error instanceof Error ? error.message : '保存自动化失败。')
     } finally {
       setIsSaving(false)
     }
@@ -1012,11 +1012,11 @@ export default function AutomationsPage(): React.JSX.Element {
 
   const persistDeleteAutomationPreference = (): void => {
     void updateSettings({ skipDeleteAutomationConfirm: true })
-    toast.success("We'll skip this confirmation next time.", {
-      description: 'You can change this in Settings.',
+    toast.success('下次将跳过这个确认。', {
+      description: '你可以在设置中修改。',
       duration: 8000,
       action: {
-        label: 'Open Settings',
+        label: '打开设置',
         onClick: () => {
           openSettingsPage()
           openSettingsTarget({
@@ -1054,7 +1054,7 @@ export default function AutomationsPage(): React.JSX.Element {
   const runNow = async (automation: Automation): Promise<void> => {
     await window.api.automations.runNow({ id: automation.id })
     await refresh()
-    toast.message('Automation run queued.')
+    toast.message('自动化运行已排队。')
   }
 
   const rerunAutomationRun = async (automation: Automation, run: AutomationRun): Promise<void> => {
@@ -1069,9 +1069,9 @@ export default function AutomationsPage(): React.JSX.Element {
     try {
       await window.api.automations.runNow({ id: automationId })
       await refresh()
-      toast.message('Automation run queued.')
+      toast.message('自动化运行已排队。')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to rerun automation.')
+      toast.error(error instanceof Error ? error.message : '重新运行自动化失败。')
       await refresh()
     } finally {
       // Why: fast skipped/failed reruns can settle before users or validation can see the guard.
@@ -1099,15 +1099,15 @@ export default function AutomationsPage(): React.JSX.Element {
       await refresh()
       toast.success(
         action === 'delete'
-          ? 'External automation deleted.'
+          ? '外部自动化已删除。'
           : action === 'run'
-            ? 'External automation queued.'
+            ? '外部自动化已排队。'
             : action === 'pause'
-              ? 'External automation paused.'
-              : 'External automation resumed.'
+              ? '外部自动化已暂停。'
+              : '外部自动化已恢复。'
       )
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'External automation action failed.')
+      toast.error(error instanceof Error ? error.message : '外部自动化操作失败。')
     } finally {
       setExternalActionKey(null)
     }
@@ -1192,13 +1192,13 @@ export default function AutomationsPage(): React.JSX.Element {
     try {
       const state = await window.api.ssh.connect({ targetId: manager.target.connectionId })
       if (!state || state.status !== 'connected') {
-        toast.error(state?.error ?? 'SSH connections are unavailable in this client.')
+        toast.error(state?.error ?? '当前客户端不可用 SSH 连接。')
         return
       }
       await refresh()
-      toast.success('SSH connected.')
+      toast.success('SSH 已连接。')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'SSH connection failed.')
+      toast.error(error instanceof Error ? error.message : 'SSH 连接失败。')
     } finally {
       setConnectingExternalSourceKey(null)
     }
@@ -1229,7 +1229,7 @@ export default function AutomationsPage(): React.JSX.Element {
       }
     }
     if (!activateAndRevealWorktree(run.workspaceId)) {
-      toast.error('Workspace is not available.')
+      toast.error('工作区不可用。')
       return
     }
     // Why: activation can create a fresh terminal for an empty workspace; tell
@@ -1284,24 +1284,24 @@ export default function AutomationsPage(): React.JSX.Element {
                 size="icon"
                 className="size-7 rounded-full"
                 onClick={closeAutomationsPage}
-                aria-label="Close automations"
+                aria-label="关闭自动化"
               >
                 <X className="size-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={6}>
-              Close · Esc
+              关闭 · Esc
             </TooltipContent>
           </Tooltip>
           <div className="mx-1 h-5 w-px bg-border/50" aria-hidden />
           <CalendarClock className="size-4 text-muted-foreground" />
-          <h1 className="text-sm font-semibold">Automations</h1>
+          <h1 className="text-sm font-semibold">自动化</h1>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label="Add automation"
+                aria-label="新建自动化"
                 onClick={() => openCreateDialog()}
                 className="border border-border/50 bg-transparent hover:bg-muted/50"
               >
@@ -1309,7 +1309,7 @@ export default function AutomationsPage(): React.JSX.Element {
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={6}>
-              Add automation
+              新建自动化
             </TooltipContent>
           </Tooltip>
         </div>
@@ -1319,7 +1319,7 @@ export default function AutomationsPage(): React.JSX.Element {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                aria-label="Refresh automations"
+                aria-label="刷新自动化"
                 onClick={refresh}
                 disabled={isLoading}
                 className="border border-border/50 bg-transparent hover:bg-muted/50"
@@ -1328,7 +1328,7 @@ export default function AutomationsPage(): React.JSX.Element {
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom" sideOffset={6}>
-              Refresh automations
+              刷新自动化
             </TooltipContent>
           </Tooltip>
         </div>
@@ -1371,20 +1371,18 @@ export default function AutomationsPage(): React.JSX.Element {
           }}
         >
           <DialogHeader>
-            <DialogTitle className="text-sm">Delete Automation</DialogTitle>
+            <DialogTitle className="text-sm">删除自动化</DialogTitle>
             <DialogDescription className="text-xs">
-              Delete{' '}
+              删除{' '}
               <span className="break-all font-medium text-foreground">{deleteTarget?.name}</span>{' '}
-              and its run history. Workspaces created by previous runs are not deleted.
+              及其运行历史。之前运行创建的工作区不会被删除。
             </DialogDescription>
           </DialogHeader>
           {deleteTarget ? (
             <div className="rounded-md border border-border/70 bg-muted/35 px-3 py-2 text-xs">
               <div className="break-all font-medium text-foreground">{deleteTarget.name}</div>
               <div className="mt-1 text-muted-foreground">
-                {deleteTarget.workspaceMode === 'new_per_run'
-                  ? 'New workspace each run'
-                  : 'Selected workspace'}
+                {deleteTarget.workspaceMode === 'new_per_run' ? '每次运行新建工作区' : '选定工作区'}
               </div>
             </div>
           ) : null}
@@ -1404,7 +1402,7 @@ export default function AutomationsPage(): React.JSX.Element {
             >
               {dontAskDeleteAgain ? <Check className="size-3" strokeWidth={3} /> : null}
             </span>
-            Don&apos;t ask again
+            不再询问
           </button>
           <DialogFooter>
             <Button
@@ -1414,7 +1412,7 @@ export default function AutomationsPage(): React.JSX.Element {
                 setDontAskDeleteAgain(false)
               }}
             >
-              Cancel
+              取消
             </Button>
             <Button
               ref={deleteConfirmButtonRef}
@@ -1422,7 +1420,7 @@ export default function AutomationsPage(): React.JSX.Element {
               onClick={() => void confirmDeleteAutomation()}
             >
               <Trash2 className="size-4" />
-              Delete
+              删除
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1444,17 +1442,17 @@ export default function AutomationsPage(): React.JSX.Element {
           }}
         >
           <DialogHeader>
-            <DialogTitle className="text-sm">Delete External Automation</DialogTitle>
+            <DialogTitle className="text-sm">删除外部自动化</DialogTitle>
             <DialogDescription className="text-xs">
-              Delete{' '}
+              删除{' '}
               <span className="break-all font-medium text-foreground">
                 {externalDeleteTarget?.job.name}
               </span>{' '}
-              from{' '}
+              ，来源：{' '}
               {externalDeleteTarget
                 ? getExternalProviderLabel(externalDeleteTarget.manager)
-                : 'external source'}{' '}
-              on {externalDeleteTarget?.manager.targetLabel}.
+                : '外部来源'}{' '}
+              / {externalDeleteTarget?.manager.targetLabel}。
             </DialogDescription>
           </DialogHeader>
           {externalDeleteTarget ? (
@@ -1467,7 +1465,7 @@ export default function AutomationsPage(): React.JSX.Element {
           ) : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setExternalDeleteTarget(null)}>
-              Cancel
+              取消
             </Button>
             <Button
               ref={deleteConfirmButtonRef}
@@ -1475,7 +1473,7 @@ export default function AutomationsPage(): React.JSX.Element {
               onClick={() => void confirmDeleteExternalAutomation()}
             >
               <Trash2 className="size-4" />
-              Delete
+              删除
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1486,8 +1484,8 @@ export default function AutomationsPage(): React.JSX.Element {
           <div className="scrollbar-sleek min-h-0 flex-1 overflow-auto p-2">
             {automations.length + externalAutomationEntries.length > 0 ? (
               <div className="grid grid-cols-[1fr_auto] gap-2 px-2 pb-2 text-[11px] font-medium uppercase text-muted-foreground">
-                <span>Automation</span>
-                <span>Next</span>
+                <span>自动化</span>
+                <span>下次</span>
               </div>
             ) : null}
             {automations.map((automation) => {
@@ -1497,8 +1495,8 @@ export default function AutomationsPage(): React.JSX.Element {
                 : null
               const workspaceLabel =
                 automation.workspaceMode === 'new_per_run'
-                  ? `Create from ${automation.baseBranch ?? automationRepo?.worktreeBaseRef ?? 'project default'}`
-                  : (automationWorktree?.displayName ?? 'Missing workspace')
+                  ? `创建自 ${automation.baseBranch ?? automationRepo?.worktreeBaseRef ?? '项目默认'}`
+                  : (automationWorktree?.displayName ?? '缺失工作区')
               const usageSummary = summarizeAutomationRunUsage(
                 runs.filter((run) => run.automationId === automation.id)
               )
@@ -1506,13 +1504,13 @@ export default function AutomationsPage(): React.JSX.Element {
                 usageSummary.knownRuns > 0
                   ? `${formatAutomationCost(
                       usageSummary.estimatedCostUsd
-                    )} est. · ${formatAutomationTokens(usageSummary.totalTokens)} tokens`
+                    )} 预计 · ${formatAutomationTokens(usageSummary.totalTokens)} 令牌`
                   : usageSummary.unavailableRuns > 0
-                    ? 'Usage unavailable'
-                    : 'No run usage yet'
+                    ? '用量不可用'
+                    : '暂无运行用量'
               const nextRunLabel = automation.enabled
                 ? formatAutomationDateTimeWithRelative(automation.nextRunAt, relativeNow)
-                : 'Paused'
+                : '已暂停'
               return (
                 <ContextMenu key={automation.id}>
                   <ContextMenuTrigger asChild>
@@ -1547,7 +1545,7 @@ export default function AutomationsPage(): React.JSX.Element {
                               badgeClassName="size-1.5"
                             />
                           ) : (
-                            <span>Unknown project</span>
+                            <span>未知项目</span>
                           )}
                           <span className="shrink-0">/</span>
                           <span className="truncate">{workspaceLabel}</span>
@@ -1572,11 +1570,11 @@ export default function AutomationsPage(): React.JSX.Element {
                   <ContextMenuContent className="w-48">
                     <ContextMenuItem onSelect={() => void runNow(automation)}>
                       <Play className="size-3.5" />
-                      Run Now
+                      立即运行
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => void openEditDialog(automation)}>
                       <Pencil className="size-3.5" />
-                      Edit
+                      编辑
                     </ContextMenuItem>
                     <ContextMenuItem onSelect={() => void toggleAutomation(automation)}>
                       {automation.enabled ? (
@@ -1584,7 +1582,7 @@ export default function AutomationsPage(): React.JSX.Element {
                       ) : (
                         <Play className="size-3.5" />
                       )}
-                      {automation.enabled ? 'Pause' : 'Resume'}
+                      {automation.enabled ? '暂停' : '恢复'}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
@@ -1592,7 +1590,7 @@ export default function AutomationsPage(): React.JSX.Element {
                       onSelect={() => requestDeleteAutomation(automation)}
                     >
                       <Trash2 className="size-3.5" />
-                      Delete
+                      删除
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -1603,10 +1601,10 @@ export default function AutomationsPage(): React.JSX.Element {
               const targetKindLabel = getExternalTargetKindLabel(entry.manager)
               if (entry.kind === 'source') {
                 const sourceStatus =
-                  entry.manager.target.type === 'ssh' ? 'Connect to load jobs' : 'Unavailable'
+                  entry.manager.target.type === 'ssh' ? '连接后加载任务' : '不可用'
                 const sourceSummary =
                   entry.manager.error ??
-                  `${providerLabel} source unavailable until ${targetKindLabel.toLowerCase()} connects.`
+                  `${providerLabel} 来源需要连接 ${targetKindLabel} 后才可用。`
                 return (
                   <button
                     key={entry.key}
@@ -1628,7 +1626,7 @@ export default function AutomationsPage(): React.JSX.Element {
                         <span className="truncate font-medium">{entry.manager.targetLabel}</span>
                       </span>
                       <span className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>{providerLabel} source</span>
+                        <span>{providerLabel} 来源</span>
                         <span className="shrink-0">/</span>
                         <span className="truncate">{targetKindLabel}</span>
                       </span>
@@ -1645,7 +1643,7 @@ export default function AutomationsPage(): React.JSX.Element {
               }
               const nextRunLabel = entry.job.enabled
                 ? formatExternalDate(entry.job.nextRunAt, relativeNow)
-                : 'Paused'
+                : '已暂停'
               const actionDisabled = !entry.manager.canManage || externalActionKey !== null
               return (
                 <ContextMenu key={entry.key}>
@@ -1683,10 +1681,10 @@ export default function AutomationsPage(): React.JSX.Element {
                           <span className="shrink-0">·</span>
                           <span className="truncate">
                             {entry.manager.provider === 'hermes'
-                              ? `${entry.job.runCount} ${entry.job.runCount === 1 ? 'run' : 'runs'}`
+                              ? `${entry.job.runCount} 次运行`
                               : entry.manager.canManage
-                                ? 'Manageable'
-                                : 'Read-only'}
+                                ? '可管理'
+                                : '只读'}
                           </span>
                         </span>
                       </span>
@@ -1702,7 +1700,7 @@ export default function AutomationsPage(): React.JSX.Element {
                       onSelect={() => requestExternalAction(entry.manager, entry.job, 'run')}
                     >
                       <Play className="size-3.5" />
-                      Run Now
+                      立即运行
                     </ContextMenuItem>
                     {entry.manager.provider === 'hermes' ? (
                       <ContextMenuItem
@@ -1710,7 +1708,7 @@ export default function AutomationsPage(): React.JSX.Element {
                         onSelect={() => openEditExternalDialog(entry.manager, entry.job)}
                       >
                         <Pencil className="size-3.5" />
-                        Edit
+                        编辑
                       </ContextMenuItem>
                     ) : null}
                     <ContextMenuItem
@@ -1728,7 +1726,7 @@ export default function AutomationsPage(): React.JSX.Element {
                       ) : (
                         <Play className="size-3.5" />
                       )}
-                      {entry.job.enabled ? 'Pause' : 'Resume'}
+                      {entry.job.enabled ? '暂停' : '恢复'}
                     </ContextMenuItem>
                     <ContextMenuSeparator />
                     <ContextMenuItem
@@ -1737,7 +1735,7 @@ export default function AutomationsPage(): React.JSX.Element {
                       onSelect={() => requestExternalAction(entry.manager, entry.job, 'delete')}
                     >
                       <Trash2 className="size-3.5" />
-                      Delete
+                      删除
                     </ContextMenuItem>
                   </ContextMenuContent>
                 </ContextMenu>
@@ -1745,7 +1743,7 @@ export default function AutomationsPage(): React.JSX.Element {
             })}
             {automations.length === 0 && externalAutomationEntries.length === 0 ? (
               <div className="grid gap-2 p-2">
-                <div className="px-1 pb-1 text-sm font-medium">Start from a template</div>
+                <div className="px-1 pb-1 text-sm font-medium">从模板开始</div>
                 {AUTOMATION_TEMPLATES.map((template) => (
                   <button
                     key={template.id}
@@ -1769,7 +1767,7 @@ export default function AutomationsPage(): React.JSX.Element {
                   onClick={() => openCreateDialog()}
                 >
                   <Plus className="size-4" />
-                  Add new
+                  新建
                 </Button>
               </div>
             ) : null}
@@ -1819,7 +1817,7 @@ export default function AutomationsPage(): React.JSX.Element {
                         {selectedExternal.manager.targetLabel}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {getExternalProviderLabel(selectedExternal.manager)} source unavailable
+                        {getExternalProviderLabel(selectedExternal.manager)} 来源不可用
                         {selectedExternal.manager.error
                           ? ` - ${selectedExternal.manager.error}`
                           : null}
@@ -1838,12 +1836,12 @@ export default function AutomationsPage(): React.JSX.Element {
                         {isSelectedExternalSshConnecting ? (
                           <RefreshCw className="size-3.5 animate-spin" />
                         ) : null}
-                        {isSelectedExternalSshConnecting ? 'Connecting...' : 'Connect SSH'}
+                        {isSelectedExternalSshConnecting ? '连接中...' : '连接 SSH'}
                       </Button>
                     ) : null}
                   </div>
                   <div className="px-3 py-6 text-sm text-muted-foreground">
-                    Connect this source to check for Hermes cron jobs in the remote profile.
+                    连接这个来源后即可检查远程配置中的 Hermes cron 任务。
                   </div>
                 </div>
               )}
@@ -1856,9 +1854,9 @@ export default function AutomationsPage(): React.JSX.Element {
             >
               <div className="flex shrink-0 items-center justify-between border-b border-border/50 px-5 py-2">
                 <TabsList variant="line" className="h-8">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="overview">概览</TabsTrigger>
                   <TabsTrigger value="runs" disabled={!selected}>
-                    Runs
+                    运行
                     <span className="text-xs text-muted-foreground">{selectedRuns.length}</span>
                   </TabsTrigger>
                 </TabsList>
@@ -1868,12 +1866,12 @@ export default function AutomationsPage(): React.JSX.Element {
                 <AutomationDetail
                   automation={selected}
                   runs={selectedRuns}
-                  projectName={selectedRepo?.displayName ?? 'Unknown project'}
+                  projectName={selectedRepo?.displayName ?? '未知项目'}
                   projectDefaultBaseRef={selectedRepo?.worktreeBaseRef ?? null}
                   workspaceName={
                     selected?.workspaceMode === 'new_per_run'
-                      ? 'New workspace each run'
-                      : (selectedWorktree?.displayName ?? 'Missing workspace')
+                      ? '每次运行新建工作区'
+                      : (selectedWorktree?.displayName ?? '缺失工作区')
                   }
                   now={relativeNow}
                   onRunNow={(automation) => void runNow(automation)}
@@ -1893,12 +1891,10 @@ export default function AutomationsPage(): React.JSX.Element {
                         relativeNow
                       ),
                       'Orca',
-                      selectedAutomationRunPageWorkspaceDisplay?.detailLabel ?? 'No workspace'
+                      selectedAutomationRunPageWorkspaceDisplay?.detailLabel ?? '无工作区'
                     ]}
                     detail={
-                      selectedAutomationRunPage.outputSnapshot?.truncated
-                        ? 'Latest saved output'
-                        : null
+                      selectedAutomationRunPage.outputSnapshot?.truncated ? '最新保存的输出' : null
                     }
                     statusLabel={getAutomationRunStatusLabel(selectedAutomationRunPage.status)}
                     statusVariant={getAutomationRunStatusVariant(selectedAutomationRunPage.status)}
@@ -1920,7 +1916,7 @@ export default function AutomationsPage(): React.JSX.Element {
                                 isSelectedAutomationRunPageRerunPending && 'animate-spin'
                               )}
                             />
-                            Rerun
+                            重新运行
                           </Button>
                         ) : null}
                         {selectedAutomationRunPageViewState ? (
@@ -1954,7 +1950,7 @@ export default function AutomationsPage(): React.JSX.Element {
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    Select an automation to view runs.
+                    选择一个自动化以查看运行记录。
                   </div>
                 )}
               </TabsContent>

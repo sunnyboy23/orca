@@ -17,8 +17,8 @@ export function getAutomationRunWorkspaceDisplay({
 }): AutomationRunWorkspaceDisplay {
   if (!run.workspaceId) {
     return {
-      rowLabel: 'Not launched',
-      detailLabel: 'Not launched',
+      rowLabel: '未启动',
+      detailLabel: '未启动',
       muted: true
     }
   }
@@ -33,7 +33,7 @@ export function getAutomationRunWorkspaceDisplay({
 
   const previousName = run.workspaceDisplayName?.trim()
   if (previousName) {
-    const deletedLabel = `${previousName} (no longer available)`
+    const deletedLabel = `${previousName}（已不可用）`
     return {
       rowLabel: previousName,
       detailLabel: deletedLabel,
@@ -43,8 +43,8 @@ export function getAutomationRunWorkspaceDisplay({
   }
 
   return {
-    rowLabel: 'Workspace no longer available',
-    detailLabel: 'Workspace no longer available',
+    rowLabel: '工作区已不可用',
+    detailLabel: '工作区已不可用',
     muted: true
   }
 }

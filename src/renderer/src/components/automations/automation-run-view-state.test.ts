@@ -66,8 +66,8 @@ describe('automation run view state', () => {
       })
     ).toMatchObject({
       availability: 'terminal',
-      actionLabel: 'View run',
-      statusLabel: 'Run is open',
+      actionLabel: '查看运行',
+      statusLabel: '运行已打开',
       canOpen: true
     })
   })
@@ -81,8 +81,8 @@ describe('automation run view state', () => {
       })
     ).toMatchObject({
       availability: 'workspace',
-      actionLabel: 'Open workspace',
-      statusLabel: 'Opened workspace; original terminal is closed.',
+      actionLabel: '打开工作区',
+      statusLabel: '已打开工作区；原终端已关闭。',
       canOpen: true
     })
   })
@@ -96,7 +96,7 @@ describe('automation run view state', () => {
       })
     ).toMatchObject({
       availability: 'metadata',
-      statusLabel: 'No workspace launched',
+      statusLabel: '未启动工作区',
       canOpen: false
     })
   })
@@ -110,7 +110,7 @@ describe('automation run view state', () => {
       })
     ).toMatchObject({
       availability: 'metadata',
-      statusLabel: 'Nightly Checks no longer available',
+      statusLabel: 'Nightly Checks 已不可用',
       canOpen: false
     })
   })
@@ -131,8 +131,8 @@ describe('automation run view state', () => {
       })
     ).toMatchObject({
       availability: 'snapshot',
-      actionLabel: 'Snapshot saved',
-      statusLabel: 'Showing saved run snapshot.',
+      actionLabel: '已保存快照',
+      statusLabel: '正在显示已保存的运行快照。',
       canOpen: false
     })
   })

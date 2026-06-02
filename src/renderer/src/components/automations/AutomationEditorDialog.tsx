@@ -127,15 +127,15 @@ export function AutomationEditorDialog({
             <div className="min-w-0 flex-1 space-y-2">
               <DialogTitle className="text-sm font-medium">
                 {isEditing
-                  ? 'Edit automation'
+                  ? '编辑自动化'
                   : isHermesCreate
-                    ? 'Create Hermes cron'
-                    : 'Create automation'}
+                    ? '创建 Hermes cron'
+                    : '创建自动化'}
               </DialogTitle>
               <Input
                 value={draft.name}
-                placeholder="Weekday repo audit"
-                aria-label="Automation name"
+                placeholder="工作日仓库巡检"
+                aria-label="自动化名称"
                 className="h-10 max-w-md border-input bg-input/30 px-3 text-lg font-semibold text-foreground shadow-xs placeholder:text-muted-foreground dark:bg-input/30"
                 onChange={(event) =>
                   onDraftChange((current) => ({ ...current, name: event.target.value }))
@@ -170,7 +170,7 @@ export function AutomationEditorDialog({
                       className={PICKER_TRIGGER_CLASS}
                     >
                       <Sparkles className="size-4" />
-                      Use template
+                      使用模板
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent align="end" className="w-96 p-3">
@@ -199,10 +199,10 @@ export function AutomationEditorDialog({
               {draft.scheduleWarning}
             </div>
           ) : null}
-          <Field label="Prompt">
+          <Field label="提示词">
             <textarea
               value={draft.prompt}
-              placeholder="Run the weekly dependency audit and summarize risky changes."
+              placeholder="运行每周依赖巡检并总结风险变更。"
               onChange={(event) =>
                 onDraftChange((current) => ({ ...current, prompt: event.target.value }))
               }
@@ -219,12 +219,12 @@ export function AutomationEditorDialog({
                 : 'grid gap-3 sm:grid-cols-2 lg:grid-cols-4'
             }
           >
-            <Field label="Project">
+            <Field label="项目">
               <RepoCombobox
                 repos={repos}
                 value={draft.projectId}
                 onValueChange={onProjectChange}
-                placeholder="Select project"
+                placeholder="选择项目"
                 triggerClassName={`h-9 w-full min-w-0 ${PICKER_TRIGGER_CLASS}`}
                 showStandaloneAddButton={false}
               />
@@ -232,20 +232,19 @@ export function AutomationEditorDialog({
             <Field
               label={
                 <span className="inline-flex items-center gap-1">
-                  Workspace
+                  工作区
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         type="button"
-                        aria-label="Workspace mode help"
+                        aria-label="工作区模式说明"
                         className="rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                       >
                         <Info className="size-3.5" />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent side="top" sideOffset={6} className="max-w-72">
-                      Worktree runs in the selected workspace. New run creates a fresh workspace
-                      from the selected branch each time.
+                      Worktree 会在选定工作区中运行；新运行模式会每次基于所选分支创建一个全新工作区。
                     </TooltipContent>
                   </Tooltip>
                 </span>
@@ -282,7 +281,7 @@ export function AutomationEditorDialog({
                       Worktree
                     </ToggleGroupItem>
                     <ToggleGroupItem value="new_per_run" className={MODE_TOGGLE_ITEM_CLASS}>
-                      New run
+                      新运行
                     </ToggleGroupItem>
                   </ToggleGroup>
                   {draft.workspaceMode === 'existing' ? (
@@ -330,7 +329,7 @@ export function AutomationEditorDialog({
                 onDraftChange={onDraftChange}
               />
             )}
-            <Field label="Schedule">
+            <Field label="调度">
               <AutomationSchedulePicker
                 draft={draft}
                 triggerClassName={PICKER_TRIGGER_CLASS}
@@ -341,21 +340,19 @@ export function AutomationEditorDialog({
               <Field
                 label={
                   <span className="inline-flex items-center gap-1">
-                    Grace
+                    补跑
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          aria-label="Missed-run grace help"
+                          aria-label="错过运行补跑说明"
                           className="rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
                           <Info className="size-3.5" />
                         </button>
                       </TooltipTrigger>
                       <TooltipContent side="top" sideOffset={6} className="max-w-72">
-                        If Orca or the execution host was unavailable at the scheduled time, Orca
-                        runs one missed occurrence when it becomes available within this window.
-                        Older missed runs are skipped.
+                        如果 Orca 或执行主机在计划时间不可用，Orca 会在这个窗口内恢复可用时补跑一次。更早错过的运行会被跳过。
                       </TooltipContent>
                     </Tooltip>
                   </span>
@@ -371,13 +368,13 @@ export function AutomationEditorDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent position="popper" side="bottom" align="start" sideOffset={4}>
-                    <SelectItem value="0">No grace</SelectItem>
-                    <SelectItem value="30">30 minutes</SelectItem>
-                    <SelectItem value="60">1 hour</SelectItem>
-                    <SelectItem value="180">3 hours</SelectItem>
-                    <SelectItem value="720">12 hours</SelectItem>
-                    <SelectItem value="1440">24 hours</SelectItem>
-                    <SelectItem value="2880">48 hours</SelectItem>
+                    <SelectItem value="0">不补跑</SelectItem>
+                    <SelectItem value="30">30 分钟</SelectItem>
+                    <SelectItem value="60">1 小时</SelectItem>
+                    <SelectItem value="180">3 小时</SelectItem>
+                    <SelectItem value="720">12 小时</SelectItem>
+                    <SelectItem value="1440">24 小时</SelectItem>
+                    <SelectItem value="2880">48 小时</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
@@ -385,7 +382,7 @@ export function AutomationEditorDialog({
           </div>
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              取消
             </Button>
             <Button
               variant="outline"
@@ -394,7 +391,7 @@ export function AutomationEditorDialog({
               className="border-foreground/25 bg-foreground/[0.04] text-foreground hover:bg-foreground/[0.08]"
             >
               {isEditing || isHermesCreate || isSaving ? null : <Plus className="size-4" />}
-              {isEditing ? 'Save Changes' : isSaving || isHermesCreate ? 'Save' : 'Create'}
+              {isEditing ? '保存变更' : isSaving || isHermesCreate ? '保存' : '创建'}
             </Button>
           </div>
         </div>

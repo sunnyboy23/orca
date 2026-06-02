@@ -60,11 +60,11 @@ describe('automation schedules', () => {
   })
 
   it('formats invalid schedules with a safe fallback label', () => {
-    expect(formatAutomationSchedule('FREQ=YEARLY')).toBe('Invalid schedule')
+    expect(formatAutomationSchedule('FREQ=YEARLY')).toBe('无效调度')
   })
 
   it('formats hourly schedules using the stored minute', () => {
-    expect(formatAutomationSchedule('FREQ=HOURLY;BYMINUTE=5')).toBe('Hourly at :05')
+    expect(formatAutomationSchedule('FREQ=HOURLY;BYMINUTE=5')).toBe('每小时 :05 运行')
   })
 
   it('computes custom cron schedules', () => {
@@ -85,7 +85,7 @@ describe('automation schedules', () => {
 
   it('labels valid custom cron schedules without treating them as invalid', () => {
     expect(formatAutomationSchedule('*/30 9-17 * * MON-FRI')).toBe(
-      'Custom cron: */30 9-17 * * MON-FRI'
+      '自定义 cron：*/30 9-17 * * MON-FRI'
     )
   })
 

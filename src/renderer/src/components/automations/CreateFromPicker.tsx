@@ -50,8 +50,7 @@ export function CreateFromPicker({
   const [isSearching, setIsSearching] = React.useState(false)
   const effectiveDefault = repo?.worktreeBaseRef ?? defaultBaseRef
   const selectedValue = value || DEFAULT_VALUE
-  const selectedLabel =
-    value || (effectiveDefault ? `${effectiveDefault} (default)` : 'Project default')
+  const selectedLabel = value || (effectiveDefault ? `${effectiveDefault}（默认）` : '项目默认')
   const branchOptions = React.useMemo(() => {
     const options = new Set<string>()
     if (effectiveDefault) {
@@ -152,7 +151,7 @@ export function CreateFromPicker({
             className={cn('h-9 w-full justify-between px-3 text-sm font-normal', triggerClassName)}
           >
             <span className="flex min-w-0 items-center gap-1.5">
-              <span className="shrink-0 text-muted-foreground">Branch from</span>
+              <span className="shrink-0 text-muted-foreground">基于分支</span>
               <span className="truncate">{selectedLabel}</span>
             </span>
             <ChevronsUpDown className="size-4 opacity-50" />
@@ -168,12 +167,10 @@ export function CreateFromPicker({
               ref={inputRef}
               value={query}
               onValueChange={setQuery}
-              placeholder="Search repo branches..."
+              placeholder="搜索仓库分支..."
             />
             <CommandList className="max-h-72">
-              <CommandEmpty>
-                {isSearching ? 'Searching branches...' : 'No branches found.'}
-              </CommandEmpty>
+              <CommandEmpty>{isSearching ? '正在搜索分支...' : '没有找到分支。'}</CommandEmpty>
               <CommandItem
                 value={effectiveDefault ? `${effectiveDefault} default` : 'project default'}
                 onSelect={() => {
@@ -188,7 +185,7 @@ export function CreateFromPicker({
                   )}
                 />
                 <span className="truncate">
-                  {effectiveDefault ? `${effectiveDefault} (default)` : 'Project default'}
+                  {effectiveDefault ? `${effectiveDefault}（默认）` : '项目默认'}
                 </span>
               </CommandItem>
               {branchOptions

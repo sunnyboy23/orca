@@ -46,7 +46,7 @@ export function WorkspaceCombobox({
           className={cn('h-9 w-full justify-between px-3 text-sm font-normal', triggerClassName)}
         >
           <span className={cn('truncate', !selected && 'text-muted-foreground')}>
-            {selected?.displayName ?? 'Select workspace'}
+            {selected?.displayName ?? '选择工作区'}
           </span>
           <ChevronsUpDown className="size-4 opacity-50" />
         </Button>
@@ -57,9 +57,9 @@ export function WorkspaceCombobox({
         onOpenAutoFocus={(event) => event.preventDefault()}
       >
         <Command>
-          <CommandInput ref={inputRef} placeholder="Search workspaces..." />
+          <CommandInput ref={inputRef} placeholder="搜索工作区..." />
           <CommandList className="max-h-72">
-            <CommandEmpty>No workspaces found.</CommandEmpty>
+            <CommandEmpty>没有找到工作区。</CommandEmpty>
             {worktrees.map((worktree) => (
               <CommandItem
                 key={worktree.id}

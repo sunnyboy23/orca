@@ -33,8 +33,8 @@ type ParsedHermesOutput = {
 }
 
 const METADATA_LINE_PATTERN = /^\*\*([^*]+):\*\*\s+(.+?)\s*$/
-const CRON_FIELD_NAMES = ['minute', 'hour', 'day of month', 'month', 'weekday'] as const
-const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const CRON_FIELD_NAMES = ['分钟', '小时', '日期', '月份', '星期'] as const
+const WEEKDAY_NAMES = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'] as const
 
 function splitSections(content: string): ParsedSection[] {
   const lines = content.split(/\r?\n/)
@@ -137,7 +137,7 @@ function describeSimpleCron(parts: string[]): string | null {
   const time = minute !== null && hour !== null ? formatCronTime(hour, minute) : null
 
   if (time && dayOfMonthField === '*' && monthField === '*' && weekdayField === '*') {
-    return `Runs daily at ${time}.`
+    return `每天 ${time} 运行。`
   }
   if (
     minute !== null &&
@@ -146,7 +146,7 @@ function describeSimpleCron(parts: string[]): string | null {
     monthField === '*' &&
     weekdayField === '*'
   ) {
-    return `Runs hourly at :${String(minute).padStart(2, '0')}.`
+    return `每小时 :${String(minute).padStart(2, '0')} 运行。`
   }
   if (
     time &&
@@ -154,15 +154,15 @@ function describeSimpleCron(parts: string[]): string | null {
     monthField === '*' &&
     /^(?:1-5|MON-FRI)$/i.test(weekdayField)
   ) {
-    return `Runs on weekdays at ${time}.`
+    return `工作日 ${time} 运行。`
   }
   const weekday = parseSingleCronNumber(weekdayField, 0, 7)
   if (time && dayOfMonthField === '*' && monthField === '*' && weekday !== null) {
-    return `Runs every ${WEEKDAY_NAMES[weekday === 7 ? 0 : weekday]} at ${time}.`
+    return `每${WEEKDAY_NAMES[weekday === 7 ? 0 : weekday]} ${time} 运行。`
   }
   const dayOfMonth = parseSingleCronNumber(dayOfMonthField, 1, 31)
   if (time && dayOfMonth !== null && monthField === '*' && weekdayField === '*') {
-    return `Runs monthly on day ${dayOfMonth} at ${time}.`
+    return `每月 ${dayOfMonth} 日 ${time} 运行。`
   }
   return null
 }
@@ -183,7 +183,7 @@ function getScheduleDescription(value: string): string | null {
   if (parts.length !== 5) {
     return null
   }
-  return describeSimpleCron(parts) ?? `Cron fields: ${describeCronFields(parts)}.`
+  return describeSimpleCron(parts) ?? `Cron 字段：${describeCronFields(parts)}。`
 }
 
 function isScheduleMetadataLabel(label: string): boolean {
@@ -378,7 +378,7 @@ export function HermesCronOutputView({ content }: { content: string }): React.JS
       ) : null}
 
       {errorSection ? (
-        <SectionCard title="Error" accent="error">
+        <SectionCard title="错误" accent="error">
           <CommentMarkdown
             variant="document"
             content={errorSection.body}
@@ -388,7 +388,7 @@ export function HermesCronOutputView({ content }: { content: string }): React.JS
       ) : null}
 
       {responseSection ? (
-        <SectionCard title="Response" accent="response">
+        <SectionCard title="响应" accent="response">
           <CommentMarkdown
             variant="document"
             content={responseSection.body}
@@ -399,7 +399,7 @@ export function HermesCronOutputView({ content }: { content: string }): React.JS
 
       {promptSection ? (
         <CollapsibleSection
-          title="Prompt"
+          title="提示词"
           tone="muted"
           icon={MessageSquare}
           iconClass="text-indigo-700 dark:text-indigo-400"
