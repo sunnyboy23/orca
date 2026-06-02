@@ -10,20 +10,28 @@ describe('classifyFeishuDevelopmentTaskIntent', () => {
   })
 
   it('creates tasks for explicit task prefixes', () => {
-    expect(classifyFeishuDevelopmentTaskIntent('任务 修复飞书消息实时刷新')).toEqual({
+    expect(classifyFeishuDevelopmentTaskIntent('转为任务 修复飞书消息实时刷新')).toEqual({
       shouldCreate: true,
       spec: '修复飞书消息实时刷新'
     })
+    expect(classifyFeishuDevelopmentTaskIntent('/run fix Feishu realtime sync')).toEqual({
+      shouldCreate: true,
+      spec: 'fix Feishu realtime sync'
+    })
   })
 
-  it('creates tasks for actionable development requests', () => {
+  it('records actionable text until the user explicitly promotes it to a task', () => {
     expect(classifyFeishuDevelopmentTaskIntent('帮我实现飞书消息实时通信')).toEqual({
-      shouldCreate: true,
-      spec: '帮我实现飞书消息实时通信'
+      shouldCreate: false,
+      reason: 'unclear'
     })
     expect(classifyFeishuDevelopmentTaskIntent('修复设置按钮白屏 bug')).toEqual({
-      shouldCreate: true,
-      spec: '修复设置按钮白屏 bug'
+      shouldCreate: false,
+      reason: 'unclear'
+    })
+    expect(classifyFeishuDevelopmentTaskIntent('任务 修复一个测试问题')).toEqual({
+      shouldCreate: false,
+      reason: 'unclear'
     })
   })
 

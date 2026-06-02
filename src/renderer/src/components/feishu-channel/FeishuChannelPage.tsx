@@ -220,7 +220,7 @@ function MessageBubble({
         {message.error ? (
           <div className="mt-2 text-xs text-destructive">{message.error}</div>
         ) : null}
-        {message.direction === 'incoming' && !message.runId ? (
+        {canCreateRunFromMessage(message) ? (
           <Button
             className="mt-2"
             size="sm"
@@ -239,6 +239,10 @@ function MessageBubble({
       </div>
     </div>
   )
+}
+
+function canCreateRunFromMessage(message: FeishuChannelMessage): boolean {
+  return message.direction === 'incoming' && message.status === 'received' && !message.runId
 }
 
 function MessageProcessingState({

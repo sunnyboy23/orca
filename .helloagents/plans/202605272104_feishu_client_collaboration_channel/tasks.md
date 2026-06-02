@@ -36,6 +36,7 @@
 - 2026-05-27 21:04 创建方案包。结论：现有飞书机器人编排包已解决“事件驱动任务”，但缺少客户端可见的消息/回复/诊断通道，本包补齐产品闭环。
 - 2026-05-28 12:35 完成首版飞书客户端通道：新增 shared 协议类型、主进程 channel store/service、FeishuBotService 入库接入、`feishu-channel:*` IPC/preload、renderer 飞书通道页面、设置页“打开飞书通道”入口和 `feishuChannel` 中英文文案；`typecheck:node`、`typecheck:web`、`check:i18n-copy`、channel store/service vitest 均通过。
 - 2026-06-02 10:20 完成实时通信与主 Agent 判断闭环：修复订阅初始快照竞态，renderer 收到事件自动更新并切到真实会话；新增飞书开发任务意图判断，闲聊只记录，明确开发任务自动进入主 Agent run；消息流显示“已交给主 Agent / 已记录，未创建任务”等状态。飞书相关 vitest、`typecheck:node`、`typecheck:web` 均通过。
+- 2026-06-02 10:30 收紧飞书自动建任务策略：普通文本和 `任务 ...` 不再自动创建 run，避免测试/闲聊误触发编排失败；仅 `转为任务`、`创建任务`、`开发任务`、`run`、`/run` 显式前缀自动建任务。聊天框“转为任务”按钮只对未处理的入站消息显示。
 
 ## 验收清单
 

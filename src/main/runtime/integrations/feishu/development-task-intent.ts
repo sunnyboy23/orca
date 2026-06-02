@@ -1,68 +1,4 @@
-const DIRECT_RUN_PREFIXES = ['run', '/run', '任务', '开发任务', '创建任务', '帮我', '请帮我']
-
-const ACTION_KEYWORDS = [
-  '修复',
-  '实现',
-  '开发',
-  '新增',
-  '添加',
-  '改造',
-  '修改',
-  '优化',
-  '重构',
-  '排查',
-  '定位',
-  '测试',
-  '验证',
-  '启动',
-  '运行',
-  '部署',
-  'fix',
-  'implement',
-  'add',
-  'update',
-  'change',
-  'refactor',
-  'debug',
-  'test',
-  'run',
-  'deploy'
-]
-
-const TARGET_KEYWORDS = [
-  '代码',
-  '项目',
-  '软件',
-  '页面',
-  '界面',
-  '组件',
-  '功能',
-  '按钮',
-  '面板',
-  '接口',
-  '服务',
-  '配置',
-  '报错',
-  'bug',
-  '白屏',
-  '崩溃',
-  '消息',
-  '通信',
-  '实时',
-  '刷新',
-  'agent',
-  'agents',
-  'cli',
-  'dev',
-  'app',
-  'ui',
-  'api',
-  'ipc',
-  'electron',
-  'react',
-  'typescript',
-  'ts'
-]
+const DIRECT_RUN_PREFIXES = ['转为任务', '创建任务', '开发任务', 'run', '/run']
 
 const CASUAL_PATTERNS = [
   /^你?好[啊呀]?[。.!！?？]*$/i,
@@ -92,13 +28,6 @@ export function classifyFeishuDevelopmentTaskIntent(text: string): FeishuDevelop
   const directSpec = stripDirectRunPrefix(normalized)
   if (directSpec) {
     return { shouldCreate: true, spec: directSpec }
-  }
-
-  const lowered = normalized.toLowerCase()
-  const hasAction = ACTION_KEYWORDS.some((keyword) => lowered.includes(keyword.toLowerCase()))
-  const hasTarget = TARGET_KEYWORDS.some((keyword) => lowered.includes(keyword.toLowerCase()))
-  if (hasAction && hasTarget) {
-    return { shouldCreate: true, spec: normalized }
   }
 
   return { shouldCreate: false, reason: 'unclear' }

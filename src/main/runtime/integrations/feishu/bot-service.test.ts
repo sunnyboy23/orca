@@ -66,10 +66,10 @@ describe('FeishuBotService', () => {
     })
 
     await service.start(createSettings())
-    await eventHandlers[0]?.onMessage(createMessage('任务 修复飞书消息实时刷新'))
+    await eventHandlers[0]?.onMessage(createMessage('转为任务 修复飞书消息实时刷新'))
 
     expect(receiveMessageMock).toHaveBeenCalledWith(
-      expect.objectContaining({ text: '任务 修复飞书消息实时刷新' })
+      expect.objectContaining({ text: '转为任务 修复飞书消息实时刷新' })
     )
     expect(service.listChannelMessages('oc_1')[0]).toMatchObject({
       status: 'processing',
