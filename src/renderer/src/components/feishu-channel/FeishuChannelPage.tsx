@@ -216,6 +216,7 @@ function MessageBubble({
           {message.runId ? <span>{copy.labels.run(message.runId)}</span> : null}
         </div>
         <div className="whitespace-pre-wrap break-words text-sm">{message.text}</div>
+        <MessageProcessingState message={message} />
         {message.error ? (
           <div className="mt-2 text-xs text-destructive">{message.error}</div>
         ) : null}
@@ -236,6 +237,30 @@ function MessageBubble({
           </Button>
         ) : null}
       </div>
+    </div>
+  )
+}
+
+function MessageProcessingState({
+  message
+}: {
+  message: FeishuChannelMessage
+}): React.JSX.Element | null {
+  const { messages } = useI18n()
+  const copy = messages.feishuChannel
+  const stateLabels: Partial<Record<FeishuChannelMessage['status'], string>> = {
+    ignored: copy.labels.ignored,
+    queued: copy.labels.queued,
+    processing: copy.labels.processing,
+    failed: copy.labels.failed
+  }
+  const label = stateLabels[message.status]
+  if (!label) {
+    return null
+  }
+  return (
+    <div className="mt-2 rounded-sm bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
+      {label}
     </div>
   )
 }

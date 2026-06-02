@@ -24,6 +24,37 @@ describe('FeishuChannelService', () => {
     expect(events).toContain('status')
   })
 
+  it('marks incoming messages when a run is created or skipped', () => {
+    const service = new FeishuChannelService({
+      getBotStatus: () => ({ state: 'connected', configured: true }),
+      getMessageClient: () => null
+    })
+    const incoming = service.receiveIncoming({
+      eventType: 'im.message.receive_v1',
+      chatId: 'chat-1',
+      messageId: 'msg-1',
+      text: '任务 修复消息刷新'
+    })
+
+    service.markMessageRunCreated(incoming.id, 'run_1')
+    expect(service.listMessages('chat-1')[0]).toMatchObject({
+      status: 'processing',
+      runId: 'run_1'
+    })
+
+    const casual = service.receiveIncoming({
+      eventType: 'im.message.receive_v1',
+      chatId: 'chat-1',
+      messageId: 'msg-2',
+      text: '你好'
+    })
+    service.markMessageIgnored(casual.id)
+
+    expect(service.listMessages('chat-1')[1]).toMatchObject({
+      status: 'ignored'
+    })
+  })
+
   it('records failed outgoing messages when the bot is disconnected', async () => {
     const service = new FeishuChannelService({
       getBotStatus: () => ({ state: 'stopped', configured: true }),

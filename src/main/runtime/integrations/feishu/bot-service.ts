@@ -78,8 +78,13 @@ export class FeishuBotService {
       createWsClient: this.createWsClient,
       handlers: {
         onMessage: async (message) => {
-          this.channelService.receiveIncoming(message)
-          await this.orchestrator?.receiveMessage(message)
+          const stored = this.channelService.receiveIncoming(message)
+          const result = await this.orchestrator?.receiveMessage(message)
+          if (result?.runId) {
+            this.channelService.markMessageRunCreated(stored.id, result.runId)
+          } else if (result && !result.handled) {
+            this.channelService.markMessageIgnored(stored.id)
+          }
         },
         onStatusChange: (status) => {
           this.status = { ...status, configured: true }

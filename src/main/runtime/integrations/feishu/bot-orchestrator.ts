@@ -6,6 +6,7 @@ import type { OrchestrationDb } from '../../orchestration/db'
 import type { CoordinatorRuntime } from '../../orchestration/coordinator'
 import { startCoordinatorRun, stopActiveCoordinatorRun } from '../../orchestration/run-service'
 import { resolveFeishuDecisionGate } from './gate-resolver'
+import { classifyFeishuDevelopmentTaskIntent } from './development-task-intent'
 
 export type FeishuBotOrchestrator = {
   receiveMessage(message: FeishuReceivedMessage): Promise<{ runId?: string; handled: boolean }>
@@ -111,7 +112,12 @@ async function handleCommand({
     await reply(messageClient, message.chatId, resolved)
     return { handled: true }
   }
-  return startRunFromFeishuMessage({ spec: command.spec, message, db, runtime, messageClient })
+  const intent = classifyFeishuDevelopmentTaskIntent(command.spec)
+  if (!intent.shouldCreate) {
+    await reply(messageClient, message.chatId, buildIgnoredMessageText(intent.reason))
+    return { handled: false }
+  }
+  return startRunFromFeishuMessage({ spec: intent.spec, message, db, runtime, messageClient })
 }
 
 async function startRunFromFeishuMessage({
@@ -198,12 +204,21 @@ function countTasksByStatus(statuses: string[]): string {
 
 function buildHelpText(): string {
   return [
-    '可以直接发送任务内容给 Orca。',
+    '可以直接发送开发任务给 Orca。',
+    '如果只是聊天，Orca 会先记录消息，不会自动创建任务。',
     '常用指令：',
+    '- 任务 <内容>：明确创建开发任务',
     '- 状态：查看当前任务',
     '- 停止：中止当前任务',
     '- 继续 <内容>：回复等待确认的问题'
   ].join('\n')
+}
+
+function buildIgnoredMessageText(reason: 'empty' | 'casual' | 'unclear'): string {
+  if (reason === 'casual') {
+    return '收到。看起来这不是开发任务，我先只记录消息。要创建任务可以发送“任务 <需求内容>”。'
+  }
+  return '这条消息还不像明确的开发任务，我先只记录消息。要创建任务可以发送“任务 <需求内容>”，或描述要修复/实现/优化的功能。'
 }
 
 async function reply(

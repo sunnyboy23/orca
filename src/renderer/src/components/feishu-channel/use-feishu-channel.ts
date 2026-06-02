@@ -115,7 +115,8 @@ export function useFeishuChannel(): FeishuChannelState {
       applyChannelEvent(event, {
         setConversations,
         setMessagesByChatId,
-        setStatus
+        setStatus,
+        setSelectedChatId
       })
     })
   }, [])
@@ -144,11 +145,13 @@ function applyChannelEvent(
       React.SetStateAction<Record<string, FeishuChannelMessage[]>>
     >
     setStatus: React.Dispatch<React.SetStateAction<FeishuChannelStatus | null>>
+    setSelectedChatId: React.Dispatch<React.SetStateAction<string | null>>
   }
 ): void {
   if (event.type === 'snapshot') {
     setters.setConversations(event.conversations)
     setters.setStatus(event.status)
+    setters.setSelectedChatId((current) => pickSelectedChatId(current, event.conversations))
     return
   }
   if (event.type === 'status') {
@@ -157,6 +160,9 @@ function applyChannelEvent(
   }
   if (event.type === 'conversation') {
     setters.setConversations((prev) => upsertConversation(prev, event.conversation))
+    setters.setSelectedChatId((current) =>
+      canReplyToFeishuConversation(current) ? current : event.conversation.chatId
+    )
     return
   }
   setters.setConversations((prev) => upsertConversation(prev, event.conversation))
@@ -164,6 +170,9 @@ function applyChannelEvent(
     ...prev,
     [event.message.chatId]: upsertMessage(prev[event.message.chatId] ?? [], event.message)
   }))
+  setters.setSelectedChatId((current) =>
+    canReplyToFeishuConversation(current) ? current : event.message.chatId
+  )
 }
 
 function upsertConversation(
@@ -182,4 +191,14 @@ function upsertMessage(
   const next = messages.filter((entry) => entry.id !== message.id)
   next.push(message)
   return next.sort((a, b) => a.createdAt - b.createdAt)
+}
+
+function pickSelectedChatId(
+  current: string | null,
+  conversations: FeishuChannelConversation[]
+): string | null {
+  if (current && conversations.some((conversation) => conversation.chatId === current)) {
+    return current
+  }
+  return firstReplyableConversation(conversations)?.chatId ?? conversations[0]?.chatId ?? null
 }

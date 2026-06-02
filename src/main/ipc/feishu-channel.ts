@@ -52,6 +52,7 @@ function subscribeFeishuChannel(
   webContents: WebContents
 ): {
   subscriptionId: string
+  initialEvents: FeishuChannelEvent[]
 } {
   let subscriptionId = ''
   const pendingEvents: FeishuChannelEvent[] = []
@@ -69,11 +70,8 @@ function subscribeFeishuChannel(
     emitEvent(event)
   })
   subscriptionId = nextSubscriptionId
-  for (const event of pendingEvents) {
-    emitEvent(event)
-  }
   webContents.once('destroyed', () => {
     runtime.unsubscribeFeishuChannel(subscriptionId)
   })
-  return { subscriptionId }
+  return { subscriptionId, initialEvents: pendingEvents }
 }

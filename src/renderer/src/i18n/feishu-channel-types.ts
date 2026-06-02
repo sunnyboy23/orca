@@ -32,6 +32,10 @@ export type FeishuChannelMessages = {
     incoming: string
     outgoing: string
     system: string
+    ignored: string
+    queued: string
+    processing: string
+    failed: string
     run: (runId: string) => string
     unread: (count: number) => string
   }

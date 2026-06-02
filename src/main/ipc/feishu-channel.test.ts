@@ -25,7 +25,7 @@ describe('registerFeishuChannelHandlers', () => {
     handleMock.mockReset()
   })
 
-  it('subscribes without throwing when the runtime emits an event synchronously', async () => {
+  it('returns initial events when the runtime emits synchronously during subscription', async () => {
     const send = vi.fn()
     const unsubscribeFeishuChannel = vi.fn()
     const destroyedCallbacks: Array<() => void> = []
@@ -45,7 +45,10 @@ describe('registerFeishuChannelHandlers', () => {
       unsubscribeFeishuChannel
     } as never)
 
-    const subscribe = getHandler<undefined, { subscriptionId: string }>('feishu-channel:subscribe')
+    const subscribe =
+      getHandler<undefined, { subscriptionId: string; initialEvents: Array<{ type: string }> }>(
+        'feishu-channel:subscribe'
+      )
     const result = await subscribe(
       {
         sender: {
@@ -59,13 +62,52 @@ describe('registerFeishuChannelHandlers', () => {
       undefined
     )
 
-    expect(result).toEqual({ subscriptionId: 'sub-1' })
-    expect(send).toHaveBeenCalledWith('feishu-channel:event', {
-      subscriptionId: 'sub-1',
-      event: { type: 'status' }
-    })
+    expect(result).toEqual({ subscriptionId: 'sub-1', initialEvents: [{ type: 'status' }] })
+    expect(send).not.toHaveBeenCalled()
 
     destroyedCallbacks[0]?.()
     expect(unsubscribeFeishuChannel).toHaveBeenCalledWith('sub-1')
+  })
+
+  it('sends events emitted after the subscription id is ready', async () => {
+    const send = vi.fn()
+    const listeners: Array<(event: { type: string }) => void> = []
+    const subscribeFeishuChannel = vi.fn((nextListener: (event: { type: string }) => void) => {
+      listeners.push(nextListener)
+      return 'sub-2'
+    })
+
+    registerFeishuChannelHandlers({
+      listFeishuChannelConversations: vi.fn(),
+      listFeishuChannelMessages: vi.fn(),
+      getFeishuChannelStatus: vi.fn(),
+      sendFeishuChannelMessage: vi.fn(),
+      createFeishuRunFromChannelMessage: vi.fn(),
+      markFeishuChannelRead: vi.fn(),
+      subscribeFeishuChannel,
+      unsubscribeFeishuChannel: vi.fn()
+    } as never)
+
+    const subscribe =
+      getHandler<undefined, { subscriptionId: string; initialEvents: Array<{ type: string }> }>(
+        'feishu-channel:subscribe'
+      )
+    await subscribe(
+      {
+        sender: {
+          isDestroyed: () => false,
+          send,
+          once: vi.fn()
+        } as unknown as Electron.WebContents
+      },
+      undefined
+    )
+
+    listeners[0]?.({ type: 'status' })
+
+    expect(send).toHaveBeenCalledWith('feishu-channel:event', {
+      subscriptionId: 'sub-2',
+      event: { type: 'status' }
+    })
   })
 })

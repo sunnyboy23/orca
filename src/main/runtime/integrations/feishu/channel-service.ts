@@ -64,6 +64,27 @@ export class FeishuChannelService {
     return stored
   }
 
+  markMessageRunCreated(messageId: string, runId: string): FeishuChannelMessage | null {
+    const updated = this.store.updateMessage(messageId, {
+      status: 'processing',
+      runId
+    })
+    if (updated) {
+      this.emitMessage(updated)
+    }
+    return updated
+  }
+
+  markMessageIgnored(messageId: string): FeishuChannelMessage | null {
+    const updated = this.store.updateMessage(messageId, {
+      status: 'ignored'
+    })
+    if (updated) {
+      this.emitMessage(updated)
+    }
+    return updated
+  }
+
   addSystemStatus({
     chatId,
     text,

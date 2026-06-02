@@ -1422,7 +1422,14 @@ const api = {
           typeof result === 'object' &&
           typeof (result as { subscriptionId?: unknown }).subscriptionId === 'string'
         ) {
-          subscriptionId = (result as { subscriptionId: string }).subscriptionId
+          const payload = result as {
+            subscriptionId: string
+            initialEvents?: FeishuChannelEvent[]
+          }
+          subscriptionId = payload.subscriptionId
+          for (const event of payload.initialEvents ?? []) {
+            callback(event)
+          }
         }
       })
       return () => {

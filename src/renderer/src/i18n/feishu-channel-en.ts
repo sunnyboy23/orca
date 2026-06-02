@@ -34,6 +34,10 @@ export const feishuChannelEn: FeishuChannelMessages = {
     incoming: 'Feishu',
     outgoing: 'Orca',
     system: 'Status',
+    ignored: 'Recorded, no task created',
+    queued: 'Queued',
+    processing: 'Sent to main Agent',
+    failed: 'Failed',
     run: (runId) => `Run ${runId}`,
     unread: (count) => `${count} unread`
   },

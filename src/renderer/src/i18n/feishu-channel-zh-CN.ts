@@ -34,6 +34,10 @@ export const feishuChannelZhCN: FeishuChannelMessages = {
     incoming: '飞书',
     outgoing: 'Orca',
     system: '状态',
+    ignored: '已记录，未创建任务',
+    queued: '等待处理',
+    processing: '已交给主 Agent',
+    failed: '处理失败',
     run: (runId) => `任务 ${runId}`,
     unread: (count) => `${count} 条未读`
   },
