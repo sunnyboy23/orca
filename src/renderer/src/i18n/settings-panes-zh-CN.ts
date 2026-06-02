@@ -1,7 +1,8 @@
 import type {
   NotificationsMessages,
   QuickCommandsMessages,
-  RuntimeMessages
+  RuntimeMessages,
+  VoiceMessages
 } from './settings-panes-types'
 
 export const notificationsZhCN: NotificationsMessages = {
@@ -120,7 +121,18 @@ export const runtimeZhCN: RuntimeMessages = {
   search: {
     title: '当前服务',
     description: '选择本地桌面、添加远程 Orca 服务，或生成配对链接。',
-    keywords: ['runtime', '环境', '服务', '客户端', '远程', '配对', '链接', 'web client', '云端', '虚拟机']
+    keywords: [
+      'runtime',
+      '环境',
+      '服务',
+      '客户端',
+      '远程',
+      '配对',
+      '链接',
+      'web client',
+      '云端',
+      '虚拟机'
+    ]
   },
   webSearch: {
     title: '当前服务',
@@ -140,8 +152,7 @@ export const runtimeZhCN: RuntimeMessages = {
     noEndpoint: '无 endpoint'
   },
   descriptions: {
-    activeServerLocal:
-      '本地会保持当前桌面行为；已保存服务会把支持的客户端调用转发到远程 runtime。',
+    activeServerLocal: '本地会保持当前桌面行为；已保存服务会把支持的客户端调用转发到远程 runtime。',
     activeServerWeb: '已保存服务会把这个浏览器连接到已配对的 Orca runtime。',
     pairingHelp: '在服务端运行 orca serve --pairing-address <host>，然后粘贴输出的配对 URL。',
     noSavedServers: '还没有保存服务。',
@@ -178,5 +189,43 @@ export const runtimeZhCN: RuntimeMessages = {
   placeholders: {
     serverName: '开发机',
     pairingCode: 'orca://pair#...'
+  }
+}
+
+export const voiceZhCN: VoiceMessages = {
+  enable: {
+    title: '启用语音听写',
+    description: '将语音输入到当前聚焦的面板。',
+    dynamicDescription: (shortcut) => `按 ${shortcut} 将语音输入到当前聚焦的面板。`,
+    keywords: ['语音', '听写', '输入', '麦克风', 'stt']
+  },
+  mode: {
+    title: '听写模式',
+    description: '切换或按住说话的听写行为。',
+    dynamicDescription: (shortcut) =>
+      `切换：按一次 ${shortcut} 开始，再按一次停止。按住：按住 ${shortcut} 时持续听写。`,
+    toggle: '切换',
+    hold: '按住',
+    keywords: ['语音', '听写', '模式', '切换', '按住']
+  },
+  model: {
+    title: '语音模型',
+    description: '选择听写使用的本地语音转文字模型。',
+    selectedDescription: (label, description) => `${label} — ${description}`,
+    selectAndDownload: '选择并下载模型后即可启用听写。',
+    selectModel: '选择模型',
+    streaming: '流式',
+    offline: '离线',
+    recommended: '推荐',
+    extracting: '正在解压...',
+    keywords: ['语音', '听写', '模型', 'stt', '下载']
+  },
+  feedback: {
+    permissionGranted: '麦克风权限已授权',
+    openedSettings: '已打开 macOS 隐私与安全性设置。授权后请再次启用听写。',
+    permissionRequired: '启用语音听写前需要授予麦克风权限。',
+    requestFailed: '无法请求麦克风权限，语音听写未启用。',
+    downloadFailed: '模型下载失败。',
+    deleteFailed: '模型删除失败。'
   }
 }

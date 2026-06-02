@@ -600,10 +600,16 @@ async function importValidatedCookies(
 // compromised renderer cannot turn cookie import into arbitrary file reads.
 export async function pickCookieFile(parentWindow: BrowserWindow | null): Promise<string | null> {
   const opts = {
-    title: 'Import Cookies',
+    title: app.getLocale().toLowerCase().startsWith('zh') ? '导入 Cookie' : 'Import Cookies',
     filters: [
-      { name: 'Cookie Files', extensions: ['json'] },
-      { name: 'All Files', extensions: ['*'] }
+      {
+        name: app.getLocale().toLowerCase().startsWith('zh') ? 'Cookie 文件' : 'Cookie Files',
+        extensions: ['json']
+      },
+      {
+        name: app.getLocale().toLowerCase().startsWith('zh') ? '所有文件' : 'All Files',
+        extensions: ['*']
+      }
     ],
     properties: ['openFile' as const]
   }
@@ -625,22 +631,22 @@ export async function importCookiesFromFile(
   try {
     rawContent = await readFile(filePath, 'utf-8')
   } catch {
-    return { ok: false, reason: 'Could not read the selected file.' }
+    return { ok: false, reason: '无法读取所选文件。' }
   }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(rawContent)
   } catch {
-    return { ok: false, reason: 'File is not valid JSON.' }
+    return { ok: false, reason: '文件不是有效的 JSON。' }
   }
 
   if (!Array.isArray(parsed)) {
-    return { ok: false, reason: 'Expected a JSON array of cookie objects.' }
+    return { ok: false, reason: '需要包含 Cookie 对象数组的 JSON 文件。' }
   }
 
   if (parsed.length === 0) {
-    return { ok: false, reason: 'Cookie file is empty.' }
+    return { ok: false, reason: 'Cookie 文件为空。' }
   }
 
   const validated: ValidatedCookie[] = []

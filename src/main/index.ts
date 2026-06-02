@@ -1195,7 +1195,8 @@ app.whenReady().then(async () => {
         statusBarVisible: ui?.statusBarVisible !== false
       }
     },
-    getKeybindings: () => keybindings?.getOverrides()
+    getKeybindings: () => keybindings?.getOverrides(),
+    getAppLanguage: () => store?.getSettings().appLanguage
   })
   // Why: E2E tests launch parallel Electron instances that would all race to
   // bind the default fixed port, crashing on EADDRINUSE. Port 0 lets the OS

@@ -2,8 +2,7 @@ import { Notification, shell, systemPreferences } from 'electron'
 
 const ACCESSIBILITY_SETTINGS_URL =
   'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility'
-const DEFAULT_ACCESSIBILITY_INSTRUCTIONS =
-  'System Settings -> Privacy & Security -> Accessibility -> enable Orca'
+const DEFAULT_ACCESSIBILITY_INSTRUCTIONS = '系统设置 -> 隐私与安全性 -> 辅助功能 -> 启用 Orca'
 
 const activePermissionNotifications = new Set<Notification>()
 
@@ -31,7 +30,7 @@ export function notifyPermissionRequired(instructions: string): void {
   }
 
   const notification = new Notification({
-    title: 'Accessibility permission required',
+    title: '需要辅助功能权限',
     body: instructions
   })
   activePermissionNotifications.add(notification)

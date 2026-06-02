@@ -15,6 +15,7 @@ import { searchRepos } from '@/lib/repo-search'
 import { cn } from '@/lib/utils'
 import type { Repo } from '../../../../shared/types'
 import RepoBadgeLabel from './RepoBadgeLabel'
+import { useI18n } from '@/i18n'
 
 type RepoComboboxProps = {
   repos: Repo[]
@@ -32,13 +33,16 @@ export default function RepoCombobox({
   value,
   onValueChange,
   onValueSelected,
-  placeholder = 'Select repo...',
+  placeholder,
   triggerClassName,
   autoOpenOnMount = false,
   showStandaloneAddButton = true
 }: RepoComboboxProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const { messages } = useI18n()
+  const copy = messages.comboboxes.repo
+  const resolvedPlaceholder = placeholder ?? copy.selectRepo
   // Why: controlled cmdk selection so hovering the footer (which lives outside
   // the cmdk tree) can clear the list's highlighted item — otherwise cmdk keeps
   // the last-hovered repo visually selected while the mouse is on the footer.
@@ -187,7 +191,7 @@ export default function RepoCombobox({
                 )}
               </span>
             ) : (
-              <span className="text-muted-foreground">{placeholder}</span>
+              <span className="text-muted-foreground">{resolvedPlaceholder}</span>
             )}
             <ChevronsUpDown className="size-3.5 opacity-50" />
           </Button>
@@ -199,13 +203,9 @@ export default function RepoCombobox({
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <Command shouldFilter={false} value={commandValue} onValueChange={setCommandValue}>
-            <CommandInput
-              placeholder="Search projects/folders..."
-              value={query}
-              onValueChange={setQuery}
-            />
+            <CommandInput placeholder={copy.search} value={query} onValueChange={setQuery} />
             <CommandList>
-              <CommandEmpty>No projects/folders match your search.</CommandEmpty>
+              <CommandEmpty>{copy.noMatch}</CommandEmpty>
               {filteredRepos.map((repo) => (
                 <CommandItem
                   key={repo.id}
@@ -252,7 +252,7 @@ export default function RepoCombobox({
                 className="h-9 w-full justify-start rounded-none px-3 text-xs font-normal"
               >
                 <FolderPlus className="size-3.5 text-muted-foreground" />
-                <span>{isAdding ? 'Adding project…' : 'Add project'}</span>
+                <span>{isAdding ? copy.addingProject : copy.addProject}</span>
               </Button>
             </div>
           </Command>
@@ -269,7 +269,7 @@ export default function RepoCombobox({
           disabled={isAdding}
           onClick={() => void handleAddFolder()}
           className="size-9 shrink-0 p-0"
-          aria-label={isAdding ? 'Adding project' : 'Add project'}
+          aria-label={isAdding ? copy.addingProject : copy.addProject}
         >
           <FolderPlus className="size-3.5" />
         </Button>

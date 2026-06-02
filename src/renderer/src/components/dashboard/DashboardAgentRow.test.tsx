@@ -76,7 +76,7 @@ function hoverSwapClasses(markup: string): string[] {
 }
 
 function dismissButtonClass(markup: string): string {
-  const match = markup.match(/<button\b(?=[^>]*aria-label="Dismiss agent")[^>]*class="([^"]*)"/)
+  const match = markup.match(/<button\b(?=[^>]*aria-label="关闭 Agent")[^>]*class="([^"]*)"/)
   if (!match) {
     throw new Error('Expected dismiss agent button in rendered markup')
   }

@@ -223,7 +223,7 @@ export function NotificationStep({
                   onClick={() => setShowMacSettingsPreview(false)}
                 >
                   <X className="size-3.5" />
-                  Dismiss
+                  关闭
                 </button>
               </div>
             </div>

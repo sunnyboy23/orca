@@ -137,14 +137,14 @@ export function BrowserProfileRow({
               ) : (
                 <Import className="size-3" />
               )}
-              Import Cookies
+              导入 Cookie
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             {detectedBrowsers.map((browser) =>
               browser.profiles.length > 1 ? (
                 <DropdownMenuSub key={browser.family}>
-                  <DropdownMenuSubTrigger>From {browser.label}</DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger>从 {browser.label} 导入</DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
                       {browser.profiles.map((bp) => (
@@ -165,13 +165,13 @@ export function BrowserProfileRow({
                   key={browser.family}
                   onSelect={() => void handleImportFromBrowser(browser.family)}
                 >
-                  From {browser.label}
+                  从 {browser.label} 导入
                 </DropdownMenuItem>
               )
             )}
             {detectedBrowsers.length > 0 && <DropdownMenuSeparator />}
             <DropdownMenuItem onSelect={() => void handleImportFromFile()}>
-              From File…
+              从文件导入...
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

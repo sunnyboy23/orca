@@ -1106,21 +1106,21 @@ export default function CombinedDiffViewer({
                 onClick={openAlternateDiff}
               >
                 {file.combinedAlternate.source === 'combined-branch'
-                  ? 'Open Branch Diff'
-                  : 'Open Uncommitted Diff'}
+                  ? '打开分支 Diff'
+                  : '打开未提交 Diff'}
               </button>
             )}
             <button
               className="w-20 text-left text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setAllSectionsCollapsed(!allSectionsCollapsed)}
             >
-              {allSectionsCollapsed ? 'Expand All' : 'Collapse All'}
+              {allSectionsCollapsed ? '全部展开' : '全部收起'}
             </button>
             <button
               className="w-24 px-2 py-0.5 text-center text-xs rounded border border-border text-muted-foreground hover:text-foreground transition-colors"
               onClick={toggleSideBySide}
             >
-              {sideBySide ? 'Inline' : 'Side by Side'}
+              {sideBySide ? '行内' : '并排'}
             </button>
           </div>
         </div>

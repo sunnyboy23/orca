@@ -43,6 +43,7 @@ import {
   buildTerminalAgentQuickCommandPreset,
   type TerminalAgentQuickCommandPreset
 } from './terminal-agent-quick-command-presets'
+import { useI18n } from '@/i18n'
 
 type TerminalQuickCommandDialogMode = 'add' | 'edit'
 
@@ -97,6 +98,8 @@ export function TerminalQuickCommandDialog({
   const [draft, setDraft] = useState<TerminalQuickCommand>(command)
   const [agentPresetOpen, setAgentPresetOpen] = useState(false)
   const [agentPresetQuery, setAgentPresetQuery] = useState('')
+  const { messages } = useI18n()
+  const agentCopy = messages.comboboxes.agent
   const agentCmdOverrides = useAppStore(
     (s) => s.settings?.agentCmdOverrides ?? EMPTY_AGENT_CMD_OVERRIDES
   )
@@ -174,7 +177,7 @@ export function TerminalQuickCommandDialog({
             {mode === 'edit' ? 'Edit Quick Command' : 'Add Quick Command'}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            Save terminal input text for the context menu.
+            保存可从右键菜单快速插入的终端输入文本。
           </DialogDescription>
         </DialogHeader>
 
@@ -191,19 +194,19 @@ export function TerminalQuickCommandDialog({
           }}
         >
           <div className="space-y-2">
-            <Label>Label</Label>
+            <Label>名称</Label>
             <Input
               value={draft.label}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, label: event.target.value }))
               }
-              placeholder="Start dev server"
+              placeholder="启动开发服务"
             />
           </div>
 
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
-              <Label>Command Text</Label>
+              <Label>命令文本</Label>
               <Popover open={agentPresetOpen} onOpenChange={setAgentPresetOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -211,9 +214,9 @@ export function TerminalQuickCommandDialog({
                     variant="outline"
                     size="xs"
                     className="h-7 shrink-0 gap-1 px-2 text-xs font-normal"
-                    aria-label="Insert an agent command"
+                    aria-label="插入 Agent 命令"
                   >
-                    Insert agent command
+                    插入 Agent 命令
                     <ChevronDown className="size-3" />
                   </Button>
                 </PopoverTrigger>
@@ -221,14 +224,14 @@ export function TerminalQuickCommandDialog({
                   <Command shouldFilter={false}>
                     <CommandInput
                       autoFocus
-                      placeholder="Search agents"
+                      placeholder={agentCopy.search}
                       value={agentPresetQuery}
                       onValueChange={setAgentPresetQuery}
                       className="h-9 text-xs"
                       wrapperClassName="px-3"
                     />
                     <CommandList className="max-h-64">
-                      <CommandEmpty>No agents match your search.</CommandEmpty>
+                      <CommandEmpty>{agentCopy.noMatch}</CommandEmpty>
                       {visibleAgentPresets.map((preset) => (
                         <CommandItem
                           key={preset.agent}

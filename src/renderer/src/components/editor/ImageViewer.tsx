@@ -151,7 +151,7 @@ export default function ImageViewer({
               className="rounded p-1 hover:bg-accent hover:text-foreground disabled:opacity-50"
               onClick={() => setZoom(1)}
               disabled={zoom === 1}
-              title="Reset zoom"
+              title="重置缩放"
             >
               <RotateCcw size={14} />
             </button>
@@ -160,7 +160,7 @@ export default function ImageViewer({
               className="rounded p-1 hover:bg-accent hover:text-foreground disabled:opacity-50"
               onClick={() => setZoom((prev) => Math.min(MAX_ZOOM, prev * ZOOM_STEP))}
               disabled={zoom >= MAX_ZOOM}
-              title="Zoom in"
+              title="放大"
             >
               <ZoomIn size={14} />
             </button>
@@ -183,7 +183,7 @@ export default function ImageViewer({
           className="top-1/2 left-1/2 h-[80vh] w-[70vw] max-w-[70vw] -translate-x-1/2 -translate-y-1/2 gap-0 overflow-hidden border border-border/60 bg-background p-0 shadow-2xl sm:max-w-[70vw]"
         >
           <DialogTitle className="sr-only">{filename}</DialogTitle>
-          <DialogDescription className="sr-only">Full-size image preview</DialogDescription>
+          <DialogDescription className="sr-only">原尺寸图片预览</DialogDescription>
           <div className="flex items-center justify-between border-b border-border/60 bg-background/95 px-3 py-2">
             <div className="min-w-0 truncate text-sm font-medium text-foreground">{filename}</div>
             <button
@@ -192,7 +192,7 @@ export default function ImageViewer({
               onClick={() => setIsPopupOpen(false)}
             >
               <X size={14} />
-              <span>Close</span>
+              <span>关闭</span>
             </button>
           </div>
           <div className="flex h-[calc(100%-4.5rem)] w-full min-h-0 items-center justify-center overflow-auto bg-muted/20 p-4 scrollbar-editor">
@@ -208,7 +208,7 @@ export default function ImageViewer({
             </div>
           </div>
           <div className="flex items-center justify-between border-t border-border/60 bg-background/95 px-3 py-2 text-xs text-muted-foreground">
-            <div>Press Esc to close</div>
+            <div>按 Esc 关闭</div>
             <div className="tabular-nums">{zoomPercent}%</div>
           </div>
         </DialogContent>

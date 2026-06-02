@@ -15,6 +15,7 @@ import { Download, Trash2, Loader2, ChevronDown, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { useShortcutLabel } from '@/hooks/useShortcutLabel'
+import { useI18n } from '@/i18n'
 
 type VoicePaneProps = {
   settings: GlobalSettings
@@ -30,6 +31,8 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
   const modelStates = useAppStore((s) => s.modelStates)
   const refreshModelStates = useAppStore((s) => s.refreshModelStates)
   const shortcutLabel = useShortcutLabel('voice.dictation')
+  const { messages } = useI18n()
+  const copy = messages.settingsPanes.voice
   const [catalog, setCatalog] = useState<SpeechModelManifest[]>([])
   const [permissionPending, setPermissionPending] = useState(false)
 
@@ -73,16 +76,14 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
       }
 
       if (result.status === 'granted') {
-        toast.success('Microphone permission granted')
+        toast.success(copy.feedback.permissionGranted)
       } else if (result.openedSystemSettings) {
-        toast.message(
-          'Opened macOS Privacy & Security. Enable dictation again after granting access.'
-        )
+        toast.message(copy.feedback.openedSettings)
       } else if (result.status !== 'unsupported') {
-        toast.message('Microphone permission is required before enabling voice dictation.')
+        toast.message(copy.feedback.permissionRequired)
       }
     } catch {
-      toast.error('Could not request microphone permission. Voice dictation was not enabled.')
+      toast.error(copy.feedback.requestFailed)
     } finally {
       setPermissionPending(false)
     }
@@ -101,15 +102,15 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
     <div className="space-y-1">
       <div className="flex items-center justify-between gap-4 py-2">
         <div className="space-y-0.5">
-          <Label>Enable Voice Dictation</Label>
+          <Label>{copy.enable.title}</Label>
           <p className="text-xs text-muted-foreground">
-            Press {shortcutLabel} to dictate text into any focused pane.
+            {copy.enable.dynamicDescription(shortcutLabel)}
           </p>
         </div>
         <button
           role="switch"
           aria-checked={voiceSettings.enabled}
-          aria-label="Enable Voice Dictation"
+          aria-label={copy.enable.title}
           aria-busy={permissionPending}
           disabled={permissionPending}
           onClick={() => void toggleVoiceDictation()}
@@ -129,10 +130,9 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
 
       <div className="flex items-center justify-between gap-4 py-2">
         <div className="space-y-0.5">
-          <Label>Dictation Mode</Label>
+          <Label>{copy.mode.title}</Label>
           <p className="text-xs text-muted-foreground">
-            Toggle: press {shortcutLabel} once to start, again to stop. Hold: dictate while{' '}
-            {shortcutLabel} is held.
+            {copy.mode.dynamicDescription(shortcutLabel)}
           </p>
         </div>
         <div className="flex shrink-0 items-center rounded-md border border-border/60 bg-background/50 p-0.5">
@@ -147,7 +147,7 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
                   : 'text-muted-foreground hover:text-foreground'
               } ${!voiceSettings.enabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {mode === 'toggle' ? 'Toggle' : 'Hold'}
+              {mode === 'toggle' ? copy.mode.toggle : copy.mode.hold}
             </button>
           ))}
         </div>
@@ -157,11 +157,11 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
 
       <div className="flex items-center justify-between gap-4 py-2">
         <div className="space-y-0.5">
-          <Label>Speech Model</Label>
+          <Label>{copy.model.title}</Label>
           <p className="text-xs text-muted-foreground">
             {selectedModel && selectedIsReady
-              ? `${selectedModel.label} — ${selectedModel.description}`
-              : 'Select and download a model to enable dictation.'}
+              ? copy.model.selectedDescription(selectedModel.label, selectedModel.description)
+              : copy.model.selectAndDownload}
           </p>
         </div>
         <DropdownMenu>
@@ -172,7 +172,7 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
               disabled={!voiceSettings.enabled}
               className="shrink-0 gap-1.5"
             >
-              {selectedModel && selectedIsReady ? selectedModel.label : 'Select Model'}
+              {selectedModel && selectedIsReady ? selectedModel.label : copy.model.selectModel}
               <ChevronDown className="size-3 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
@@ -195,7 +195,7 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
                     } else if (!isDownloading) {
                       void window.api.speech
                         .downloadModel(manifest.id)
-                        .catch(() => toast.error('Failed to download model.'))
+                        .catch(() => toast.error(copy.feedback.downloadFailed))
                     }
                   }}
                   className={`group flex items-center gap-2.5 py-2.5 ${
@@ -213,17 +213,17 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-medium">{manifest.label}</span>
                       <span className="text-[10px] px-1 py-px rounded-full leading-none bg-muted text-muted-foreground">
-                        {manifest.streaming ? 'streaming' : 'offline'}
+                        {manifest.streaming ? copy.model.streaming : copy.model.offline}
                       </span>
                       {manifest.recommended && (
                         <span className="text-[10px] px-1 py-px rounded-full leading-none bg-emerald-500/10 text-emerald-500">
-                          recommended
+                          {copy.model.recommended}
                         </span>
                       )}
                       <span className="text-[10px] text-muted-foreground/60">
                         {isDownloading && mState?.progress !== undefined
                           ? mState.status === 'extracting'
-                            ? 'Extracting...'
+                            ? copy.model.extracting
                             : `${Math.round(mState.progress * 100)}%`
                           : `${sizeMb} MB`}
                       </span>
@@ -239,7 +239,7 @@ export function VoicePane({ settings, updateSettings }: VoicePaneProps): React.J
                         void window.api.speech
                           .deleteModel(manifest.id)
                           .then(refreshModelStates)
-                          .catch(() => toast.error('Failed to delete model.'))
+                          .catch(() => toast.error(copy.feedback.deleteFailed))
                       }}
                       className="shrink-0 p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-destructive transition-all rounded"
                     >

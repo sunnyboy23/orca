@@ -187,7 +187,7 @@ export function BrowserToolbarMenu({
 
           <DropdownMenuItem onSelect={() => setNewProfileDialogOpen(true)}>
             <Plus className="mr-2 size-3.5" />
-            New Profile…
+            新建配置...
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -203,14 +203,14 @@ export function BrowserToolbarMenu({
           >
             <DropdownMenuSubTrigger disabled={browserSessionImportState?.status === 'importing'}>
               <Import className="mr-2 size-3.5" />
-              Import Cookies
+              导入 Cookie
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent>
                 {detectedBrowsers.map((browser) =>
                   browser.profiles.length > 1 ? (
                     <DropdownMenuSub key={browser.family}>
-                      <DropdownMenuSubTrigger>From {browser.label}</DropdownMenuSubTrigger>
+                      <DropdownMenuSubTrigger>从 {browser.label} 导入</DropdownMenuSubTrigger>
                       <DropdownMenuPortal>
                         <DropdownMenuSubContent>
                           {browser.profiles.map((profile) => (
@@ -231,13 +231,13 @@ export function BrowserToolbarMenu({
                       key={browser.family}
                       onSelect={() => void handleImportFromBrowser(browser.family)}
                     >
-                      From {browser.label}
+                      从 {browser.label} 导入
                     </DropdownMenuItem>
                   )
                 )}
                 {detectedBrowsers.length > 0 && <DropdownMenuSeparator />}
                 <DropdownMenuItem onSelect={() => void handleImportFromFile()}>
-                  From File…
+                  从文件导入...
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuPortal>
@@ -248,7 +248,7 @@ export function BrowserToolbarMenu({
           <DropdownMenuSub>
             <DropdownMenuSubTrigger>
               <Monitor className="mr-2 size-3.5" />
-              Viewport Size
+              视口大小
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent>

@@ -192,7 +192,7 @@ export function registerPetHandlers(): void {
     const senderWindow =
       BrowserWindow.fromWebContents(event.sender) ?? BrowserWindow.getFocusedWindow()
     const options: Electron.OpenDialogOptions = {
-      title: 'Pick pet',
+      title: '选择宠物',
       properties: ['openFile'],
       // Why: single filter and no `apng` extension. macOS file dialogs map
       // filter extensions to UTIs; `apng` has no registered UTI, so including
@@ -201,7 +201,7 @@ export function registerPetHandlers(): void {
       // bytes by the browser.
       filters: [
         {
-          name: 'Pet image',
+          name: '宠物图片',
           extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg']
         }
       ]
@@ -215,20 +215,20 @@ export function registerPetHandlers(): void {
     const src = result.filePaths[0]
     const classified = classifyFile(src)
     if (!classified) {
-      throw new Error('Unsupported file. Pick a PNG, APNG, JPG, GIF, WebP, or SVG.')
+      throw new Error('不支持该文件。请选择 PNG、APNG、JPG、GIF、WebP 或 SVG。')
     }
     let srcStat: Awaited<ReturnType<typeof stat>>
     try {
       srcStat = await stat(src)
     } catch {
-      throw new Error('Could not read the selected file.')
+      throw new Error('无法读取所选文件。')
     }
     if (!srcStat.isFile()) {
-      throw new Error('Selected path is not a file')
+      throw new Error('所选路径不是文件。')
     }
     if (srcStat.size > MAX_BYTES) {
       throw new Error(
-        `File is too large (${(srcStat.size / (1024 * 1024)).toFixed(1)} MB). Max is ${MAX_BYTES / (1024 * 1024)} MB.`
+        `文件太大（${(srcStat.size / (1024 * 1024)).toFixed(1)} MB），最大支持 ${MAX_BYTES / (1024 * 1024)} MB。`
       )
     }
 
@@ -244,11 +244,11 @@ export function registerPetHandlers(): void {
       await copyFile(src, dest)
     } catch {
       await rm(dest, { force: true }).catch(() => {})
-      throw new Error('Could not save the pet.')
+      throw new Error('无法保存宠物。')
     }
 
     const rawLabel = basename(src, extname(src)).trim()
-    const label = rawLabel.length > 0 ? rawLabel.slice(0, 40) : 'Custom pet'
+    const label = rawLabel.length > 0 ? rawLabel.slice(0, 40) : '自定义宠物'
     return {
       id,
       label,
@@ -265,7 +265,7 @@ export function registerPetHandlers(): void {
     // when Finder is set to show package contents — the post-pick logic walks
     // up to the parent directory in that case.
     const options: Electron.OpenDialogOptions = {
-      title: 'Pick a .codex-pet bundle',
+      title: '选择 .codex-pet 包',
       properties: ['openFile', 'openDirectory', 'treatPackageAsDirectory']
     }
     const result = senderWindow
@@ -280,7 +280,7 @@ export function registerPetHandlers(): void {
       const pickedStat = await stat(picked)
       bundleDir = pickedStat.isDirectory() ? picked : dirname(picked)
     } catch {
-      throw new Error('Could not read the selected path.')
+      throw new Error('无法读取所选路径。')
     }
 
     const manifestPath = join(bundleDir, 'pet.json')
@@ -427,11 +427,11 @@ export function registerPetHandlers(): void {
       await rename(tmpDir, destDir)
     } catch {
       await rm(tmpDir, { recursive: true, force: true }).catch(() => {})
-      throw new Error('Could not save the pet bundle.')
+      throw new Error('无法保存宠物包。')
     }
 
     const rawLabel = (manifest.displayName ?? manifest.id ?? basename(bundleDir)).trim()
-    const label = rawLabel.length > 0 ? rawLabel.slice(0, 40) : 'Pet bundle'
+    const label = rawLabel.length > 0 ? rawLabel.slice(0, 40) : '宠物包'
     return {
       id,
       label,

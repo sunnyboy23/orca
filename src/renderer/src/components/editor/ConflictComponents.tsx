@@ -235,18 +235,18 @@ export function ConflictReviewPanel({
     return (
       <div className="flex h-full items-center justify-center px-6 text-center">
         <div className="max-w-md space-y-3">
-          <div className="text-sm font-medium text-foreground">All conflicts resolved</div>
+          <div className="text-sm font-medium text-foreground">所有冲突已解决</div>
           <div className="text-xs text-muted-foreground">
-            This review snapshot no longer has any live unresolved conflicts.
+            这个审阅快照中已经没有未解决的实时冲突。
           </div>
           <div className="flex items-center justify-center gap-2">
             <Button type="button" size="sm" variant="outline" onClick={onReturnToSourceControl}>
               <GitMerge className="size-3.5" />
-              Source Control
+              源代码管理
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={onDismiss}>
               <X className="size-3.5" />
-              Dismiss
+              关闭
             </Button>
           </div>
         </div>

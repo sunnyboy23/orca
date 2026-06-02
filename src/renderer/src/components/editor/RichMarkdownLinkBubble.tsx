@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/react'
 import { ExternalLink, Pencil, Unlink } from 'lucide-react'
+import { useI18n, type I18nMessages } from '@/i18n'
 
 export type LinkBubbleState = {
   href: string
@@ -31,11 +32,13 @@ export function getLinkBubblePosition(
 function LinkEditInput({
   initialHref,
   onSave,
-  onCancel
+  onCancel,
+  copy
 }: {
   initialHref: string
   onSave: (href: string) => void
   onCancel: () => void
+  copy: I18nMessages['editorChrome']
 }): React.JSX.Element {
   const [value, setValue] = useState(initialHref)
   const ref = useRef<HTMLInputElement>(null)
@@ -65,7 +68,7 @@ function LinkEditInput({
           onCancel()
         }
       }}
-      placeholder="Paste or type a link…"
+      placeholder={copy.pasteOrTypeLink}
       className="rich-markdown-link-input"
     />
   )
@@ -90,6 +93,9 @@ export function RichMarkdownLinkBubble({
   onEditCancel,
   onOpen
 }: RichMarkdownLinkBubbleProps): React.JSX.Element {
+  const { messages } = useI18n()
+  const copy = messages.editorChrome
+
   return (
     <div
       className="rich-markdown-link-bubble"
@@ -104,7 +110,12 @@ export function RichMarkdownLinkBubble({
       onKeyDown={(e) => e.stopPropagation()}
     >
       {isEditing ? (
-        <LinkEditInput initialHref={linkBubble.href} onSave={onSave} onCancel={onEditCancel} />
+        <LinkEditInput
+          initialHref={linkBubble.href}
+          onSave={onSave}
+          onCancel={onEditCancel}
+          copy={copy}
+        />
       ) : (
         <>
           <span className="rich-markdown-link-url" title={linkBubble.href}>
@@ -114,7 +125,7 @@ export function RichMarkdownLinkBubble({
             type="button"
             className="rich-markdown-link-button"
             onClick={onOpen}
-            title="Open link"
+            title={copy.openLink}
           >
             <ExternalLink size={14} />
           </button>
@@ -122,7 +133,7 @@ export function RichMarkdownLinkBubble({
             type="button"
             className="rich-markdown-link-button"
             onClick={onEditStart}
-            title="Edit link"
+            title={copy.editLink}
           >
             <Pencil size={14} />
           </button>
@@ -130,7 +141,7 @@ export function RichMarkdownLinkBubble({
             type="button"
             className="rich-markdown-link-button"
             onClick={onRemove}
-            title="Remove link"
+            title={copy.removeLink}
           >
             <Unlink size={14} />
           </button>

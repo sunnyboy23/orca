@@ -331,7 +331,7 @@ function SetupScriptPromptCard(): React.JSX.Element | null {
                 type="button"
                 variant="ghost"
                 size="icon-xs"
-                aria-label="Dismiss setup scripts"
+                aria-label="关闭设置脚本提示"
                 className="-mr-1 text-muted-foreground"
                 onClick={handleDismiss}
               >
@@ -339,7 +339,7 @@ function SetupScriptPromptCard(): React.JSX.Element | null {
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={4}>
-              Dismiss
+              关闭
             </TooltipContent>
           </Tooltip>
         </div>

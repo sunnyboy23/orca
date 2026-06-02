@@ -155,14 +155,13 @@ export function FirstLaunchBanner({
           Opt out
         </Button>
         <Button size="sm" onClick={handleAcknowledge} disabled={inFlight}>
-          Got it
+          知道了
         </Button>
       </div>
-      {/* aria-label says "Dismiss" — the action persists silent opt-in,
-          not just hides the UI. */}
+      {/* Why: this action persists silent opt-in, not just hides the UI. */}
       <button
         type="button"
-        aria-label="Dismiss notice"
+        aria-label="关闭提示"
         onClick={handleAcknowledge}
         disabled={inFlight}
         className="absolute right-1.5 top-1.5 rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"

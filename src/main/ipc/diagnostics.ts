@@ -234,14 +234,14 @@ function isTicketId(value: unknown): value is string {
 async function confirmBundleUpload(bundle: CollectedBundle): Promise<void> {
   const result = await dialog.showMessageBox({
     type: 'question',
-    buttons: ['Upload', 'Cancel'],
+    buttons: ['上传', '取消'],
     defaultId: 1,
     cancelId: 1,
-    title: 'Upload diagnostic bundle?',
-    message: 'Upload diagnostic bundle to Orca support?',
+    title: '上传诊断包？',
+    message: '要将诊断包上传给 Orca 支持团队吗？',
     detail: `Bundle ${bundle.bundleSubmissionId}\n${bundle.spanCount} span(s), ${Math.round(
       bundle.bytes / 1024
-    )} KB\n\nThe exact redacted NDJSON preview was opened before this upload confirmation.`
+    )} KB\n\n上传确认前已经打开过脱敏后的 NDJSON 预览。`
   })
   if (result.response !== 0) {
     throw new Error('diagnostic bundle upload cancelled')

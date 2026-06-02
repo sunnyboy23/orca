@@ -1186,10 +1186,10 @@ export default function SmartWorkspaceNameField({
             </Button>
             {crossRepoPrompt?.matchingRepo ? (
               <Button onClick={() => void acceptGitHubLink(crossRepoPrompt.matchingRepo!)}>
-                Switch to {crossRepoPrompt.matchingRepo.displayName}
+                切换到 {crossRepoPrompt.matchingRepo.displayName}
               </Button>
             ) : (
-              <Button onClick={() => void handleAddMatchingRepo()}>Add project...</Button>
+              <Button onClick={() => void handleAddMatchingRepo()}>添加项目...</Button>
             )}
           </DialogFooter>
         </DialogContent>

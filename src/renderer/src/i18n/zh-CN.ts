@@ -7,7 +7,12 @@ import { experimentalZhCN, inputZhCN, privacyZhCN, tasksZhCN } from './settings-
 import { floatingWorkspaceZhCN } from './settings-floating-workspace-zh-CN'
 import { gitZhCN } from './settings-git-zh-CN'
 import { integrationsZhCN } from './settings-integrations-zh-CN'
-import { notificationsZhCN, quickCommandsZhCN, runtimeZhCN } from './settings-panes-zh-CN'
+import {
+  notificationsZhCN,
+  quickCommandsZhCN,
+  runtimeZhCN,
+  voiceZhCN
+} from './settings-panes-zh-CN'
 import { shortcutsZhCN } from './settings-shortcuts-zh-CN'
 import { sshZhCN } from './settings-ssh-zh-CN'
 import { terminalZhCN } from './settings-terminal-zh-CN'
@@ -135,7 +140,8 @@ export const zhCNMessages = {
     shortcuts: shortcutsZhCN,
     ssh: sshZhCN,
     tasks: tasksZhCN,
-    terminal: terminalZhCN
+    terminal: terminalZhCN,
+    voice: voiceZhCN
   },
   navigation: {
     tasks: '任务',
@@ -152,10 +158,74 @@ export const zhCNMessages = {
     searchWorktreesAndBrowserTabs: '搜索 worktree 和浏览器标签页'
   },
   window: {
+    applicationMenu: '应用菜单',
     minimize: '最小化',
     maximize: '最大化',
     restore: '还原',
     close: '关闭'
+  },
+  updateCard: {
+    dismiss: '关闭',
+    dismissTip: '关闭提示',
+    checking: '正在检查更新',
+    latest: '已经是最新版本',
+    available: '有可用更新',
+    downloading: '正在下载更新',
+    downloaded: '更新已准备安装',
+    error: '更新错误',
+    status: '更新状态',
+    updateError: '更新错误',
+    checkFailed: '检查更新失败',
+    completeUpdateFailed: '无法完成更新。',
+    checkUpdatesFailed: '无法检查更新。',
+    retryDownload: '重试下载',
+    recheck: '重新检查',
+    restartInstallFailed: '无法重启并安装更新。',
+    tryAgain: '重试',
+    installing: '正在安装...',
+    reassurance: '更新期间不会中断正在运行的终端会话。',
+    newRelease: (title) => `新版本：${title}`,
+    moreSinceLastUpdate: (count) => `上次更新后还有 ${count} 个版本`,
+    fullReleaseNotes: '查看完整发布说明',
+    update: '更新',
+    releaseNotes: '发布说明',
+    updateReady: (version) => `Orca v${version} 已准备好。`,
+    sessionsNotInterrupted: '终端会话不会被中断。',
+    downloadingTitle: '正在下载更新',
+    minimizeToStatusBar: '最小化到状态栏',
+    downloadingVersion: (version) => `正在下载 Orca v${version}。`,
+    downloadingProgress: (percent) => `正在下载... ${percent}%`,
+    downloadManually: '手动下载',
+    readyToInstall: '已准备安装',
+    downloadedRestart: (version) => `Orca v${version} 已下载完成。准备好后请重启安装。`,
+    restartToUpdate: '重启并更新'
+  },
+  comboboxes: {
+    agent: {
+      blankTerminal: '空白终端',
+      currentDefault: '当前默认',
+      setAsDefault: '设为默认',
+      search: '搜索 Agent...',
+      noMatch: '没有匹配的 Agent。',
+      manageAgents: '管理 Agent'
+    },
+    repo: {
+      selectRepo: '选择仓库...',
+      search: '搜索项目/文件夹...',
+      noMatch: '没有匹配的项目或文件夹。',
+      addingProject: '正在添加项目...',
+      addProject: '添加项目'
+    }
+  },
+  editorChrome: {
+    slashCommands: '斜杠菜单',
+    searchBlocks: '搜索内容块',
+    searchBlocksPlaceholder: '搜索内容块...',
+    noBlocksFound: '没有找到内容块',
+    pasteOrTypeLink: '粘贴或输入链接...',
+    openLink: '打开链接',
+    editLink: '编辑链接',
+    removeLink: '移除链接'
   },
   orchestrationPage: {
     title: '编排',

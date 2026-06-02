@@ -406,8 +406,8 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
                   'opacity-0 transition-opacity duration-150',
                   'group-hover/agent-row:opacity-100 focus-visible:opacity-100'
                 )}
-                aria-label="Dismiss agent"
-                title="Dismiss"
+                aria-label="关闭 Agent"
+                title="关闭"
               >
                 <X className="size-3.5" />
               </button>
@@ -429,8 +429,8 @@ const DashboardAgentRow = React.memo(function DashboardAgentRow({
                 'opacity-0 transition-opacity duration-150',
                 'group-hover/agent-row:opacity-100 focus-visible:opacity-100'
               )}
-              aria-label="Dismiss agent"
-              title="Dismiss"
+              aria-label="关闭 Agent"
+              title="关闭"
             >
               <X className="size-3.5" />
             </button>

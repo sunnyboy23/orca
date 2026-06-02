@@ -4,6 +4,7 @@ import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { runSlashCommand } from './rich-markdown-commands'
 import type { SlashCommand, SlashMenuState } from './rich-markdown-commands'
+import { useI18n } from '@/i18n'
 
 type RichMarkdownSlashMenuProps = {
   editor: Editor | null
@@ -23,27 +24,29 @@ export function RichMarkdownSlashMenu({
   onEmojiPick
 }: RichMarkdownSlashMenuProps): React.JSX.Element {
   let currentGroup: SlashCommand['group'] | null = null
+  const { messages } = useI18n()
+  const copy = messages.editorChrome
 
   return (
     <div
       className="rich-markdown-slash-menu"
       style={{ left: slashMenu.left, top: slashMenu.top }}
       role="dialog"
-      aria-label="Slash commands"
+      aria-label={copy.slashCommands}
     >
       <div className="rich-markdown-slash-search" onMouseDown={(event) => event.preventDefault()}>
         <Search className="size-3.5" />
         <input
-          aria-label="Search blocks"
+          aria-label={copy.searchBlocks}
           readOnly
           type="text"
           value={slashMenu.query}
-          placeholder="Search blocks..."
+          placeholder={copy.searchBlocksPlaceholder}
         />
       </div>
       <div className="rich-markdown-slash-results scrollbar-sleek" role="listbox">
         {filteredCommands.length === 0 ? (
-          <div className="rich-markdown-slash-empty">No blocks found</div>
+          <div className="rich-markdown-slash-empty">{copy.noBlocksFound}</div>
         ) : (
           filteredCommands.map((command, index) => {
             const showGroup = command.group !== currentGroup

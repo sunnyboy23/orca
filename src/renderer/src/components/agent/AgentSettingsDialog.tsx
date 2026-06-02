@@ -33,9 +33,9 @@ export default function AgentSettingsDialog({
           agents are detected. */}
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-sm">Agents</DialogTitle>
+          <DialogTitle className="text-sm">Agent</DialogTitle>
           <DialogDescription className="text-xs">
-            Manage AI agents, set a default, and customize commands.
+            管理 AI Agent、设置默认 Agent，并自定义启动命令。
           </DialogDescription>
         </DialogHeader>
         <div className="scrollbar-sleek -mr-2 max-h-[70vh] overflow-y-auto pr-2">

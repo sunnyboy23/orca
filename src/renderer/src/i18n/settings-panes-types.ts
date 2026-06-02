@@ -117,6 +117,34 @@ export type RuntimeMessages = {
   }
 }
 
+export type VoiceMessages = {
+  enable: SettingFieldCopy & {
+    dynamicDescription: (shortcut: string) => string
+  }
+  mode: SettingFieldCopy & {
+    toggle: string
+    hold: string
+    dynamicDescription: (shortcut: string) => string
+  }
+  model: SettingFieldCopy & {
+    selectedDescription: (label: string, description: string) => string
+    selectAndDownload: string
+    selectModel: string
+    streaming: string
+    offline: string
+    recommended: string
+    extracting: string
+  }
+  feedback: {
+    permissionGranted: string
+    openedSettings: string
+    permissionRequired: string
+    requestFailed: string
+    downloadFailed: string
+    deleteFailed: string
+  }
+}
+
 export type GitMessages = {
   branchPrefix: SettingFieldCopy & {
     options: Record<'gitUsername' | 'custom' | 'none', string>

@@ -46,7 +46,7 @@ export function FloatingTerminalOrchestrationDialog({
     try {
       setCliStatus(await window.api.cli.getInstallStatus())
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to load CLI status.')
+      toast.error(error instanceof Error ? error.message : '加载 CLI 状态失败。')
     } finally {
       setCliLoading(false)
     }
@@ -61,10 +61,10 @@ export function FloatingTerminalOrchestrationDialog({
   const cliInstalled = isOrcaCliAvailableOnPath(cliStatus)
   const cliSupported = cliStatus?.supported ?? false
   const cliLabel = cliInstalled
-    ? 'orca is on PATH'
+    ? '`orca` 已在 PATH 中'
     : cliLoading
-      ? 'Checking CLI status...'
-      : (cliStatus?.detail ?? 'Register orca so agents can call Orca from a terminal.')
+      ? '正在检查 CLI 状态...'
+      : (cliStatus?.detail ?? '注册 `orca`，让 Agent 能从终端调用 Orca。')
 
   const handleInstallCli = async (): Promise<void> => {
     setCliBusy(true)
@@ -77,7 +77,7 @@ export function FloatingTerminalOrchestrationDialog({
         onSetupStateChange()
       }
       if (isOrcaCliAvailableOnPath(next)) {
-        toast.success('Registered `orca` in PATH.')
+        toast.success('已把 `orca` 注册到 PATH。')
       }
     } finally {
       setCliBusy(false)
@@ -103,16 +103,16 @@ export function FloatingTerminalOrchestrationDialog({
             }
           })
         )
-        toast.success('Pasted the skill install command. Press Enter to run it.')
+        toast.success('已粘贴技能安装命令，按 Enter 执行。')
       } else {
-        toast.success('Copied the skill install command.')
+        toast.success('已复制技能安装命令。')
       }
       onSetupStateChange()
       if (isOrcaCliAvailableOnPath(nextCliStatus ?? cliStatus)) {
         onOpenChange(false)
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy skill command.')
+      toast.error(error instanceof Error ? error.message : '复制技能命令失败。')
     } finally {
       setSkillBusy(false)
     }
@@ -121,9 +121,9 @@ export function FloatingTerminalOrchestrationDialog({
   const handleCopySkillCommand = async (): Promise<void> => {
     try {
       await window.api.ui.writeClipboardText(ORCHESTRATION_SKILL_INSTALL_COMMAND)
-      toast.success('Copied the skill install command.')
+      toast.success('已复制技能安装命令。')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to copy skill command.')
+      toast.error(error instanceof Error ? error.message : '复制技能命令失败。')
     }
   }
 
@@ -131,10 +131,8 @@ export function FloatingTerminalOrchestrationDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="gap-4 sm:max-w-[620px]">
         <DialogHeader>
-          <DialogTitle>Enable orchestration</DialogTitle>
-          <DialogDescription>
-            Add the Orca CLI, then install the agent skill in this terminal.
-          </DialogDescription>
+          <DialogTitle>启用编排</DialogTitle>
+          <DialogDescription>先添加 Orca CLI，然后在当前终端安装 Agent 技能。</DialogDescription>
         </DialogHeader>
 
         <div className="min-w-0 divide-y divide-border/60 overflow-hidden rounded-md border border-border/60 bg-muted/20">
@@ -158,10 +156,10 @@ export function FloatingTerminalOrchestrationDialog({
                     size="xs"
                     disabled
                     className="shrink-0 gap-1.5 disabled:opacity-100"
-                    aria-label="Orca CLI added to PATH"
+                    aria-label="Orca CLI 已添加到 PATH"
                   >
                     <Check className="size-3" />
-                    Added
+                    已添加
                   </Button>
                 ) : (
                   <Button
@@ -172,7 +170,7 @@ export function FloatingTerminalOrchestrationDialog({
                     className="shrink-0 gap-1.5"
                   >
                     {cliBusy ? <Loader2 className="size-3.5 animate-spin" /> : null}
-                    Add to PATH
+                    添加到 PATH
                   </Button>
                 )}
               </div>
@@ -183,9 +181,9 @@ export function FloatingTerminalOrchestrationDialog({
             <div className="space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
-                  <p className="text-sm font-medium">Orchestration skill</p>
+                  <p className="text-sm font-medium">编排技能</p>
                   <p className="text-xs text-muted-foreground">
-                    Paste this command into the terminal so agents can coordinate through Orca.
+                    把这条命令粘贴到终端，让 Agent 能通过 Orca 协同工作。
                   </p>
                   {!cliInstalled ? (
                     <p className="text-xs text-muted-foreground">
@@ -205,7 +203,7 @@ export function FloatingTerminalOrchestrationDialog({
                   ) : (
                     <Clipboard className="size-3.5" />
                   )}
-                  {activeTabId ? 'Paste' : 'Copy'}
+                  {activeTabId ? '粘贴' : '复制'}
                 </Button>
               </div>
               <div className="flex min-w-0 items-center gap-2 rounded bg-background px-2 py-1.5">
@@ -217,7 +215,7 @@ export function FloatingTerminalOrchestrationDialog({
                   size="icon-xs"
                   className="shrink-0"
                   onClick={() => void handleCopySkillCommand()}
-                  aria-label="Copy orchestration skill install command"
+                  aria-label="复制编排技能安装命令"
                 >
                   <Copy className="size-3.5" />
                 </Button>

@@ -1156,9 +1156,7 @@ export function FloatingTerminalPanel({
           })}
           {activeEditorFile ? (
             <div className="absolute inset-0 flex min-h-0 min-w-0">
-              <Suspense
-                fallback={<EditorLoadingFallback />}
-              >
+              <Suspense fallback={<EditorLoadingFallback />}>
                 <EditorPanel
                   activeFileId={activeEditorFile.id}
                   activeViewStateId={activeEditorUnifiedId}
@@ -1190,9 +1188,9 @@ export function FloatingTerminalPanel({
         >
           <div className="space-y-2">
             <div className="space-y-0.5">
-              <p className="text-sm font-medium">Enable orchestration</p>
+              <p className="text-sm font-medium">启用编排</p>
               <p className="text-xs leading-5 text-muted-foreground">
-                Set up the Orca CLI and agent skill so agents can coordinate through Orca.
+                设置 Orca CLI 和 Agent 技能，让多个 Agent 可以通过 Orca 协同工作。
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -1203,7 +1201,7 @@ export function FloatingTerminalPanel({
                 className="flex-1"
                 onClick={dismissOrchestrationSetup}
               >
-                Dismiss
+                稍后再说
               </Button>
               <Button
                 type="button"
@@ -1212,7 +1210,7 @@ export function FloatingTerminalPanel({
                 className="flex-1"
                 onClick={() => setOrchestrationDialogOpen(true)}
               >
-                Enable
+                启用
               </Button>
             </div>
           </div>

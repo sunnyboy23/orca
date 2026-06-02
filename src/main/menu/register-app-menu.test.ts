@@ -15,28 +15,41 @@ vi.mock('electron', () => ({
     setApplicationMenu: setApplicationMenuMock
   },
   app: {
-    name: 'Orca'
+    name: 'Orca',
+    getLocale: () => 'en-US'
   }
 }))
 
-import { getNextDefaultOnAppearanceSettingValue, registerAppMenu } from './register-app-menu'
+import {
+  getNextDefaultOnAppearanceSettingValue,
+  registerAppMenu,
+  type RegisterAppMenuOptions
+} from './register-app-menu'
 
 const isMac = process.platform === 'darwin'
 
-function buildMenuOptions() {
+function buildMenuOptions(): RegisterAppMenuOptions & {
+  onCheckForUpdates: ReturnType<typeof vi.fn<RegisterAppMenuOptions['onCheckForUpdates']>>
+  onOpenSettings: ReturnType<typeof vi.fn<RegisterAppMenuOptions['onOpenSettings']>>
+  onOpenFeatureTour: ReturnType<typeof vi.fn<RegisterAppMenuOptions['onOpenFeatureTour']>>
+  onOpenCrashReport: ReturnType<typeof vi.fn<RegisterAppMenuOptions['onOpenCrashReport']>>
+  onBeforeReload: ReturnType<typeof vi.fn<NonNullable<RegisterAppMenuOptions['onBeforeReload']>>>
+  onToggleAppearance: ReturnType<typeof vi.fn<RegisterAppMenuOptions['onToggleAppearance']>>
+  getAppearanceState: ReturnType<typeof vi.fn<RegisterAppMenuOptions['getAppearanceState']>>
+} {
   return {
-    onCheckForUpdates: vi.fn(),
-    onOpenSettings: vi.fn(),
-    onOpenFeatureTour: vi.fn(),
-    onOpenCrashReport: vi.fn(),
-    onBeforeReload: vi.fn(),
-    onZoomIn: vi.fn(),
-    onZoomOut: vi.fn(),
-    onZoomReset: vi.fn(),
-    onToggleLeftSidebar: vi.fn(),
-    onToggleRightSidebar: vi.fn(),
-    onToggleAppearance: vi.fn(),
-    getAppearanceState: vi.fn(() => ({
+    onCheckForUpdates: vi.fn<RegisterAppMenuOptions['onCheckForUpdates']>(),
+    onOpenSettings: vi.fn<RegisterAppMenuOptions['onOpenSettings']>(),
+    onOpenFeatureTour: vi.fn<RegisterAppMenuOptions['onOpenFeatureTour']>(),
+    onOpenCrashReport: vi.fn<RegisterAppMenuOptions['onOpenCrashReport']>(),
+    onBeforeReload: vi.fn<NonNullable<RegisterAppMenuOptions['onBeforeReload']>>(),
+    onZoomIn: vi.fn<RegisterAppMenuOptions['onZoomIn']>(),
+    onZoomOut: vi.fn<RegisterAppMenuOptions['onZoomOut']>(),
+    onZoomReset: vi.fn<RegisterAppMenuOptions['onZoomReset']>(),
+    onToggleLeftSidebar: vi.fn<RegisterAppMenuOptions['onToggleLeftSidebar']>(),
+    onToggleRightSidebar: vi.fn<RegisterAppMenuOptions['onToggleRightSidebar']>(),
+    onToggleAppearance: vi.fn<RegisterAppMenuOptions['onToggleAppearance']>(),
+    getAppearanceState: vi.fn<RegisterAppMenuOptions['getAppearanceState']>(() => ({
       showTasksButton: true,
       showMobileButton: true,
       showTitlebarAppName: true,
@@ -57,6 +70,30 @@ function getSubmenu(
   return (item?.submenu ?? []) as Electron.MenuItemConstructorOptions[]
 }
 
+function englishLabels() {
+  return {
+    checkForUpdates: 'Check for Updates...',
+    settings: `Settings\t${isMac ? '⌘,' : 'Ctrl+,'}`,
+    exploreOrca: 'Explore Orca',
+    reportCrash: 'Report Crash...',
+    exportPdf: `Export as PDF...\t${isMac ? '⌘⇧E' : 'Ctrl+Shift+E'}`,
+    file: 'File',
+    exit: 'Exit',
+    appearance: 'Appearance',
+    showTasksButton: 'Show Tasks Button',
+    showMobileButton: 'Show Orca Mobile Button',
+    showTitlebarAppName: 'Show Titlebar App Name',
+    showStatusBar: 'Show Status Bar',
+    view: 'View',
+    reload: 'Reload',
+    forceReload: `Force Reload\t${isMac ? '⌘⇧R' : 'Ctrl+Shift+R'}`,
+    toggleLeftSidebar: `Toggle Left Sidebar\t${isMac ? '⌘B' : 'Ctrl+B'}`,
+    toggleRightSidebar: `Toggle Right Sidebar\t${isMac ? '⌘L' : 'Ctrl+L'}`,
+    openWorktreePalette: `Open Worktree Palette\t${isMac ? '⌘J' : 'Ctrl+Shift+J'}`,
+    help: 'Help'
+  }
+}
+
 describe('registerAppMenu', () => {
   it('toggles missing default-on appearance settings from visible to hidden', () => {
     expect(getNextDefaultOnAppearanceSettingValue(undefined)).toBe(false)
@@ -75,16 +112,15 @@ describe('registerAppMenu', () => {
     registerAppMenu(buildMenuOptions())
 
     expect(buildFromTemplateMock).toHaveBeenCalledTimes(1)
-    const viewSubmenu = getSubmenu(getTemplate(), 'View')
-    const expectedForceReloadLabel = `Force Reload\t${isMac ? '⌘⇧R' : 'Ctrl+Shift+R'}`
+    const viewSubmenu = getSubmenu(getTemplate(), englishLabels().view)
 
     expect(viewSubmenu).toEqual(
-      expect.arrayContaining([expect.objectContaining({ label: 'Reload' })])
+      expect.arrayContaining([expect.objectContaining({ label: englishLabels().reload })])
     )
 
-    const reloadItem = viewSubmenu.find((item) => item.label === 'Reload')
+    const reloadItem = viewSubmenu.find((item) => item.label === englishLabels().reload)
     expect(reloadItem?.accelerator).toBeUndefined()
-    const forceReloadItem = viewSubmenu.find((item) => item.label === expectedForceReloadLabel)
+    const forceReloadItem = viewSubmenu.find((item) => item.label === englishLabels().forceReload)
     expect(forceReloadItem).toBeDefined()
     expect(forceReloadItem?.accelerator).toBeUndefined()
   })
@@ -104,7 +140,9 @@ describe('registerAppMenu', () => {
 
     registerAppMenu(options)
 
-    const reloadItem = getSubmenu(getTemplate(), 'View').find((item) => item.label === 'Reload')
+    const reloadItem = getSubmenu(getTemplate(), englishLabels().view).find(
+      (item) => item.label === englishLabels().reload
+    )
     reloadItem?.click?.({} as never, {} as never, {} as never)
 
     expect(reloadMock).toHaveBeenCalledTimes(1)
@@ -127,8 +165,8 @@ describe('registerAppMenu', () => {
 
     registerAppMenu(options)
 
-    const forceReloadItem = getSubmenu(getTemplate(), 'View').find((item) =>
-      item.label?.startsWith('Force Reload\t')
+    const forceReloadItem = getSubmenu(getTemplate(), englishLabels().view).find(
+      (item) => item.label === englishLabels().forceReload
     )
     forceReloadItem?.click?.({} as never, {} as never, {} as never)
 
@@ -146,7 +184,7 @@ describe('registerAppMenu', () => {
     // either way.
     const parentLabel = isMac ? 'Orca' : 'Help'
     const item = getSubmenu(getTemplate(), parentLabel).find(
-      (entry) => entry.label === 'Check for Updates...'
+      (entry) => entry.label === englishLabels().checkForUpdates
     )
 
     item?.click?.({} as never, undefined as never, { shiftKey: true } as Electron.KeyboardEvent)
@@ -169,9 +207,10 @@ describe('registerAppMenu', () => {
   it('shows the worktree palette shortcut as a display-only menu hint', () => {
     registerAppMenu(buildMenuOptions())
 
-    const viewSubmenu = getSubmenu(getTemplate(), 'View')
-    const expectedLabel = `Open Worktree Palette\t${isMac ? '⌘J' : 'Ctrl+Shift+J'}`
-    const paletteItem = viewSubmenu.find((item) => item.label === expectedLabel)
+    const viewSubmenu = getSubmenu(getTemplate(), englishLabels().view)
+    const paletteItem = viewSubmenu.find(
+      (item) => item.label === englishLabels().openWorktreePalette
+    )
 
     expect(paletteItem).toBeDefined()
     expect(paletteItem?.accelerator).toBeUndefined()
@@ -186,19 +225,45 @@ describe('registerAppMenu', () => {
     // redistributed so users see them in File / Help instead.
     expect(template.find((item) => item.label === 'Orca')).toBeUndefined()
 
-    const fileLabels = getSubmenu(template, 'File').map((item) => item.label)
+    const fileLabels = getSubmenu(template, englishLabels().file).map((item) => item.label)
     expect(fileLabels).toEqual(
       expect.arrayContaining([
-        `Export as PDF...\t${isMac ? '⌘⇧E' : 'Ctrl+Shift+E'}`,
-        `Settings\t${isMac ? '⌘,' : 'Ctrl+,'}`,
-        'Exit'
+        englishLabels().exportPdf,
+        englishLabels().settings,
+        englishLabels().exit
       ])
     )
 
-    const helpLabels = getSubmenu(template, 'Help').map((item) => item.label)
+    const helpLabels = getSubmenu(template, englishLabels().help).map((item) => item.label)
     expect(helpLabels).toEqual(
-      expect.arrayContaining(['Report Crash...', 'Explore Orca', 'Check for Updates...'])
+      expect.arrayContaining([
+        englishLabels().reportCrash,
+        englishLabels().exploreOrca,
+        englishLabels().checkForUpdates
+      ])
     )
+  })
+
+  it('uses Chinese labels when the app language is Chinese', () => {
+    const options = buildMenuOptions()
+    options.getAppLanguage = vi.fn<NonNullable<RegisterAppMenuOptions['getAppLanguage']>>(
+      () => 'zh-CN'
+    )
+    registerAppMenu(options)
+
+    const template = getTemplate()
+    const fileLabels = getSubmenu(template, '文件').map((item) => item.label)
+    const viewLabels = getSubmenu(template, '视图').map((item) => item.label)
+    const helpLabels = getSubmenu(template, '帮助').map((item) => item.label)
+    const appearanceSubmenu = (getSubmenu(template, '视图').find((item) => item.label === '外观')
+      ?.submenu ?? []) as Electron.MenuItemConstructorOptions[]
+
+    expect(fileLabels).toContain(`导出为 PDF...\t${isMac ? '⌘⇧E' : 'Ctrl+Shift+E'}`)
+    expect(viewLabels).toEqual(expect.arrayContaining(['重新加载', '外观']))
+    expect(appearanceSubmenu.map((item) => item.label)).toEqual(
+      expect.arrayContaining(['显示状态栏', '显示任务按钮', '显示 Orca Mobile 按钮'])
+    )
+    expect(helpLabels).toEqual(expect.arrayContaining(['报告崩溃...', '了解 Orca']))
   })
 
   it.runIf(isMac)('keeps the macOS app-named menu with Settings and quit roles', () => {
@@ -208,23 +273,27 @@ describe('registerAppMenu', () => {
     const appSubmenu = getSubmenu(template, 'Orca')
     const appLabels = appSubmenu.map((item) => item.label)
     expect(appLabels).toEqual(
-      expect.arrayContaining(['Check for Updates...', `Settings\t${isMac ? '⌘,' : 'Ctrl+,'}`])
+      expect.arrayContaining([englishLabels().checkForUpdates, englishLabels().settings])
     )
     // Why: on macOS File should NOT duplicate Settings/Exit — those live in
     // the system app menu, so only Export belongs under File.
-    const fileLabels = getSubmenu(template, 'File').map((item) => item.label)
-    expect(fileLabels).not.toContain(`Settings\t${isMac ? '⌘,' : 'Ctrl+,'}`)
-    expect(fileLabels).not.toContain('Exit')
-    const helpLabels = getSubmenu(template, 'Help').map((item) => item.label)
-    expect(helpLabels).toEqual(['Report Crash...', undefined, 'Explore Orca'])
+    const fileLabels = getSubmenu(template, englishLabels().file).map((item) => item.label)
+    expect(fileLabels).not.toContain(englishLabels().settings)
+    expect(fileLabels).not.toContain(englishLabels().exit)
+    const helpLabels = getSubmenu(template, englishLabels().help).map((item) => item.label)
+    expect(helpLabels).toEqual([
+      englishLabels().reportCrash,
+      undefined,
+      englishLabels().exploreOrca
+    ])
   })
 
   it('routes Feature tour through its callback', () => {
     const options = buildMenuOptions()
     registerAppMenu(options)
 
-    const featureTourItem = getSubmenu(getTemplate(), 'Help').find(
-      (entry) => entry.label === 'Explore Orca'
+    const featureTourItem = getSubmenu(getTemplate(), englishLabels().help).find(
+      (entry) => entry.label === englishLabels().exploreOrca
     )
     expect(featureTourItem?.accelerator).toBeUndefined()
 
@@ -239,8 +308,8 @@ describe('registerAppMenu', () => {
     const options = buildMenuOptions()
     registerAppMenu(options)
 
-    const crashReportItem = getSubmenu(getTemplate(), 'Help').find(
-      (entry) => entry.label === 'Report Crash...'
+    const crashReportItem = getSubmenu(getTemplate(), englishLabels().help).find(
+      (entry) => entry.label === englishLabels().reportCrash
     )
 
     const targetWindow = {} as Electron.BaseWindow
@@ -260,24 +329,32 @@ describe('registerAppMenu', () => {
     })
     registerAppMenu(options)
 
-    const viewSubmenu = getSubmenu(getTemplate(), 'View')
-    const appearanceEntry = viewSubmenu.find((item) => item.label === 'Appearance')
+    const viewSubmenu = getSubmenu(getTemplate(), englishLabels().view)
+    const appearanceEntry = viewSubmenu.find((item) => item.label === englishLabels().appearance)
     expect(appearanceEntry).toBeDefined()
 
     const appearanceSubmenu = (appearanceEntry?.submenu ??
       []) as Electron.MenuItemConstructorOptions[]
-    const tasksItem = appearanceSubmenu.find((item) => item.label === 'Show Tasks Button')
+    const tasksItem = appearanceSubmenu.find(
+      (item) => item.label === englishLabels().showTasksButton
+    )
     expect(tasksItem?.type).toBe('checkbox')
     expect(tasksItem?.checked).toBe(false)
 
-    const mobileItem = appearanceSubmenu.find((item) => item.label === 'Show Orca Mobile Button')
+    const mobileItem = appearanceSubmenu.find(
+      (item) => item.label === englishLabels().showMobileButton
+    )
     expect(mobileItem?.type).toBe('checkbox')
     expect(mobileItem?.checked).toBe(true)
 
-    const titlebarItem = appearanceSubmenu.find((item) => item.label === 'Show Titlebar App Name')
+    const titlebarItem = appearanceSubmenu.find(
+      (item) => item.label === englishLabels().showTitlebarAppName
+    )
     expect(titlebarItem?.checked).toBe(true)
 
-    const statusBarItem = appearanceSubmenu.find((item) => item.label === 'Show Status Bar')
+    const statusBarItem = appearanceSubmenu.find(
+      (item) => item.label === englishLabels().showStatusBar
+    )
     expect(statusBarItem?.checked).toBe(true)
   })
 
@@ -285,18 +362,18 @@ describe('registerAppMenu', () => {
     const options = buildMenuOptions()
     registerAppMenu(options)
 
-    const viewSubmenu = getSubmenu(getTemplate(), 'View')
-    const appearanceSubmenu = (viewSubmenu.find((item) => item.label === 'Appearance')?.submenu ??
-      []) as Electron.MenuItemConstructorOptions[]
+    const viewSubmenu = getSubmenu(getTemplate(), englishLabels().view)
+    const appearanceSubmenu = (viewSubmenu.find((item) => item.label === englishLabels().appearance)
+      ?.submenu ?? []) as Electron.MenuItemConstructorOptions[]
 
     appearanceSubmenu
-      .find((item) => item.label === 'Show Tasks Button')
+      .find((item) => item.label === englishLabels().showTasksButton)
       ?.click?.({} as never, {} as never, {} as never)
     appearanceSubmenu
-      .find((item) => item.label === 'Show Orca Mobile Button')
+      .find((item) => item.label === englishLabels().showMobileButton)
       ?.click?.({} as never, {} as never, {} as never)
     appearanceSubmenu
-      .find((item) => item.label === 'Show Titlebar App Name')
+      .find((item) => item.label === englishLabels().showTitlebarAppName)
       ?.click?.({} as never, {} as never, {} as never)
 
     expect(options.onToggleAppearance).toHaveBeenCalledWith('showTasksButton')
@@ -308,12 +385,12 @@ describe('registerAppMenu', () => {
     const options = buildMenuOptions()
     registerAppMenu(options)
 
-    const viewSubmenu = getSubmenu(getTemplate(), 'View')
-    const appearanceSubmenu = (viewSubmenu.find((item) => item.label === 'Appearance')?.submenu ??
-      []) as Electron.MenuItemConstructorOptions[]
+    const viewSubmenu = getSubmenu(getTemplate(), englishLabels().view)
+    const appearanceSubmenu = (viewSubmenu.find((item) => item.label === englishLabels().appearance)
+      ?.submenu ?? []) as Electron.MenuItemConstructorOptions[]
 
-    const leftLabel = `Toggle Left Sidebar\t${isMac ? '⌘B' : 'Ctrl+B'}`
-    const rightLabel = `Toggle Right Sidebar\t${isMac ? '⌘L' : 'Ctrl+L'}`
+    const leftLabel = englishLabels().toggleLeftSidebar
+    const rightLabel = englishLabels().toggleRightSidebar
 
     appearanceSubmenu
       .find((item) => item.label === leftLabel)

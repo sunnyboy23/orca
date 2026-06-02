@@ -43,17 +43,17 @@ export function MarkdownTableOfContentsPanel({
   onNavigate
 }: MarkdownTableOfContentsPanelProps): React.JSX.Element {
   return (
-    <aside className="markdown-toc-panel" aria-label="Table of contents">
+    <aside className="markdown-toc-panel" aria-label="目录">
       <div className="markdown-toc-header">
         <ListTree className="size-3.5 text-muted-foreground" />
-        <span>Table of Contents</span>
+        <span>目录</span>
         <Button
           type="button"
           variant="ghost"
           size="icon-xs"
           className="ml-auto"
-          aria-label="Close table of contents"
-          title="Close table of contents"
+          aria-label="关闭目录"
+          title="关闭目录"
           onClick={onClose}
         >
           <X className="size-3.5" />
@@ -65,7 +65,7 @@ export function MarkdownTableOfContentsPanel({
             <MarkdownTocRow key={item.id} depth={0} item={item} onNavigate={onNavigate} />
           ))
         ) : (
-          <div className="markdown-toc-empty">No headings</div>
+          <div className="markdown-toc-empty">没有标题</div>
         )}
       </div>
     </aside>

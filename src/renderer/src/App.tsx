@@ -257,6 +257,7 @@ function applyRemoteWorkspacePatchStatus(
 }
 
 function App(): React.JSX.Element {
+  const { messages } = useI18n()
   useUnreadDockBadge()
   useRadixBodyPointerEventsRecovery()
   useWebSessionTabsSync()
@@ -1363,14 +1364,14 @@ function App(): React.JSX.Element {
               <TooltipTrigger asChild>
                 <button
                   className="titlebar-icon-button"
-                  aria-label="Application menu"
+                  aria-label={messages.window.applicationMenu}
                   onClick={() => window.api.ui.popupMenu()}
                 >
                   <MoreHorizontal size={14} />
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" sideOffset={6}>
-                Application menu
+                {messages.window.applicationMenu}
               </TooltipContent>
             </Tooltip>
           </>

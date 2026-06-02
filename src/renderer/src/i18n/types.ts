@@ -14,7 +14,8 @@ import type {
   CommitMessageAiMessages,
   GitMessages,
   QuickCommandsMessages,
-  RuntimeMessages
+  RuntimeMessages,
+  VoiceMessages
 } from './settings-panes-types'
 import type { ShortcutsMessages } from './settings-shortcuts-types'
 import type { SshSettingsMessages } from './settings-ssh-types'
@@ -138,6 +139,7 @@ export type I18nMessages = {
     ssh: SshSettingsMessages
     tasks: TasksMessages
     terminal: SettingsTerminalMessages
+    voice: VoiceMessages
   }
   navigation: {
     tasks: string
@@ -154,10 +156,74 @@ export type I18nMessages = {
     searchWorktreesAndBrowserTabs: string
   }
   window: {
+    applicationMenu: string
     minimize: string
     maximize: string
     restore: string
     close: string
+  }
+  updateCard: {
+    dismiss: string
+    dismissTip: string
+    checking: string
+    latest: string
+    available: string
+    downloading: string
+    downloaded: string
+    error: string
+    status: string
+    updateError: string
+    checkFailed: string
+    completeUpdateFailed: string
+    checkUpdatesFailed: string
+    retryDownload: string
+    recheck: string
+    restartInstallFailed: string
+    tryAgain: string
+    installing: string
+    reassurance: string
+    newRelease: (title: string) => string
+    moreSinceLastUpdate: (count: number) => string
+    fullReleaseNotes: string
+    update: string
+    releaseNotes: string
+    updateReady: (version: string) => string
+    sessionsNotInterrupted: string
+    downloadingTitle: string
+    minimizeToStatusBar: string
+    downloadingVersion: (version: string) => string
+    downloadingProgress: (percent: number) => string
+    downloadManually: string
+    readyToInstall: string
+    downloadedRestart: (version: string) => string
+    restartToUpdate: string
+  }
+  comboboxes: {
+    agent: {
+      blankTerminal: string
+      currentDefault: string
+      setAsDefault: string
+      search: string
+      noMatch: string
+      manageAgents: string
+    }
+    repo: {
+      selectRepo: string
+      search: string
+      noMatch: string
+      addingProject: string
+      addProject: string
+    }
+  }
+  editorChrome: {
+    slashCommands: string
+    searchBlocks: string
+    searchBlocksPlaceholder: string
+    noBlocksFound: string
+    pasteOrTypeLink: string
+    openLink: string
+    editLink: string
+    removeLink: string
   }
   orchestrationPage: {
     title: string

@@ -1,7 +1,8 @@
 import type {
   NotificationsMessages,
   QuickCommandsMessages,
-  RuntimeMessages
+  RuntimeMessages,
+  VoiceMessages
 } from './settings-panes-types'
 
 export const notificationsEn: NotificationsMessages = {
@@ -137,7 +138,16 @@ export const runtimeEn: RuntimeMessages = {
   webSearch: {
     title: 'Active Server',
     description: 'Connect this browser to a saved Orca server.',
-    keywords: ['runtime', 'environment', 'server', 'client', 'remote', 'pairing code', 'cloud', 'vm']
+    keywords: [
+      'runtime',
+      'environment',
+      'server',
+      'client',
+      'remote',
+      'pairing code',
+      'cloud',
+      'vm'
+    ]
   },
   labels: {
     activeServer: 'Active Server',
@@ -155,7 +165,8 @@ export const runtimeEn: RuntimeMessages = {
     activeServerLocal:
       "Local keeps today's desktop behavior. Saved servers route supported client calls through the remote runtime.",
     activeServerWeb: 'Saved servers route this browser through a paired Orca runtime.',
-    pairingHelp: 'Run orca serve --pairing-address <host> on the server and paste the printed pairing URL.',
+    pairingHelp:
+      'Run orca serve --pairing-address <host> on the server and paste the printed pairing URL.',
     noSavedServers: 'No saved servers.',
     shareServer: 'Create a revocable access grant so a browser or another Orca client can connect.',
     switchServer:
@@ -192,5 +203,44 @@ export const runtimeEn: RuntimeMessages = {
   placeholders: {
     serverName: 'Dev box',
     pairingCode: 'orca://pair#...'
+  }
+}
+
+export const voiceEn: VoiceMessages = {
+  enable: {
+    title: 'Enable Voice Dictation',
+    description: 'Dictate text into any focused pane.',
+    dynamicDescription: (shortcut) => `Press ${shortcut} to dictate text into any focused pane.`,
+    keywords: ['voice', 'dictation', 'speech', 'microphone', 'stt']
+  },
+  mode: {
+    title: 'Dictation Mode',
+    description: 'Toggle or hold-to-talk dictation behavior.',
+    dynamicDescription: (shortcut) =>
+      `Toggle: press ${shortcut} once to start, again to stop. Hold: dictate while ${shortcut} is held.`,
+    toggle: 'Toggle',
+    hold: 'Hold',
+    keywords: ['voice', 'dictation', 'mode', 'toggle', 'hold']
+  },
+  model: {
+    title: 'Speech Model',
+    description: 'Select the local speech-to-text model used for dictation.',
+    selectedDescription: (label, description) => `${label} — ${description}`,
+    selectAndDownload: 'Select and download a model to enable dictation.',
+    selectModel: 'Select Model',
+    streaming: 'streaming',
+    offline: 'offline',
+    recommended: 'recommended',
+    extracting: 'Extracting...',
+    keywords: ['voice', 'speech', 'model', 'stt', 'download']
+  },
+  feedback: {
+    permissionGranted: 'Microphone permission granted',
+    openedSettings:
+      'Opened macOS Privacy & Security. Enable dictation again after granting access.',
+    permissionRequired: 'Microphone permission is required before enabling voice dictation.',
+    requestFailed: 'Could not request microphone permission. Voice dictation was not enabled.',
+    downloadFailed: 'Failed to download model.',
+    deleteFailed: 'Failed to delete model.'
   }
 }

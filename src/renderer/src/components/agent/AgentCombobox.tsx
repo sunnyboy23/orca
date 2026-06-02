@@ -18,8 +18,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { AgentIcon, type AgentCatalogEntry } from '@/lib/agent-catalog'
 import { cn } from '@/lib/utils'
 import type { TuiAgent } from '../../../../shared/types'
+import { useI18n, type I18nMessages } from '@/i18n'
 
 type DefaultAgentPreference = TuiAgent | 'blank' | null
+type AgentComboboxCopy = I18nMessages['comboboxes']['agent']
 
 type AgentComboboxProps = {
   agents: AgentCatalogEntry[]
@@ -54,6 +56,7 @@ type ItemRenderArgs = {
   onSetDefault?: () => void
   icon: React.ReactNode
   label: string
+  copy: AgentComboboxCopy
 }
 
 function renderItem({
@@ -64,7 +67,8 @@ function renderItem({
   onSelect,
   onSetDefault,
   icon,
-  label
+  label,
+  copy
 }: ItemRenderArgs): React.ReactNode {
   const row = (
     <CommandItem
@@ -91,7 +95,7 @@ function renderItem({
       <ContextMenuContent className="z-[70]">
         <ContextMenuItem onSelect={onSetDefault} disabled={isDefault}>
           <Star className="size-3.5" />
-          {isDefault ? 'Current default' : 'Set as default'}
+          {isDefault ? copy.currentDefault : copy.setAsDefault}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -133,6 +137,8 @@ export default function AgentCombobox({
 }: AgentComboboxProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const { messages } = useI18n()
+  const copy = messages.comboboxes.agent
   // Why: controlled cmdk selection so hovering the footer (which lives outside
   // the cmdk tree) can clear the list's highlighted item — otherwise cmdk keeps
   // the last-hovered agent visually selected while the mouse is on the footer.
@@ -149,8 +155,9 @@ export default function AgentCombobox({
     if (!q) {
       return true
     }
-    return 'blank terminal'.includes(q) || 'terminal'.startsWith(q)
-  }, [query])
+    const blankLabel = copy.blankTerminal.toLowerCase()
+    return blankLabel.includes(q) || 'terminal'.startsWith(q)
+  }, [copy.blankTerminal, query])
 
   React.useEffect(() => {
     if (!open) {
@@ -258,7 +265,7 @@ export default function AgentCombobox({
             ) : (
               <span className="inline-flex min-w-0 flex-1 items-center gap-1.5">
                 <Terminal className="size-3.5" />
-                <span className="truncate">Blank Terminal</span>
+                <span className="truncate">{copy.blankTerminal}</span>
               </span>
             )}
             <ChevronsUpDown className="size-3.5 opacity-50" />
@@ -274,9 +281,9 @@ export default function AgentCombobox({
           onOpenAutoFocus={(event) => event.preventDefault()}
         >
           <Command shouldFilter={false} value={commandValue} onValueChange={setCommandValue}>
-            <CommandInput placeholder="Search agents..." value={query} onValueChange={setQuery} />
+            <CommandInput placeholder={copy.search} value={query} onValueChange={setQuery} />
             <CommandList>
-              <CommandEmpty>No agents match your search.</CommandEmpty>
+              <CommandEmpty>{copy.noMatch}</CommandEmpty>
               {blankMatchesQuery
                 ? renderItem({
                     key: BLANK_VALUE,
@@ -286,7 +293,8 @@ export default function AgentCombobox({
                     onSelect: () => handleSelect(null),
                     onSetDefault: onSetDefault ? () => onSetDefault('blank') : undefined,
                     icon: <Terminal className="size-3.5" />,
-                    label: 'Blank Terminal'
+                    label: copy.blankTerminal,
+                    copy
                   })
                 : null}
               {filteredAgents.map((agent) =>
@@ -298,7 +306,8 @@ export default function AgentCombobox({
                   onSelect: () => handleSelect(agent.id),
                   onSetDefault: onSetDefault ? () => onSetDefault(agent.id) : undefined,
                   icon: <AgentIcon agent={agent.id} />,
-                  label: agent.label
+                  label: agent.label,
+                  copy
                 })
               )}
             </CommandList>
@@ -312,7 +321,7 @@ export default function AgentCombobox({
                   onMouseEnter={() => setCommandValue('')}
                   className="h-9 w-full justify-start rounded-none px-3 text-xs font-normal text-muted-foreground"
                 >
-                  Manage agents
+                  {copy.manageAgents}
                   <svg
                     className="ml-auto size-3"
                     viewBox="0 0 24 24"

@@ -44,7 +44,7 @@ async function pickFloatingMarkdownDocument(
   }
   const filePath = result.filePaths[0]
   if (!isMarkdownDocumentName(filePath)) {
-    throw new Error('Selected file is not a markdown document.')
+    throw new Error('所选文件不是 Markdown 文档。')
   }
   authorizeExternalPath(filePath)
   return markdownDocumentFromFilePath(cwd, filePath, { outsideRootRelativePath: 'basename' })

@@ -7,7 +7,7 @@ import { experimentalEn, inputEn, privacyEn, tasksEn } from './settings-core-pan
 import { floatingWorkspaceEn } from './settings-floating-workspace-en'
 import { gitEn } from './settings-git-en'
 import { integrationsEn } from './settings-integrations-en'
-import { notificationsEn, quickCommandsEn, runtimeEn } from './settings-panes-en'
+import { notificationsEn, quickCommandsEn, runtimeEn, voiceEn } from './settings-panes-en'
 import { shortcutsEn } from './settings-shortcuts-en'
 import { sshEn } from './settings-ssh-en'
 import { terminalEn } from './settings-terminal-en'
@@ -144,7 +144,8 @@ export const enMessages = {
     shortcuts: shortcutsEn,
     ssh: sshEn,
     tasks: tasksEn,
-    terminal: terminalEn
+    terminal: terminalEn,
+    voice: voiceEn
   },
   navigation: {
     tasks: 'Tasks',
@@ -161,10 +162,74 @@ export const enMessages = {
     searchWorktreesAndBrowserTabs: 'Search worktrees and browser tabs'
   },
   window: {
+    applicationMenu: 'Application menu',
     minimize: 'Minimize',
     maximize: 'Maximize',
     restore: 'Restore',
     close: 'Close'
+  },
+  updateCard: {
+    dismiss: 'Dismiss',
+    dismissTip: 'Dismiss tip',
+    checking: 'Checking for updates',
+    latest: "You're on the latest version",
+    available: 'Update available',
+    downloading: 'Downloading update',
+    downloaded: 'Update ready to install',
+    error: 'Update error',
+    status: 'Update status',
+    updateError: 'Update Error',
+    checkFailed: 'Update Check Failed',
+    completeUpdateFailed: 'Could not complete the update.',
+    checkUpdatesFailed: 'Could not check for updates.',
+    retryDownload: 'Retry Download',
+    recheck: 'Re-check',
+    restartInstallFailed: 'Could not restart to install the update.',
+    tryAgain: 'Try Again',
+    installing: 'Installing...',
+    reassurance: "Your terminal sessions won't be interrupted during the update.",
+    newRelease: (title) => `New: ${title}`,
+    moreSinceLastUpdate: (count) => `+${count} more since your last update`,
+    fullReleaseNotes: 'Read the full release notes',
+    update: 'Update',
+    releaseNotes: 'Release notes',
+    updateReady: (version) => `Orca v${version} is ready.`,
+    sessionsNotInterrupted: "Sessions won't be interrupted.",
+    downloadingTitle: 'Downloading Update',
+    minimizeToStatusBar: 'Minimize to status bar',
+    downloadingVersion: (version) => `Orca v${version} is downloading.`,
+    downloadingProgress: (percent) => `Downloading... ${percent}%`,
+    downloadManually: 'Download Manually',
+    readyToInstall: 'Ready to Install',
+    downloadedRestart: (version) => `Orca v${version} is downloaded. Restart when you're ready.`,
+    restartToUpdate: 'Restart to Update'
+  },
+  comboboxes: {
+    agent: {
+      blankTerminal: 'Blank Terminal',
+      currentDefault: 'Current default',
+      setAsDefault: 'Set as default',
+      search: 'Search agents...',
+      noMatch: 'No agents match your search.',
+      manageAgents: 'Manage agents'
+    },
+    repo: {
+      selectRepo: 'Select repo...',
+      search: 'Search projects/folders...',
+      noMatch: 'No projects/folders match your search.',
+      addingProject: 'Adding project...',
+      addProject: 'Add project'
+    }
+  },
+  editorChrome: {
+    slashCommands: 'Slash commands',
+    searchBlocks: 'Search blocks',
+    searchBlocksPlaceholder: 'Search blocks...',
+    noBlocksFound: 'No blocks found',
+    pasteOrTypeLink: 'Paste or type a link...',
+    openLink: 'Open link',
+    editLink: 'Edit link',
+    removeLink: 'Remove link'
   },
   orchestrationPage: {
     title: 'Orchestration',

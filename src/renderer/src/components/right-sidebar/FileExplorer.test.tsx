@@ -1,4 +1,9 @@
 import { describe, expect, it, vi } from 'vitest'
+
+vi.hoisted(() => {
+  vi.stubGlobal('navigator', { userAgent: 'Mac' })
+})
+
 import { Ellipsis, ListCollapse, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownMenuCheckboxItem } from '@/components/ui/dropdown-menu'
@@ -35,7 +40,7 @@ function visit(node: unknown, cb: (node: ReactElementLike) => void): void {
 function findRefreshButton(node: unknown): ReactElementLike {
   let found: ReactElementLike | null = null
   visit(node, (entry) => {
-    if (entry.type === Button && entry.props['aria-label'] === 'Refresh Explorer') {
+    if (entry.type === Button && entry.props['aria-label'] === '刷新文件浏览器') {
       found = entry
     }
   })
@@ -48,7 +53,7 @@ function findRefreshButton(node: unknown): ReactElementLike {
 function findCollapseAllButton(node: unknown): ReactElementLike {
   let found: ReactElementLike | null = null
   visit(node, (entry) => {
-    if (entry.type === Button && entry.props['aria-label'] === 'Collapse All') {
+    if (entry.type === Button && entry.props['aria-label'] === '全部收起') {
       found = entry
     }
   })
@@ -61,7 +66,7 @@ function findCollapseAllButton(node: unknown): ReactElementLike {
 function findMoreActionsButton(node: unknown): ReactElementLike {
   let found: ReactElementLike | null = null
   visit(node, (entry) => {
-    if (entry.type === Button && entry.props['aria-label'] === 'More Explorer Actions') {
+    if (entry.type === Button && entry.props['aria-label'] === '更多文件浏览器操作') {
       found = entry
     }
   })
@@ -74,7 +79,7 @@ function findMoreActionsButton(node: unknown): ReactElementLike {
 function queryMoreActionsButton(node: unknown): ReactElementLike | null {
   let found: ReactElementLike | null = null
   visit(node, (entry) => {
-    if (entry.type === Button && entry.props['aria-label'] === 'More Explorer Actions') {
+    if (entry.type === Button && entry.props['aria-label'] === '更多文件浏览器操作') {
       found = entry
     }
   })
@@ -84,10 +89,7 @@ function queryMoreActionsButton(node: unknown): ReactElementLike | null {
 function findGitIgnoredMenuItem(node: unknown): ReactElementLike {
   let found: ReactElementLike | null = null
   visit(node, (entry) => {
-    if (
-      entry.type === DropdownMenuCheckboxItem &&
-      entry.props.children === 'Show Git Ignored Files'
-    ) {
+    if (entry.type === DropdownMenuCheckboxItem && entry.props.children === '显示 Git 忽略文件') {
       found = entry
     }
   })
@@ -100,10 +102,7 @@ function findGitIgnoredMenuItem(node: unknown): ReactElementLike {
 function queryGitIgnoredMenuItem(node: unknown): ReactElementLike | null {
   let found: ReactElementLike | null = null
   visit(node, (entry) => {
-    if (
-      entry.type === DropdownMenuCheckboxItem &&
-      entry.props.children === 'Show Git Ignored Files'
-    ) {
+    if (entry.type === DropdownMenuCheckboxItem && entry.props.children === '显示 Git 忽略文件') {
       found = entry
     }
   })
@@ -279,16 +278,16 @@ describe('FileExplorerToolbar', () => {
     const openInItems = findOpenInMenuItems(element)
     expect(openInItems.props.worktreePath).toBe('/tmp/orca')
     expect(openInItems.props.connectionId).toBe('ssh-1')
-    expect(openInItems.props.labelPrefix).toBe('Open in ')
+    expect(openInItems.props.labelPrefix).toBe('用 ')
   })
 
   it('keeps the overflow menu as the last toolbar button', () => {
     const element = makeToolbar()
 
     expect(getToolbarButtonLabels(element)).toEqual([
-      'Collapse All',
-      'Refresh Explorer',
-      'More Explorer Actions'
+      '全部收起',
+      '刷新文件浏览器',
+      '更多文件浏览器操作'
     ])
   })
 
@@ -297,7 +296,7 @@ describe('FileExplorerToolbar', () => {
 
     expect(queryMoreActionsButton(element)).not.toBeNull()
     expect(queryGitIgnoredMenuItem(element)).toBeNull()
-    expect(findOpenInMenuItems(element).props.labelPrefix).toBe('Open in ')
+    expect(findOpenInMenuItems(element).props.labelPrefix).toBe('用 ')
   })
 })
 

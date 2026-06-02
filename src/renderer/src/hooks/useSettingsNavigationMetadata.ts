@@ -56,7 +56,7 @@ import {
 import { getSshPaneSearchEntries } from '@/components/settings/ssh-search'
 import { MOBILE_SETTINGS_PANE_SEARCH_ENTRIES } from '@/components/settings/mobile-settings-search'
 import { COMPUTER_USE_PANE_SEARCH_ENTRIES } from '@/components/settings/computer-use-search'
-import { VOICE_PANE_SEARCH_ENTRIES } from '@/components/settings/voice-pane-search'
+import { getVoicePaneSearchEntries } from '@/components/settings/voice-pane-search'
 import { DEVELOPER_PERMISSIONS_PANE_SEARCH_ENTRIES } from '@/components/settings/developer-permissions-search'
 import { getPrivacyPaneSearchEntries } from '@/components/settings/privacy-search'
 import { getShortcutsPaneSearchEntries } from '@/components/settings/shortcuts-search'
@@ -80,7 +80,8 @@ import type {
   GitMessages,
   NotificationsMessages,
   QuickCommandsMessages,
-  RuntimeMessages
+  RuntimeMessages,
+  VoiceMessages
 } from '@/i18n/settings-panes-types'
 import type { ShortcutsMessages } from '@/i18n/settings-shortcuts-types'
 import type { SettingsTerminalMessages } from '@/i18n/settings-terminal-types'
@@ -123,6 +124,7 @@ export function buildSettingsNavigationMetadata({
     ssh: SshSettingsMessages
     tasks: TasksMessages
     terminal: SettingsTerminalMessages
+    voice: VoiceMessages
   }>
 }): SettingsNavSection[] {
   const sections = settingsMessages.sections
@@ -307,7 +309,7 @@ export function buildSettingsNavigationMetadata({
             title: sections.voice.title,
             description: sections.voice.description,
             icon: Mic,
-            searchEntries: VOICE_PANE_SEARCH_ENTRIES,
+            searchEntries: getVoicePaneSearchEntries(settingsPaneMessages?.voice),
             group: 'capabilities',
             badge: sections.voice.badge
           }

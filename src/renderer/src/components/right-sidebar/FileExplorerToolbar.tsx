@@ -11,6 +11,14 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { WorktreeOpenInMenuItems } from '@/components/sidebar/WorktreeOpenInMenu'
 
+const COPY = {
+  collapseAll: '全部收起',
+  refreshExplorer: '刷新文件浏览器',
+  moreExplorerActions: '更多文件浏览器操作',
+  showGitIgnoredFiles: '显示 Git 忽略文件',
+  openInPrefix: '用 '
+} as const
+
 type FileExplorerToolbarProps = {
   repoName: string
   worktreePath: string
@@ -53,7 +61,7 @@ export function FileExplorerToolbar({
             variant="ghost"
             size="icon-xs"
             className="text-muted-foreground hover:text-foreground"
-            aria-label="Collapse All"
+            aria-label={COPY.collapseAll}
             disabled={!canCollapseAll}
             onClick={onCollapseAll}
           >
@@ -61,7 +69,7 @@ export function FileExplorerToolbar({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={4}>
-          Collapse All
+          {COPY.collapseAll}
         </TooltipContent>
       </Tooltip>
       <Tooltip>
@@ -71,7 +79,7 @@ export function FileExplorerToolbar({
             variant="ghost"
             size="icon-xs"
             className="text-muted-foreground hover:text-foreground"
-            aria-label="Refresh Explorer"
+            aria-label={COPY.refreshExplorer}
             disabled={refresh.isRefreshing}
             onClick={refresh.handleRefresh}
           >
@@ -83,7 +91,7 @@ export function FileExplorerToolbar({
           </Button>
         </TooltipTrigger>
         <TooltipContent side="bottom" sideOffset={4}>
-          Refresh Explorer
+          {COPY.refreshExplorer}
         </TooltipContent>
       </Tooltip>
       <DropdownMenu>
@@ -95,14 +103,14 @@ export function FileExplorerToolbar({
                 variant="ghost"
                 size="icon-xs"
                 className="text-muted-foreground hover:text-foreground"
-                aria-label="More Explorer Actions"
+                aria-label={COPY.moreExplorerActions}
               >
                 <Ellipsis className="size-3" />
               </Button>
             </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent side="bottom" sideOffset={4}>
-            More Explorer Actions
+            {COPY.moreExplorerActions}
           </TooltipContent>
         </Tooltip>
         <DropdownMenuContent align="end" className="min-w-[12rem]">
@@ -111,14 +119,14 @@ export function FileExplorerToolbar({
               checked={showGitIgnoredFiles}
               onCheckedChange={onToggleGitIgnoredFiles}
             >
-              Show Git Ignored Files
+              {COPY.showGitIgnoredFiles}
             </DropdownMenuCheckboxItem>
           ) : null}
           {showGitIgnoredFilesToggle ? <DropdownMenuSeparator /> : null}
           <WorktreeOpenInMenuItems
             worktreePath={worktreePath}
             connectionId={connectionId}
-            labelPrefix="Open in "
+            labelPrefix={COPY.openInPrefix}
           />
         </DropdownMenuContent>
       </DropdownMenu>

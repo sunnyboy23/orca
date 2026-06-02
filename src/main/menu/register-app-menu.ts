@@ -5,6 +5,8 @@ import {
   type KeybindingActionId,
   type KeybindingOverrides
 } from '../../shared/keybindings'
+import type { AppLanguage } from '../../shared/types'
+import { resolveAppMenuCopy } from './menu-copy'
 
 export type AppearanceMenuState = {
   showTasksButton: boolean
@@ -19,7 +21,7 @@ export function getNextDefaultOnAppearanceSettingValue(current: boolean | undefi
   return !(current !== false)
 }
 
-type RegisterAppMenuOptions = {
+export type RegisterAppMenuOptions = {
   onOpenSettings: () => void
   onOpenFeatureTour: (window?: Electron.BaseWindow | null) => void
   onOpenCrashReport: (window?: Electron.BaseWindow | null) => void
@@ -33,6 +35,7 @@ type RegisterAppMenuOptions = {
   onToggleAppearance: (key: AppearanceMenuKey) => void
   getAppearanceState: () => AppearanceMenuState
   getKeybindings?: () => KeybindingOverrides | undefined
+  getAppLanguage?: () => AppLanguage | undefined
 }
 
 function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
@@ -49,11 +52,16 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
     onToggleRightSidebar,
     onToggleAppearance,
     getAppearanceState,
-    getKeybindings
+    getKeybindings,
+    getAppLanguage
   } = options
 
   const isMac = process.platform === 'darwin'
   const appearance = getAppearanceState()
+  const copy = resolveAppMenuCopy({
+    appLanguage: getAppLanguage?.(),
+    systemLocale: app.getLocale()
+  })
   const shortcutLabel = (actionId: KeybindingActionId): string => {
     const bindings = getEffectiveKeybindingsForAction(
       actionId,
@@ -92,27 +100,27 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
   }
 
   const checkForUpdatesItem: Electron.MenuItemConstructorOptions = {
-    label: 'Check for Updates...',
+    label: copy.checkForUpdates,
     click: checkForUpdatesClick
   }
 
   const settingsItem: Electron.MenuItemConstructorOptions = {
-    label: `Settings\t${shortcutLabel('app.settings')}`,
+    label: `${copy.settings}\t${shortcutLabel('app.settings')}`,
     click: () => onOpenSettings()
   }
 
   const featureTourItem: Electron.MenuItemConstructorOptions = {
-    label: 'Explore Orca',
+    label: copy.exploreOrca,
     click: (_menuItem, window) => onOpenFeatureTour(window)
   }
 
   const crashReportItem: Electron.MenuItemConstructorOptions = {
-    label: 'Report Crash...',
+    label: copy.reportCrash,
     click: (_menuItem, window) => onOpenCrashReport(window)
   }
 
   const exportPdfItem: Electron.MenuItemConstructorOptions = {
-    label: `Export as PDF...\t${shortcutLabel('file.exportPdf')}`,
+    label: `${copy.exportPdf}\t${shortcutLabel('file.exportPdf')}`,
     click: () => {
       // Why: fire a one-way event into the focused renderer. The renderer
       // owns the knowledge of whether a markdown surface is active and
@@ -149,7 +157,7 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
   }
 
   const fileMenu: Electron.MenuItemConstructorOptions = {
-    label: 'File',
+    label: copy.file,
     submenu: [
       exportPdfItem,
       // Why: on Windows/Linux there is no app-named menu, so Settings and
@@ -161,13 +169,13 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
             { type: 'separator' },
             settingsItem,
             { type: 'separator' },
-            { role: 'quit', label: 'Exit' }
+            { role: 'quit', label: copy.exit }
           ] satisfies Electron.MenuItemConstructorOptions[]))
     ]
   }
 
   const editMenu: Electron.MenuItemConstructorOptions = {
-    label: 'Edit',
+    label: copy.edit,
     submenu: [
       { role: 'undo' },
       { role: 'redo' },
@@ -187,7 +195,7 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
   // appearance state through getAppearanceState() and produces a fresh
   // template with accurate `checked` values.
   const appearanceSubmenu: Electron.MenuItemConstructorOptions = {
-    label: 'Appearance',
+    label: copy.appearance,
     submenu: [
       {
         // Why: display-only shortcut hint — not a real accelerator. Cmd/Ctrl+B
@@ -196,35 +204,35 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
         // accelerator here would steal the chord before that carve-out can
         // fire. Sidebar open/closed lives in the renderer store (non-persisted),
         // so we forward a toggle request rather than mirroring state in main.
-        label: `Toggle Left Sidebar\t${shortcutLabel('sidebar.left.toggle')}`,
+        label: `${copy.toggleLeftSidebar}\t${shortcutLabel('sidebar.left.toggle')}`,
         click: () => onToggleLeftSidebar()
       },
       {
         // Why: display-only shortcut hint for the same reason as above.
-        label: `Toggle Right Sidebar\t${shortcutLabel('sidebar.right.toggle')}`,
+        label: `${copy.toggleRightSidebar}\t${shortcutLabel('sidebar.right.toggle')}`,
         click: () => onToggleRightSidebar()
       },
       {
-        label: 'Show Status Bar',
+        label: copy.showStatusBar,
         type: 'checkbox',
         checked: appearance.statusBarVisible,
         click: () => onToggleAppearance('statusBarVisible')
       },
       { type: 'separator' },
       {
-        label: 'Show Tasks Button',
+        label: copy.showTasksButton,
         type: 'checkbox',
         checked: appearance.showTasksButton,
         click: () => onToggleAppearance('showTasksButton')
       },
       {
-        label: 'Show Orca Mobile Button',
+        label: copy.showMobileButton,
         type: 'checkbox',
         checked: appearance.showMobileButton,
         click: () => onToggleAppearance('showMobileButton')
       },
       {
-        label: 'Show Titlebar App Name',
+        label: copy.showTitlebarAppName,
         type: 'checkbox',
         checked: appearance.showTitlebarAppName,
         click: () => onToggleAppearance('showTitlebarAppName')
@@ -233,28 +241,28 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
   }
 
   const viewMenu: Electron.MenuItemConstructorOptions = {
-    label: 'View',
+    label: copy.view,
     submenu: [
       {
-        label: 'Reload',
+        label: copy.reload,
         click: () => reloadFocusedWindow(false)
       },
       {
-        label: `Force Reload\t${shortcutLabel('app.forceReload')}`,
+        label: `${copy.forceReload}\t${shortcutLabel('app.forceReload')}`,
         click: () => reloadFocusedWindow(true)
       },
       { role: 'toggleDevTools' },
       { type: 'separator' },
       {
-        label: `Reset Size\t${shortcutLabel('zoom.reset')}`,
+        label: `${copy.resetSize}\t${shortcutLabel('zoom.reset')}`,
         click: () => onZoomReset()
       },
       {
-        label: `Zoom In\t${shortcutLabel('zoom.in')}`,
+        label: `${copy.zoomIn}\t${shortcutLabel('zoom.in')}`,
         click: () => onZoomIn()
       },
       {
-        label: `Zoom Out\t${shortcutLabel('zoom.out')}`,
+        label: `${copy.zoomOut}\t${shortcutLabel('zoom.out')}`,
         click: () => onZoomOut()
       },
       { type: 'separator' },
@@ -264,7 +272,7 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
         // before the renderer's keydown handler fires. The overlay
         // mutual-exclusion logic (which runs in the renderer) would be
         // bypassed if this were a real accelerator binding.
-        label: `Open Worktree Palette\t${shortcutLabel('worktree.palette')}`
+        label: `${copy.openWorktreePalette}\t${shortcutLabel('worktree.palette')}`
       },
       { type: 'separator' },
       { role: 'togglefullscreen' },
@@ -274,12 +282,12 @@ function buildAndApplyMenu(options: RegisterAppMenuOptions): void {
   }
 
   const windowMenu: Electron.MenuItemConstructorOptions = {
-    label: 'Window',
+    label: copy.window,
     submenu: [{ role: 'minimize' }, { role: 'zoom' }]
   }
 
   const helpMenu: Electron.MenuItemConstructorOptions = {
-    label: 'Help',
+    label: copy.help,
     submenu: [
       crashReportItem,
       { type: 'separator' },
